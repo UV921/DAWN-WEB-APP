@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
+import { UiMessage } from "@/components/UiMessage";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -18,13 +19,13 @@ export default function LoginPage() {
         callbackUrl: "/onboarding",
       });
       if (!res || res.error) {
-        setError("Login failed. Refresh and try again.");
+        setError("Sign-in didn’t work. Refresh the page and try once more.");
         setBusy(null);
         return;
       }
       window.location.assign("/onboarding");
     } catch {
-      setError("Login crashed.");
+      setError("Something went wrong. Check your connection and try again.");
       setBusy(null);
     }
   }
@@ -40,31 +41,35 @@ export default function LoginPage() {
         </Link>
         <h1 className="font-display mt-10 text-4xl text-white">Sign in</h1>
         <p className="mt-3 text-[var(--color-mist)]">
-          Demo works now. Discord optional for friend accountability.
+          Start with a demo account to try the morning flow. Use Discord when
+          you want friend accountability.
         </p>
 
-        {error && (
-          <p className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            {error}
-          </p>
-        )}
+        {error ? (
+          <div className="mt-5">
+            <UiMessage tone="error">{error}</UiMessage>
+          </div>
+        ) : null}
 
         <div className="mt-10 flex flex-col gap-3">
           <button
             type="button"
             disabled={busy !== null}
             onClick={() => void demoLogin("you")}
-            className="rounded-full bg-[var(--color-dawn)] px-6 py-3.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+            className="ui-btn ui-btn-primary w-full"
           >
-            {busy === "you" ? "Signing in…" : "Demo as You"}
+            {busy === "you" ? "Signing in…" : "Try demo (you)"}
           </button>
+          <p className="text-center text-xs text-[var(--color-mist)]">
+            Instant — no Discord needed. You’ll set wake time next.
+          </p>
           <button
             type="button"
             disabled={busy !== null}
             onClick={() => void demoLogin("friend")}
-            className="rounded-full border border-white/20 px-6 py-3.5 text-sm text-white hover:border-white/40 disabled:opacity-50"
+            className="ui-btn ui-btn-ghost w-full"
           >
-            {busy === "friend" ? "Signing in…" : "Demo as Friend"}
+            {busy === "friend" ? "Signing in…" : "Try demo as a friend"}
           </button>
           <button
             type="button"
@@ -73,6 +78,9 @@ export default function LoginPage() {
           >
             Continue with Discord
           </button>
+          <p className="text-center text-xs text-[var(--color-mist)]">
+            Best for circle check-ins and Discord reminders.
+          </p>
         </div>
       </div>
     </main>

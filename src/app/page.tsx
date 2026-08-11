@@ -27,21 +27,47 @@ export default async function HomePage() {
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 rounded-full bg-[var(--color-dawn)]/30 blur-3xl md:h-56 md:w-56"
           />
-          <h1 className="font-display animate-rise relative max-w-3xl text-5xl leading-[1.05] tracking-tight text-white md:text-7xl">
+          <p className="animate-rise text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
+            Morning accountability
+          </p>
+          <h1 className="font-display animate-rise relative mt-3 max-w-3xl text-5xl leading-[1.05] tracking-tight text-white md:text-7xl">
             Dawn
           </h1>
           <p className="animate-rise-delay mt-5 max-w-xl text-lg text-[var(--color-mist)] md:text-xl">
-            Sleep early. Put the phone down. Wake up. Gym. Read. Quran. Track
-            the streak with a friend on Discord.
+            Wake early. Check in once. See what to do next — habits, reminders,
+            and friends on Discord.
           </p>
-          <div className="mt-10 flex flex-wrap gap-3">
+          <div className="mt-10 flex flex-wrap items-center gap-3">
             <Link
               href="/login"
               className="rounded-full bg-[var(--color-dawn)] px-7 py-3.5 text-sm font-semibold text-[var(--color-night)] transition hover:bg-[#f7c46e]"
             >
-              Continue with Discord
+              Get started
             </Link>
+            <p className="text-sm text-[var(--color-mist)]">
+              Demo in 10 seconds · Discord optional
+            </p>
           </div>
+          <ul className="mt-14 grid max-w-2xl gap-4 text-sm text-[var(--color-cloud)] sm:grid-cols-3">
+            <li>
+              <p className="font-medium text-white">1. Wake</p>
+              <p className="mt-1 text-[var(--color-mist)]">
+                Hold to log you’re up in your morning window.
+              </p>
+            </li>
+            <li>
+              <p className="font-medium text-white">2. Plan</p>
+              <p className="mt-1 text-[var(--color-mist)]">
+                Add a reminder or a couple of tiny tasks.
+              </p>
+            </li>
+            <li>
+              <p className="font-medium text-white">3. Check in</p>
+              <p className="mt-1 text-[var(--color-mist)]">
+                Mark habits when their time opens — streaks stay honest.
+              </p>
+            </li>
+          </ul>
         </section>
       </div>
     </main>

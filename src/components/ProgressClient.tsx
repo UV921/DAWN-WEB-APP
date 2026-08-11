@@ -35,17 +35,22 @@ export function ProgressClient() {
       <div className="app-shell relative z-10 mx-auto max-w-5xl">
         <AppNav active="progress" />
         <div className="mt-10 animate-rise">
-          <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
-            Progress
-          </p>
-          <h1 className="font-display mt-2 text-4xl text-white md:text-5xl">
-            Your grid
-          </h1>
-          <p className="mt-3 max-w-lg text-[var(--color-mist)]">
-            Contribution graph and wake times — the long view of consistency.
+          <p className="ui-kicker">Progress</p>
+          <h1 className="ui-title mt-2">Your consistency</h1>
+          <p className="ui-sub mt-3">
+            Heatmap and wake times — proof of the days you showed up. Empty days
+            mean you haven’t checked in yet.
           </p>
           {loading ? (
-            <p className="mt-12 text-[var(--color-mist)]">Loading charts…</p>
+            <p className="mt-12 text-[var(--color-mist)]">Loading your charts…</p>
+          ) : logs.length === 0 ? (
+            <p className="mt-12 max-w-md text-[var(--color-mist)]">
+              No check-ins yet. Complete a morning on{" "}
+              <a href="/dashboard" className="ui-btn-text">
+                Today
+              </a>{" "}
+              and your grid will fill in here.
+            </p>
           ) : (
             <div className="mt-8">
               <HabitCharts logs={logs} habits={habits} />

@@ -184,15 +184,11 @@ export function CircleClient() {
       <div className="app-shell relative z-10 mx-auto max-w-5xl">
         <AppNav active="circle" />
         <div className="mt-6 animate-rise sm:mt-10">
-          <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
-            Accountability
-          </p>
-          <h1 className="font-display mt-2 text-3xl text-white sm:text-4xl md:text-5xl">
-            Friend circle
-          </h1>
-          <p className="mt-3 max-w-xl text-sm text-[var(--color-mist)] sm:text-base">
-            Wake with people who notice. Share a code, see who’s up, nudge who
-            isn’t — Discord optional.
+          <p className="ui-kicker">Accountability</p>
+          <h1 className="ui-title mt-2">Friend circle</h1>
+          <p className="ui-sub mt-3">
+            Create or join a circle, share the code, then check in on Today —
+            friends see who’s up. Discord nudges are optional.
           </p>
 
           {(message || error) && (
@@ -326,9 +322,13 @@ export function CircleClient() {
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Loading circles…</p>
           ) : empty ? (
-            <p className="mt-12 text-[var(--color-mist)]">
-              No circles yet — create one or join with a code above.
-            </p>
+            <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-8 text-center">
+              <p className="font-display text-2xl text-white">No circle yet</p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-mist)]">
+                Create one above and share the invite code, or paste a friend’s
+                code to join. Once you’re in, today’s board shows who’s awake.
+              </p>
+            </div>
           ) : (
             <div className="mt-12 space-y-10">
               {circles.map((circle) => {

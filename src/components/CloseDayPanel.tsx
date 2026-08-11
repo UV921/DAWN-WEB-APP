@@ -118,15 +118,14 @@ export function CloseDayPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-6">
-      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-dawn)]">
-        Close the day
-      </p>
-      <h2 className="font-display mt-2 text-2xl text-white md:text-3xl">
+    <section className="ui-section">
+      <p className="ui-kicker">Close the day</p>
+      <h2 className="ui-title mt-2 text-[1.75rem] sm:text-3xl">
         Set tomorrow before you sleep
       </h2>
-      <p className="mt-2 text-sm text-[var(--color-mist)]">
-        Sleep target {sleepGoal}. Tonight’s plan is tomorrow’s morning.
+      <p className="ui-sub mt-2">
+        Sleep target {sleepGoal}. What you write here shows up on Tomorrow’s
+        morning screen.
       </p>
 
       {aiReady ? (
@@ -234,13 +233,20 @@ export function CloseDayPanel({
       </div>
       {msg ? (
         <p
-          className={`mt-3 text-sm ${saved || tip ? "text-[var(--color-leaf)]" : "text-[var(--color-ember)]"}`}
+          className={`mt-3 text-sm ${
+            saved
+              ? "text-[var(--color-leaf)]"
+              : msg.toLowerCase().includes("could") ||
+                  msg.toLowerCase().includes("fail")
+                ? "text-red-300"
+                : "text-[var(--color-leaf)]"
+          }`}
         >
           {msg}
         </p>
       ) : (
         <p className="mt-3 text-xs text-[var(--color-mist)]">
-          <FlowSteps steps={["plan", "sleep", "wake"]} />
+          Flow: <FlowSteps steps={["plan tomorrow", "sleep", "wake"]} />
         </p>
       )}
     </section>

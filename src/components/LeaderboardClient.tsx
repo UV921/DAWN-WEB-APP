@@ -103,16 +103,14 @@ export function LeaderboardClient() {
       <div className="app-shell relative z-10 mx-auto max-w-3xl">
         <AppNav active="leaderboard" />
         <div className="mt-6 animate-rise sm:mt-10">
-          <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
-            Compete
-          </p>
-          <h1 className="font-display mt-2 text-3xl text-white sm:text-4xl md:text-5xl">
-            Leaderboard
-          </h1>
-          <p className="mt-3 max-w-lg text-sm text-[var(--color-mist)] sm:text-base">
+          <p className="ui-kicker">Compete</p>
+          <h1 className="ui-title mt-2">Who showed up</h1>
+          <p className="ui-sub mt-3">
             {scope === "discord"
-              ? "Close circle — everyone who logged into Dawn with Discord on your Dawn server."
-              : "Real rankings from wake logs, open streaks, and XP."}{" "}
+              ? "People on your Discord server who use Dawn — ranked by early wakes and streaks."
+              : scope === "circle"
+                ? "Your friend circle only. Invite people from Friends if this looks empty."
+                : "Everyone on Dawn — ranked by early wakes, open streaks, and XP."}{" "}
             {today ? `Updated for ${today}.` : ""}
           </p>
 

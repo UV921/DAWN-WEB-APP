@@ -58,35 +58,36 @@ export function SettingsClient() {
 
   return (
     <main className="dawn-bg noise relative min-h-screen">
-      <div className="app-shell relative z-10 mx-auto max-w-3xl">
+      <div className="app-shell relative z-10 mx-auto max-w-2xl">
         <AppNav active="settings" />
-        <div className="mt-6 animate-rise sm:mt-10">
-          <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
-            Settings
-          </p>
-          <h1 className="font-display mt-2 text-3xl text-white sm:text-4xl md:text-5xl">
-            Your morning
-          </h1>
-          <p className="mt-3 max-w-lg text-sm text-[var(--color-mist)] sm:text-base">
-            Set when Dawn asks if you’re awake. Then reminders. Then today’s
-            tasks. Change name and Discord separately.
+        <div className="mt-8 animate-rise sm:mt-12">
+          <p className="ui-kicker">Settings</p>
+          <h1 className="ui-title mt-3">Make Dawn fit you</h1>
+          <p className="ui-sub mt-3">
+            Wake time first — then habits, reminders, Discord, and your mission.
+            Each tab has one job.
           </p>
 
-          <div className="mt-6 -mx-1 flex gap-1 overflow-x-auto pb-1 sm:mt-8">
+          <div
+            role="tablist"
+            className="mt-8 flex gap-1 overflow-x-auto"
+          >
             {TABS.map((t) => (
               <button
                 key={t.id}
                 type="button"
+                role="tab"
+                aria-selected={tab === t.id}
                 onClick={() => {
                   setTab(t.id);
                   const url = new URL(window.location.href);
                   url.searchParams.set("tab", t.id);
                   window.history.replaceState({}, "", url.toString());
                 }}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
+                className={`shrink-0 px-3 py-2 text-sm transition ${
                   tab === t.id
-                    ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                    : "border border-white/15 text-[var(--color-mist)] hover:text-white"
+                    ? "text-[var(--color-dawn)]"
+                    : "text-[var(--color-mist)] hover:text-white"
                 }`}
               >
                 {t.label}
@@ -148,7 +149,7 @@ export function SettingsClient() {
             ) : null}
           </div>
 
-          <div className="mt-12 border-t border-white/10 pt-8">
+          <div className="mt-12 pt-2">
             <button
               type="button"
               onClick={() => {
@@ -160,7 +161,7 @@ export function SettingsClient() {
                   window.location.href = "/onboarding";
                 });
               }}
-              className="text-sm text-[var(--color-mist)] underline-offset-2 hover:text-white hover:underline"
+              className="ui-btn-text text-sm"
             >
               Redo first-time setup
             </button>

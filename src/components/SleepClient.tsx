@@ -50,14 +50,11 @@ export function SleepClient() {
         <AppNav active="sleep" />
         <div className="mt-6 animate-rise space-y-8 sm:mt-10 sm:space-y-10">
           <div>
-            <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-dawn)]">
-              Sleep
-            </p>
-            <h1 className="font-display mt-2 text-3xl text-white sm:text-4xl md:text-5xl">
-              Tonight sets tomorrow
-            </h1>
-            <p className="mt-3 max-w-lg text-sm text-[var(--color-mist)] sm:text-base">
-              Close the day here — plan the morning, then sleep. Scores below.
+            <p className="ui-kicker">Sleep</p>
+            <h1 className="ui-title mt-2">Tonight sets tomorrow</h1>
+            <p className="ui-sub mt-3">
+              Write tomorrow’s wake goal and one sentence for the morning, then
+              log bedtime. Scores below show how you’ve been sleeping.
             </p>
           </div>
 

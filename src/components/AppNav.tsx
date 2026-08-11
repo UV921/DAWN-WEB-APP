@@ -10,7 +10,7 @@ const LINKS = [
   { href: "/progress", key: "progress", label: "Progress", short: "Stats" },
   { href: "/leaderboard", key: "leaderboard", label: "Board", short: "Board" },
   { href: "/circle", key: "circle", label: "Friends", short: "Friends" },
-  { href: "/settings", key: "settings", label: "Settings", short: "Set" },
+  { href: "/settings", key: "settings", label: "Settings", short: "More" },
 ] as const;
 
 export type NavKey = (typeof LINKS)[number]["key"];
@@ -25,7 +25,7 @@ export function AppNav({ active }: { active: NavKey }) {
   return (
     <>
       {/* Desktop / tablet top nav */}
-      <header className="hidden items-center justify-between border-b border-white/10 pb-5 md:flex">
+      <header className="hidden items-center justify-between pb-5 md:flex">
         <div className="flex items-center gap-6 lg:gap-8">
           <Link
             href="/dashboard"
@@ -69,7 +69,7 @@ export function AppNav({ active }: { active: NavKey }) {
       </header>
 
       {/* Mobile top brand bar */}
-      <header className="flex items-center justify-between border-b border-white/10 pb-4 md:hidden">
+      <header className="flex items-center justify-between pb-4 md:hidden">
         <Link
           href="/dashboard"
           className="font-display text-xl tracking-tight text-[var(--color-dawn)]"

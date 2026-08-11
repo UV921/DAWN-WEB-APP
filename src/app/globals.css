@@ -233,3 +233,218 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* —— Classic Dawn UI primitives —— */
+.ui-kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-dawn);
+}
+
+.ui-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.15;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.ui-sub {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--color-mist);
+  max-width: 28rem;
+}
+
+.ui-section {
+  padding-top: 0.25rem;
+}
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.ui-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ui-btn-primary {
+  background: var(--color-dawn);
+  color: var(--color-night);
+  border: 1px solid transparent;
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ui-btn-ghost {
+  background: transparent;
+  color: var(--color-cloud);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.ui-btn-ghost:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.ui-btn-text {
+  background: transparent;
+  border: none;
+  color: var(--color-mist);
+  min-height: auto;
+  padding: 0.25rem 0;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(139, 163, 184, 0.35);
+}
+
+.ui-btn-text:hover:not(:disabled) {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+.ui-field {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.8rem 1rem;
+  color: #fff;
+  outline: none;
+}
+
+.ui-field:focus {
+  border-color: color-mix(in oklab, var(--color-dawn) 70%, transparent);
+}
+
+.ui-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 1rem 1.1rem;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ui-row:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ui-row.is-done {
+  border-color: color-mix(in oklab, var(--color-dawn) 45%, transparent);
+  background: color-mix(in oklab, var(--color-dawn) 8%, transparent);
+}
+
+.ui-row.is-locked {
+  opacity: 0.55;
+}
+
+.ui-check {
+  display: flex;
+  height: 1.35rem;
+  width: 1.35rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.65rem;
+  color: transparent;
+}
+
+.ui-check.is-on {
+  border-color: var(--color-dawn);
+  background: var(--color-dawn);
+  color: var(--color-night);
+}
+
+.ui-stat {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  color: var(--color-dawn);
+}
+
+/* Card boxes — consistent panels for Today stats / challenge */
+.ui-card {
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 1rem 1.1rem;
+}
+
+.ui-card-compact {
+  padding: 0.85rem 0.75rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .ui-card {
+    padding: 1.15rem 1.25rem;
+  }
+  .ui-card-compact {
+    padding: 1rem 0.9rem;
+  }
+}
+
+.ui-card-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+}
+
+.ui-section-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.ui-section-help {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-mist);
+}
+
+/* Soft pulse for live “saving / loading” hints */
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ui-live {
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-live {
+    animation: none;
+  }
+}

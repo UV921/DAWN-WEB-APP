@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  /// Local: sqlite. For Vercel/Railway production, change to "postgresql" (see DEPLOY.md).
-  provider = "sqlite"
+  /// Neon Postgres (local + production). See DEPLOY.md.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
