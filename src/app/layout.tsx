@@ -20,7 +20,7 @@ const sora = Sora({
 export const metadata: Metadata = {
   title: "Dawn — Morning habit accountability",
   description:
-    "Wake early, sleep early, gym, reading, Quran — streaks, graphs, and Discord friend accountability.",
+    "Wake early, sleep early, gym, reading — streaks, graphs, and Discord friend accountability.",
   manifest: "/manifest.webmanifest",
   applicationName: "Dawn",
   appleWebApp: {

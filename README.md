@@ -9,7 +9,7 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 - Wake early  
 - Gym  
 - Reading  
-- Quran  
+- Custom habits you add 
 
 ## Features
 
