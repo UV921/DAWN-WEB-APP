@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  /// Local: sqlite. For Vercel/Railway production, change to "postgresql" (see DEPLOY.md).
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  discordId     String?   @unique
+  wakeGoal      String    @default("06:00")
+  sleepGoal     String    @default("23:00")
+  timezone      String    @default("Asia/Kolkata")
+  /// channel | dm | both | off — default for new reminders
+  discordNotifyDefault String  @default("channel")
+  /// Personal Discord channel for reminder pings (optional)
+  discordChannelId     String?
+  onboardingDone       Boolean  @default(false)
+  /// JSON string of onboarding answers
+  onboardingJson       String   @default("{}")
+  focusHabitKey        String   @default("wakeEarly")
+  identityLine         String   @default("")
+  whyLine              String   @default("")
+  /// JSON: deep personal interview answers + generated brief
+  lifeJson             String   @default("{}")
+  xp                   Int      @default(0)
+  level                Int      @default(1)
+  totalEarlyWakes      Int      @default(0)
+  bestWakeStreak       Int      @default(0)
+  /// Days in a row with nightly review done + ≥50% todos
+  consistencyStreak    Int      @default(0)
+  bestConsistencyStreak Int     @default(0)
+  /// YYYY-MM-DD — start of current wake challenge
+  challengeStartDate   String?
+  /// Length of current challenge in days (user-selected)
+  challengeDays        Int      @default(7)
+  /// Spoken commitment shown every morning
+  pledgeText           String   @default("")
+  /// Last calendar day the user opened the app (habit of opening Dawn)
+  lastOpenDate         String?
+  openStreak           Int      @default(0)
+  bestOpenStreak       Int      @default(0)
+  /// ISO timestamp of most recent app open (any source)
+  lastOpenAt           String?
+  /// First open HH:MM today (local)
+  firstOpenTimeToday   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  logs     HabitLog[]
+  habits   Habit[]
+  goals    Goal[]
+  reminders Reminder[]
+  memberships CircleMember[]
+  ownedCircles AccountabilityCircle[] @relation("CircleOwner")
+  trackedIn TrackedMember[]
+  dayPlans DayPlan[]
+  todos Todo[]
+  appOpens AppOpen[]
+  missions Mission[]
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String   @default("")
+  /// Optional HH:MM target
+  targetTime  String?
+  /// wake | sleep | custom
+  kind        String   @default("custom")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  @@index([userId, active])
+}
+
+model Reminder {
+  id               String   @id @default(cuid())
+  userId           String
+  goalId           String?
+  title            String
+  message          String   @default("")
+  /// HH:MM local
+  time             String
+  enabled          Boolean  @default(true)
+  notifyBrowser    Boolean  @default(true)
+  notifyDiscord    Boolean  @default(false)
+  /// channel | dm | both
+  discordTarget    String   @default("channel")
+  /// Optional override channel; else user.discordChannelId / circle / env
+  discordChannelId String?
+  /// Prevents double-fire: "YYYY-MM-DD-HH:MM"
+  lastFiredKey     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal Goal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, enabled])
+  @@index([enabled, time])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  userId      String
+  key         String
+  label       String
+  description String   @default("")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  /// Optional HH:MM — when empty, defaults from wake/sleep goals + habit type
+  windowStart String?
+  windowEnd   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId, active])
+}
+
+model HabitLog {
+  id         String   @id @default(cuid())
+  userId     String
+  date       String
+  wakeTime   String?
+  bedtime    String?
+  /// JSON map of habitKey -> boolean
+  checks     String   @default("{}")
+  sleepEarly Boolean  @default(false)
+  noPhone    Boolean  @default(false)
+  wakeEarly  Boolean  @default(false)
+  gym        Boolean  @default(false)
+  reading    Boolean  @default(false)
+  quran      Boolean  @default(false)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model AccountabilityCircle {
+  id               String   @id @default(cuid())
+  name             String
+  inviteCode       String   @unique
+  ownerId          String
+  discordChannelId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  owner   User           @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members CircleMember[]
+}
+
+model CircleMember {
+  id       String   @id @default(cuid())
+  circleId String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  circle AccountabilityCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([circleId, userId])
+}
+
+/// Discord channel used as a shared morning board
+model TrackedChannel {
+  id               String   @id @default(cuid())
+  channelId        String   @unique
+  guildId          String
+  name             String   @default("Morning board")
+  /// HH:MM — when to DM every member "are you awake?"
+  pingTime         String   @default("06:00")
+  /// HH:MM — when to post public leaderboard
+  leaderboardTime  String   @default("08:00")
+  /// HH:MM — nightly "did you finish todos?" DM
+  reviewTime       String   @default("21:00")
+  /// HH:MM — post consistency report (on track vs needs focus)
+  reportTime       String   @default("21:30")
+  lastPingDate     String?
+  lastLeaderboardDate String?
+  lastReviewDate   String?
+  lastReportDate   String?
+  createdAt        DateTime @default(now())
+
+  members TrackedMember[]
+
+  @@index([guildId])
+}
+
+model TrackedMember {
+  id               String   @id @default(cuid())
+  trackedChannelId String
+  userId           String
+  joinedAt         DateTime @default(now())
+  /// Last date we DMed a wake ping
+  lastPingDate     String?
+  /// true if they tapped I'm awake today
+  respondedDate    String?
+  /// Last date we sent wind-down / tomorrow plan DM
+  lastWindDownDate String?
+  /// Last date we sent nightly task review DM
+  lastReviewDate   String?
+
+  channel TrackedChannel @relation(fields: [trackedChannelId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trackedChannelId, userId])
+}
+
+/// Plan for a specific calendar day (set the night before)
+model DayPlan {
+  id         String   @id @default(cuid())
+  userId     String
+  date       String
+  wakeGoal   String?
+  goalText   String   @default("")
+  /// Snapshot after nightly review
+  todosDone  Int      @default(0)
+  todosTotal Int      @default(0)
+  reviewed   Boolean  @default(false)
+  /// Morning series after wake: none | reminders | todos | done
+  morningFlow String  @default("none")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Todo {
+  id        String   @id @default(cuid())
+  userId    String
+  /// Day this todo is for (YYYY-MM-DD)
+  date      String
+  text      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+/// Each time the user opens / foregrounds Dawn (visibility, PWA, motion)
+model AppOpen {
+  id         String   @id @default(cuid())
+  userId     String
+  date       String
+  /// Local HH:MM when opened
+  time       String
+  /// visibility | focus | cold | motion | resume
+  source     String   @default("visibility")
+  standalone Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, createdAt])
+}
+
+/// User-built 7-day mission (custom habits + task templates — not only AI defaults)
+model Mission {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String   @default("7-day mission")
+  startDate       String
+  days            Int      @default(7)
+  active          Boolean  @default(true)
+  /// JSON array of habit keys to track for this mission
+  habitKeys       String   @default("[]")
+  /// JSON array of daily task template strings
+  taskTemplates   String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+}

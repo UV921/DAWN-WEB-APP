@@ -1,0 +1,11 @@
+# Railway service for the Discord bot (always-on).
+# Web app stays on Vercel; this only runs: npm run bot
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npx prisma generate"
+
+[deploy]
+startCommand = "npx tsx bot/index.ts"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
