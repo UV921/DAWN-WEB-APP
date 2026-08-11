@@ -15,6 +15,20 @@ async function ensureDemoUser(email: string, name: string) {
   });
 }
 
+/** Avoid email unique collisions when linking Discord. */
+async function uniqueEmailOrKeep(
+  nextEmail: string,
+  userId: string,
+  currentEmail: string | null
+) {
+  const taken = await prisma.user.findUnique({
+    where: { email: nextEmail },
+    select: { id: true },
+  });
+  if (!taken || taken.id === userId) return nextEmail;
+  return currentEmail ?? nextEmail;
+}
+
 export const authOptions: NextAuthOptions = {
   // No PrismaAdapter — Credentials + JWT is more reliable for demo login.
   // Discord users are upserted in the signIn callback.
@@ -64,22 +78,60 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "discord" && profile && "id" in profile) {
         const discordId = String((profile as { id: string }).id);
         const email =
-          user.email ||
-          `${discordId}@users.noreply.discord.local`;
-        const dbUser = await prisma.user.upsert({
-          where: { email },
-          create: {
-            email,
-            name: user.name,
-            image: user.image,
-            discordId,
-          },
-          update: {
-            name: user.name,
-            image: user.image,
-            discordId,
-          },
-        });
+          user.email || `${discordId}@users.noreply.discord.local`;
+
+        // Prefer discordId (unique). Upsert-by-email alone fails when the same
+        // Discord account returns a different email than an older row.
+        let dbUser = await prisma.user.findUnique({ where: { discordId } });
+
+        if (dbUser) {
+          dbUser = await prisma.user.update({
+            where: { id: dbUser.id },
+            data: {
+              name: user.name ?? dbUser.name,
+              image: user.image ?? dbUser.image,
+              // Keep a real Discord email when we get one; don't clobber with noreply
+              ...(user.email && user.email !== dbUser.email
+                ? {
+                    email: await uniqueEmailOrKeep(
+                      user.email,
+                      dbUser.id,
+                      dbUser.email
+                    ),
+                  }
+                : {}),
+            },
+          });
+        } else {
+          const byEmail = await prisma.user.findUnique({ where: { email } });
+          if (byEmail) {
+            if (byEmail.discordId && byEmail.discordId !== discordId) {
+              console.error("Email already linked to another Discord id", {
+                email,
+                discordId,
+              });
+              return false;
+            }
+            dbUser = await prisma.user.update({
+              where: { id: byEmail.id },
+              data: {
+                name: user.name ?? byEmail.name,
+                image: user.image ?? byEmail.image,
+                discordId,
+              },
+            });
+          } else {
+            dbUser = await prisma.user.create({
+              data: {
+                email,
+                name: user.name,
+                image: user.image,
+                discordId,
+              },
+            });
+          }
+        }
+
         user.id = dbUser.id;
       }
       return true;
