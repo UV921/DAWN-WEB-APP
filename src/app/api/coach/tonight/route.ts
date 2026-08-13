@@ -8,6 +8,7 @@ import {
   isAiConfigured,
   aiProviderLabel,
 } from "@/lib/ai-coach";
+import { parseLifeJson } from "@/lib/personal-life";
 
 /** Meaningful AI: suggest tomorrow from real wake/habit history. */
 export async function GET() {
@@ -43,7 +44,7 @@ export async function POST() {
     }),
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { whyLine: true, name: true },
+      select: { whyLine: true, name: true, lifeJson: true },
     }),
   ]);
 
@@ -52,6 +53,7 @@ export async function POST() {
     checks: mergeLogChecks(l),
   }));
 
+  const life = parseLifeJson(user?.lifeJson);
   const result = await generateTonightPlan({
     logs,
     today: formatLocalDate(new Date()),
@@ -59,6 +61,8 @@ export async function POST() {
     wakeGoal: session.user.wakeGoal || "06:00",
     name: user?.name || session.user.name,
     whyLine: user?.whyLine,
+    lifeAnswers: life.answers,
+    lifeBrief: life.brief,
   });
 
   if (!result.ok) {

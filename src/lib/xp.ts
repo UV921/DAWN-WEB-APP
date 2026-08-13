@@ -44,6 +44,8 @@ export function awardCheckInXp(opts: {
   habitsNewlyDone: number;
   focusDone: boolean;
   allDone: boolean;
+  nightClosed?: boolean;
+  loopComplete?: boolean;
 }): { xp: number; labels: string[] } {
   let xp = 0;
   const labels: string[] = [];
@@ -70,6 +72,14 @@ export function awardCheckInXp(opts: {
   if (opts.allDone) {
     xp += 30;
     labels.push("+30 full morning");
+  }
+  if (opts.nightClosed) {
+    xp += 22;
+    labels.push("+22 night closed");
+  }
+  if (opts.loopComplete) {
+    xp += 40;
+    labels.push("+40 daily loop");
   }
   return { xp, labels };
 }

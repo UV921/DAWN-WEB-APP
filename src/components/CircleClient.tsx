@@ -169,8 +169,11 @@ export function CircleClient() {
 
   if (!session?.user) {
     return (
-      <main className="dawn-bg flex min-h-screen items-center justify-center text-[var(--color-mist)]">
-        Loading…
+      <main className="dawn-bg min-h-screen">
+        <div className="app-shell mx-auto max-w-5xl">
+          <AppNav active="circle" />
+          <p className="mt-10 text-sm text-[var(--color-mist)]">Loading friends…</p>
+        </div>
       </main>
     );
   }

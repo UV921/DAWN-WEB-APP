@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatLocalDate, mergeLogChecks } from "@/lib/habits";
 import { generateAiCoach, isAiConfigured, aiProviderLabel } from "@/lib/ai-coach";
+import { parseLifeJson } from "@/lib/personal-life";
 
 export async function GET() {
   return NextResponse.json({
@@ -32,21 +33,31 @@ export async function POST() {
   const since = formatLocalDate(
     new Date(Date.now() - 21 * 24 * 60 * 60 * 1000)
   );
-  const rawLogs = await prisma.habitLog.findMany({
-    where: { userId: session.user.id, date: { gte: since } },
-    orderBy: { date: "asc" },
-  });
+  const [rawLogs, user] = await Promise.all([
+    prisma.habitLog.findMany({
+      where: { userId: session.user.id, date: { gte: since } },
+      orderBy: { date: "asc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { whyLine: true, lifeJson: true, name: true },
+    }),
+  ]);
   const logs = rawLogs.map((l) => ({
     ...l,
     checks: mergeLogChecks(l),
   }));
+  const life = parseLifeJson(user?.lifeJson);
 
   const result = await generateAiCoach({
     logs,
     today: formatLocalDate(new Date()),
     sleepGoal: session.user.sleepGoal || "23:00",
     wakeGoal: session.user.wakeGoal || "06:00",
-    name: session.user.name,
+    name: user?.name || session.user.name,
+    whyLine: user?.whyLine,
+    lifeAnswers: life.answers,
+    lifeBrief: life.brief,
   });
 
   if (!result.ok) {

@@ -69,6 +69,9 @@ function buildPrompt(opts: {
   sleepGoal: string;
   wakeGoal: string;
   name?: string | null;
+  whyLine?: string | null;
+  lifeAnswers?: Record<string, string>;
+  lifeBrief?: { headline?: string; todayAngle?: string; nightAngle?: string; focus?: string; avoid?: string } | null;
 }) {
   const todayLog = opts.logs.find((l) => l.date === opts.today);
   const day = buildDaySleepReport(
@@ -86,14 +89,19 @@ function buildPrompt(opts: {
   const local = buildCoachPlan(opts.logs, opts.sleepGoal, opts.wakeGoal);
   const idealBed = idealBedtimeForWake(opts.wakeGoal, 8);
 
-  const system = `You are Dawn, a direct Muslim-friendly morning accountability coach.
-Goal: help the user SLEEP EARLIER and WAKE EARLIER with almost zero friction.
-Be specific, realistic, kind but firm. No medical diagnosis. No guilt spiral.
+  const system = `You are Dawn, a high-level morning architect.
+You already know this person's life (work, home, nights, why they care). Use that. Do not give generic advice.
+Goal: SLEEP EARLIER and WAKE EARLIER with almost zero friction.
+Be specific, realistic, kind but firm. Prescribe actions, don't ask permission.
+No medical diagnosis. No guilt spiral. No religion unless they brought it up.
 Use short sentences. Prefer concrete times (HH:MM).
 Return ONLY valid JSON matching the schema — no markdown.`;
 
   const userPayload = {
     name: opts.name || "friend",
+    why: opts.whyLine || "",
+    life: opts.lifeAnswers || {},
+    brief: opts.lifeBrief || null,
     today: opts.today,
     goals: {
       sleepGoal: opts.sleepGoal,
@@ -248,6 +256,9 @@ export async function generateAiCoach(opts: {
   sleepGoal: string;
   wakeGoal: string;
   name?: string | null;
+  whyLine?: string | null;
+  lifeAnswers?: Record<string, string>;
+  lifeBrief?: { headline?: string; todayAngle?: string; nightAngle?: string; focus?: string; avoid?: string } | null;
 }): Promise<
   | { ok: true; coach: AiCoachResult; provider: string }
   | { ok: false; error: string }
@@ -372,6 +383,8 @@ export async function generateTonightPlan(opts: {
   wakeGoal: string;
   name?: string | null;
   whyLine?: string | null;
+  lifeAnswers?: Record<string, string>;
+  lifeBrief?: { headline?: string; todayAngle?: string; nightAngle?: string; focus?: string; avoid?: string } | null;
 }): Promise<
   | { ok: true; plan: TonightPlan; provider: string }
   | { ok: false; error: string }
@@ -383,13 +396,15 @@ export async function generateTonightPlan(opts: {
     return l.bedtime > opts.sleepGoal;
   }).length;
 
-  const system = `You are Dawn. Use ONLY the user's real habit log to suggest tomorrow.
-Return JSON: { "tip": "one sentence rooted in their pattern", "goalText": "one morning line", "todos": ["up to 4 tiny tasks"], "bedBy": "HH:MM optional" }.
-No fluff. No "Built for you". Be concrete with times when useful.`;
+  const system = `You are Dawn. Use the user's life interview AND their habit log to prescribe tomorrow.
+Return JSON: { "tip": "one sentence rooted in their pattern + life", "goalText": "one morning line", "todos": ["up to 4 tiny tasks"], "bedBy": "HH:MM optional" }.
+No fluff. No "Built for you". Be concrete with times. Respect their avoid list.`;
 
   const user = JSON.stringify({
     name: opts.name || "friend",
     why: opts.whyLine || "",
+    life: opts.lifeAnswers || {},
+    brief: opts.lifeBrief || null,
     goals: { sleepGoal: opts.sleepGoal, wakeGoal: opts.wakeGoal },
     last7Days: week,
     stats: {

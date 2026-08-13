@@ -4,13 +4,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { HabitDef, HabitLogLike } from "@/lib/habits";
 import type { DayMode } from "@/lib/daily-loop";
-import { formatDuration } from "@/lib/habit-windows";
+import {
+  enrichHabitsWithWindows,
+  formatDuration,
+  isInWindow,
+  nowMins,
+  defaultWindowForKey,
+} from "@/lib/habit-windows";
 import { WakeHit } from "@/components/WakeHit";
 import { MorningRitual } from "@/components/MorningRitual";
-import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { CloseDayPanel } from "@/components/CloseDayPanel";
 import { TodayOverview } from "@/components/TodayOverview";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
+import { MorningPulseCard } from "@/components/MorningPulseCard";
+import { DailyLoop } from "@/components/DailyLoop";
+import { TodayTasks, type TodayTodo } from "@/components/TodayTasks";
+import {
+  buildMorningPulse,
+  type MorningPulse,
+  type WeekPulse,
+} from "@/lib/morning-pulse";
 
 type Streaks = Record<string, { current: number; longest: number }>;
 
@@ -38,7 +51,10 @@ type Profile = {
   openStreak?: number;
   pledgeText?: string;
   celebrate: "big" | "chill";
+  todayAngle?: string;
 };
+
+type Todo = TodayTodo;
 
 type Challenge = {
   active: boolean;
@@ -59,8 +75,6 @@ type Hit = {
   title: string;
   subtitle?: string;
 };
-
-type Todo = { id: string; text: string; done: boolean };
 
 type Props = {
   wakeGoal: string;
@@ -86,9 +100,8 @@ function friendlyDate(iso: string) {
   if (!iso) return "";
   try {
     const [y, m, d] = iso.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    return dt.toLocaleDateString(undefined, {
-      weekday: "long",
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+      weekday: "short",
       month: "short",
       day: "numeric",
     });
@@ -121,35 +134,39 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     wakeGoal?: string | null;
   } | null>(null);
   const [todayTodos, setTodayTodos] = useState<Todo[]>([]);
+  const [reminders, setReminders] = useState<
+    { id: string; title: string; time: string; enabled: boolean }[]
+  >([]);
   const [notifyReady, setNotifyReady] = useState(false);
-  const [missionKeys, setMissionKeys] = useState<string[]>([]);
-  const [morningFlow, setMorningFlow] = useState<
-    "none" | "reminders" | "todos" | "done"
-  >("none");
-  const [showAfterWake, setShowAfterWake] = useState(false);
+  const [pulse, setPulse] = useState<MorningPulse | null>(null);
+  const [pulseAi, setPulseAi] = useState(false);
+  const [, setTick] = useState(0);
 
   const checksRef = useRef(checks);
   const wakeRef = useRef(wakeTime);
   const bedRef = useRef(bedtime);
   const todayRef = useRef(today);
   const defsRef = useRef(habitDefs);
-
   checksRef.current = checks;
   wakeRef.current = wakeTime;
   bedRef.current = bedtime;
   todayRef.current = today;
   defsRef.current = habitDefs;
 
+  const applyHabits = useCallback(
+    (defs: HabitRow[]) => {
+      setHabitDefs(
+        enrichHabitsWithWindows(defs, wakeGoal, sleepGoal) as HabitRow[]
+      );
+    },
+    [wakeGoal, sleepGoal]
+  );
+
   const load = useCallback(async () => {
     try {
-      const [res, missionRes] = await Promise.all([
-        fetch("/api/habits?days=400"),
-        fetch("/api/mission"),
-      ]);
+      const res = await fetch("/api/habits?days=42&lite=1");
       if (!res.ok) {
-        setLoadError(
-          "Couldn’t load today. Check your connection, then try again."
-        );
+        setLoadError("Couldn’t load today. Check your connection.");
         setLoading(false);
         return;
       }
@@ -158,37 +175,70 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
       setStreaks(data.streaks);
-      setHabitDefs(defs);
+      applyHabits(defs);
       setDayMode(data.dayMode || "day");
       setChallenge(data.challenge || null);
       setTodayPlan(data.todayPlan || null);
       setTodayTodos(data.todayTodos || []);
       if (data.profile) setProfile(data.profile as Profile);
-
-      if (missionRes.ok) {
-        const m = await missionRes.json();
-        const flow = (m.morningFlow || "none") as
-          | "none"
-          | "reminders"
-          | "todos"
-          | "done";
-        setMorningFlow(flow);
-        setMissionKeys(
-          Array.isArray(m.mission?.habitKeys) ? m.mission.habitKeys : []
-        );
-        if (m.todos?.length) setTodayTodos(m.todos);
-        if (
-          data.todayLog?.wakeTime &&
-          (flow === "reminders" || flow === "todos")
-        ) {
-          setShowAfterWake(true);
-        } else if (flow === "done" || flow === "none") {
-          setShowAfterWake(false);
-        }
-      }
-
+      const todos = (data.todayTodos || []) as Todo[];
+      const tlog = data.todayLog as HabitLogLike | undefined;
+      const nextChecks = tlog
+        ? { ...emptyChecks(defs), ...(tlog.checks || {}) }
+        : emptyChecks(defs);
+      const localPulse = buildMorningPulse({
+        week: (data.weekPulse as WeekPulse) || {
+          days: 0,
+          wakeOnTime: 0,
+          wakeLogged: 0,
+          nightsClosed: 0,
+          habitHits: 0,
+          habitSlots: 0,
+        },
+        todayWake: Boolean(tlog?.wakeTime),
+        habitsDone: defs.filter((h) => nextChecks[h.key]).length,
+        habitsTotal: defs.length || 1,
+        tasksDone: todos.filter((x) => x.done).length,
+        tasksTotal: todos.length,
+        nightClosed: Boolean(tlog?.bedtime),
+        streak: data.profile?.earlyStreak || 0,
+        runDay: data.challenge?.active ? data.challenge.day : undefined,
+        runTotal: data.challenge?.total,
+      });
+      setPulse(localPulse);
+      setPulseAi(false);
+      void fetch("/api/coach/pulse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          week: data.weekPulse,
+          todayWake: Boolean(tlog?.wakeTime),
+          habitsDone: defs.filter((h) => nextChecks[h.key]).length,
+          habitsTotal: defs.length || 1,
+          tasksDone: todos.filter((x) => x.done).length,
+          tasksTotal: todos.length,
+          nightClosed: Boolean(tlog?.bedtime),
+          streak: data.profile?.earlyStreak || 0,
+          runDay: data.challenge?.active ? data.challenge.day : undefined,
+          runTotal: data.challenge?.total,
+        }),
+      })
+        .then((r) => r.json())
+        .then((d: { pulse?: MorningPulse; usedAi?: boolean }) => {
+          if (d.pulse?.headline) {
+            setPulse(d.pulse);
+            setPulseAi(Boolean(d.usedAi));
+          }
+        })
+        .catch(() => undefined);
+      void fetch("/api/reminders")
+        .then((r) => r.json())
+        .then((d: { reminders?: { id: string; title: string; time: string; enabled: boolean }[] }) => {
+          setReminders((d.reminders || []).filter((x) => x.enabled));
+        })
+        .catch(() => undefined);
       onData?.({
-        logs: data.logs,
+        logs: data.logs || [],
         streaks: data.streaks,
         today: data.today,
         habits: defs,
@@ -197,25 +247,34 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         const t = data.todayLog as HabitLogLike;
         setWakeTime(t.wakeTime || "");
         setBedtime(t.bedtime || "");
-        setChecks({
-          ...emptyChecks(defs),
-          ...(t.checks || {}),
-        });
+        setChecks({ ...emptyChecks(defs), ...(t.checks || {}) });
       } else {
         setChecks(emptyChecks(defs));
       }
     } catch {
-      setLoadError("Something went wrong loading today. Pull to refresh.");
+      setLoadError("Something went wrong loading today.");
     } finally {
       setLoading(false);
     }
-  }, [onData]);
+  }, [applyHabits, onData]);
 
   useEffect(() => {
     void load();
-    const t = window.setInterval(() => void load(), 60_000);
-    return () => window.clearInterval(t);
   }, [load]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        applyHabits(defsRef.current);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [applyHabits]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -229,116 +288,104 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       nextBed: string
     ) => {
       const date = todayRef.current;
-      if (!date) return;
+      if (!date) return false;
       setSaving(true);
       setStatus("idle");
       setBanner(null);
-      const res = await fetch("/api/habits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          wakeTime: nextWake || null,
-          bedtime: nextBed || null,
-          checks: nextChecks,
-        }),
-      });
-      setSaving(false);
-      if (!res.ok) {
+      try {
+        const res = await fetch("/api/habits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date,
+            wakeTime: nextWake || null,
+            bedtime: nextBed || null,
+            checks: nextChecks,
+          }),
+        });
+        setSaving(false);
+        if (!res.ok) {
+          setStatus("error");
+          setBanner({
+            tone: "error",
+            text: "Couldn’t save. Try once more.",
+          });
+          return false;
+        }
+        const saved = await res.json();
+        if (saved.rejected?.length) {
+          setBanner({
+            tone: "warn",
+            text: (saved.rejected as { reason: string }[])
+              .map((r) => r.reason)
+              .slice(0, 2)
+              .join(" · "),
+          });
+          await load();
+          return false;
+        }
+        if (saved.hit) {
+          setHit(saved.hit as Hit);
+          setProfile((p) =>
+            p
+              ? {
+                  ...p,
+                  xp: (p.xp || 0) + saved.hit.xpGained,
+                  level: saved.hit.level,
+                  progress: saved.hit.progress,
+                  intoLevel: saved.hit.intoLevel,
+                  need: saved.hit.need,
+                  earlyStreak: saved.hit.streak,
+                }
+              : p
+          );
+        }
+        setStatus("saved");
+        window.setTimeout(() => setStatus("idle"), 1200);
+        return true;
+      } catch {
+        setSaving(false);
         setStatus("error");
-        setBanner({
-          tone: "error",
-          text: "Couldn’t save that check-in. Try once more.",
-        });
-        return;
+        return false;
       }
-      const saved = await res.json();
-      if (saved.rejected?.length) {
-        setBanner({
-          tone: "warn",
-          text: (saved.rejected as { reason: string }[])
-            .map((r) => r.reason)
-            .slice(0, 2)
-            .join(" · "),
-        });
-      }
-      if (saved.hit) {
-        setHit(saved.hit as Hit);
-        setProfile((p) =>
-          p
-            ? {
-                ...p,
-                xp: (p.xp || 0) + saved.hit.xpGained,
-                level: saved.hit.level,
-                progress: saved.hit.progress,
-                intoLevel: saved.hit.intoLevel,
-                need: saved.hit.need,
-                earlyStreak: saved.hit.streak,
-              }
-            : p
-        );
-      }
-      setStatus("saved");
-      await load();
-      window.setTimeout(() => setStatus("idle"), 1600);
     },
     [load]
   );
 
   async function toggleHabit(h: HabitRow) {
+    const live = enrichHabitsWithWindows(
+      defsRef.current,
+      wakeGoal,
+      sleepGoal
+    ) as HabitRow[];
+    const row = live.find((x) => x.key === h.key) || h;
     const done = checksRef.current[h.key];
-    if (!done && !h.canSubmit) {
+    if (!done && !row.canSubmit) {
       setBanner({
         tone: "tip",
-        text: h.opensInMin
-          ? `${h.label} opens in ${formatDuration(h.opensInMin)} (${h.windowStart}–${h.windowEnd}). Come back then.`
-          : `${h.label} isn’t open yet — ${h.windowLabel || "outside its time window"}.`,
+        text: row.opensInMin
+          ? `${h.label} opens in ${formatDuration(row.opensInMin)}`
+          : `${h.label} isn’t open yet.`,
       });
       return;
     }
-    const next = {
-      ...checksRef.current,
-      [h.key]: !done,
-    };
+    const prev = checksRef.current;
+    const next = { ...prev, [h.key]: !done };
     setChecks(next);
-    await persist(next, wakeRef.current, bedRef.current);
+    const ok = await persist(next, wakeRef.current, bedRef.current);
+    if (!ok) setChecks(prev);
   }
 
   async function wokeUp() {
-    const wakeHabit = defsRef.current.find((h) => h.key === "wakeEarly");
-    if (wakeHabit && !wakeHabit.canSubmit) {
-      setBanner({
-        tone: "warn",
-        text: `Wake check-in is open ${wakeHabit.windowStart}–${wakeHabit.windowEnd}. Come back in that window.`,
-      });
-      return;
-    }
     if (wakeRef.current) return;
     const t = nowHHMM();
     const next = { ...checksRef.current, wakeEarly: true };
     setWakeTime(t);
     setChecks(next);
     await persist(next, t, bedRef.current);
-    if (morningFlow !== "done") {
-      await fetch("/api/mission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "morning-flow", step: "reminders" }),
-      });
-      setMorningFlow("reminders");
-      setShowAfterWake(true);
-    }
   }
 
   async function goingToSleep() {
-    const sleepHabit = defsRef.current.find((h) => h.key === "sleepEarly");
-    if (sleepHabit && !sleepHabit.canSubmit) {
-      setBanner({
-        tone: "tip",
-        text: `Sleep check-in opens ${sleepHabit.windowStart}–${sleepHabit.windowEnd}.`,
-      });
-      return;
-    }
     if (bedRef.current) return;
     const t = nowHHMM();
     const next = { ...checksRef.current, sleepEarly: true };
@@ -356,22 +403,17 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     if (res.ok) {
       setBanner({
         tone: "success",
-        text: `You’re in. ${days}-day challenge started — show up tomorrow morning.`,
+        text: `${days}-day challenge started.`,
       });
       await load();
-    } else {
-      setBanner({
-        tone: "error",
-        text: "Couldn’t start the challenge. Try again.",
-      });
     }
   }
 
   async function enableNotifications() {
     if (!("Notification" in window)) {
       setBanner({
-        tone: "warn",
-        text: "This browser doesn’t support notifications.",
+        tone: "tip",
+        text: "On iPhone: add Dawn to the Home Screen, then allow alerts. Discord reminders still work with the app closed.",
       });
       return;
     }
@@ -381,29 +423,25 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       tone: p === "granted" ? "success" : "tip",
       text:
         p === "granted"
-          ? "Notifications on — Dawn can nudge you at reminder times."
-          : "Notifications stayed off. You can turn them on later in Settings.",
+          ? "Alerts on while Dawn is open. Use Discord for pings when it’s closed."
+          : "Alerts stayed off. Discord reminders still work.",
     });
   }
 
-  async function toggleTodo(t: Todo) {
-    await fetch("/api/day-plan", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: t.id, done: !t.done }),
-    });
-    setTodayTodos((prev) =>
-      prev.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x))
-    );
-  }
+  const liveHabits = enrichHabitsWithWindows(
+    habitDefs,
+    wakeGoal,
+    sleepGoal
+  ) as HabitRow[];
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-4 py-10">
-        <div className="h-3 w-28 rounded bg-white/10" />
-        <div className="h-10 w-3/4 max-w-sm rounded bg-white/10" />
-        <div className="h-4 w-full max-w-md rounded bg-white/5" />
-        <p className="pt-4 text-sm text-[var(--color-mist)]">Loading today…</p>
+      <div className="space-y-4 py-8">
+        <div className="h-8 w-40 rounded bg-white/10" />
+        <div className="h-4 w-56 rounded bg-white/5" />
+        <div className="mt-6 h-24 rounded-2xl bg-white/[0.04]" />
+        <div className="h-14 rounded-2xl bg-white/[0.04]" />
+        <div className="h-14 rounded-2xl bg-white/[0.04]" />
       </div>
     );
   }
@@ -430,50 +468,38 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     );
   }
 
-  const done = habitDefs.filter((h) => checks[h.key]).length;
-  const openNow = habitDefs.filter((h) => h.canSubmit && !checks[h.key]);
+  const done = liveHabits.filter((h) => checks[h.key]).length;
+  const openNow = liveHabits.filter((h) => h.canSubmit && !checks[h.key]);
+  const nextLocked = liveHabits
+    .filter((h) => !checks[h.key] && !h.canSubmit)
+    .sort((a, b) => (a.opensInMin || 99_999) - (b.opensInMin || 99_999))[0];
   const focusKey = profile?.focusHabitKey || "wakeEarly";
-  const sortedHabits = [...habitDefs].sort((a, b) => {
-    const aM = missionKeys.includes(a.key) ? 1 : 0;
-    const bM = missionKeys.includes(b.key) ? 1 : 0;
-    if (aM !== bM) return bM - aM;
+  const sortedHabits = [...liveHabits].sort((a, b) => {
     if (a.canSubmit !== b.canSubmit) return a.canSubmit ? -1 : 1;
     if (a.key === focusKey) return -1;
     if (b.key === focusKey) return 1;
     return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   });
-
-  const wakeHabit = habitDefs.find((h) => h.key === "wakeEarly");
+  const wakeHabit = liveHabits.find((h) => h.key === "wakeEarly");
   const wakeWindowOpen = Boolean(wakeHabit?.canSubmit);
-  const showAfter =
-    Boolean(wakeTime) && showAfterWake && morningFlow !== "done";
+  const sleepHabit = liveHabits.find((h) => h.key === "sleepEarly");
+  const sleepWin =
+    sleepHabit?.windowStart && sleepHabit?.windowEnd
+      ? { start: sleepHabit.windowStart, end: sleepHabit.windowEnd }
+      : defaultWindowForKey("sleepEarly", wakeGoal, sleepGoal);
+  const inSleepWindow = isInWindow(nowMins(), sleepWin.start, sleepWin.end);
 
-  let actionLabel = "Today";
-  let actionHelp = "";
-  if (!wakeTime && wakeWindowOpen) {
-    actionLabel = "Wake check-in";
-    actionHelp = "Hold the button to log that you’re up.";
-  } else if (!wakeTime && !wakeWindowOpen) {
-    actionLabel = "Wake window closed";
-    actionHelp = `Open ${wakeHabit?.windowStart || "—"}–${wakeHabit?.windowEnd || "—"}.`;
-  } else if (showAfter && morningFlow !== "todos") {
-    actionLabel = "Reminders";
-    actionHelp = "Optional — add one or skip.";
-  } else if (showAfter) {
-    actionLabel = "Tasks";
-    actionHelp = "Optional — add a few or skip.";
-  } else if (dayMode === "evening" || dayMode === "night") {
-    actionLabel = "Evening";
-    actionHelp = "Finish habits, then plan tomorrow.";
-  } else if (wakeTime) {
-    actionLabel = openNow.length ? "Open habits" : "Habits";
-    actionHelp = openNow.length
-      ? "Tap a habit to mark it done."
-      : "Nothing open right now — come back later.";
-  }
+  const tasksDone = todayTodos.filter((t) => t.done).length;
+  const nextLine = wakeTime
+    ? openNow[0]
+      ? `Next: ${openNow[0].label}${openNow[0].closesInMin ? ` · ${formatDuration(openNow[0].closesInMin)} left` : ""}`
+      : nextLocked
+        ? `Next: ${nextLocked.label} in ${formatDuration(nextLocked.opensInMin || 0)}`
+        : "Morning habits done."
+    : null;
 
   return (
-    <div className="animate-rise space-y-6 sm:space-y-7">
+    <div className="space-y-5">
       <WakeHit
         open={Boolean(hit)}
         title={hit?.title || ""}
@@ -488,164 +514,176 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       />
 
       <header>
-        <p className="ui-kicker">Today</p>
-        <h1 className="font-display mt-2 text-3xl text-white sm:text-4xl">
-          {friendlyDate(today) || "Your day"}
-        </h1>
-        <p className="mt-1.5 text-sm text-[var(--color-mist)]">
-          {wakeTime ? `Up at ${wakeTime}` : `Wake goal ${wakeGoal}`}
-          {todayPlan?.goalText ? ` · ${todayPlan.goalText}` : ""}
+        <p className="text-sm text-[var(--color-mist)]">
+          {friendlyDate(today) || "Today"}
+          {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
         </p>
+        <h1 className="font-display mt-1 text-3xl text-white">Morning</h1>
+        {todayPlan?.goalText ? (
+          <p className="mt-2 text-sm text-[var(--color-cloud)]">
+            {todayPlan.goalText}
+          </p>
+        ) : null}
       </header>
+
+      {pulse ? <MorningPulseCard pulse={pulse} usedAi={pulseAi} /> : null}
 
       <TodayOverview
         earlyStreak={profile?.earlyStreak || 0}
-        openStreak={profile?.openStreak || 0}
         habitsDone={done}
-        habitsTotal={habitDefs.length || 1}
+        habitsTotal={liveHabits.length || 1}
+        xp={profile?.xp || 0}
+        level={profile?.level || 1}
+        intoLevel={profile?.intoLevel || 0}
+        need={profile?.need || 80}
         challenge={challenge}
         onStartChallenge={(days) => void startChallenge(days)}
       />
 
+      <DailyLoop
+        steps={[
+          {
+            key: "wake",
+            label: "Wake",
+            detail: wakeTime || wakeGoal,
+            done: Boolean(wakeTime),
+          },
+          {
+            key: "habits",
+            label: "Habits",
+            detail: `${done}/${liveHabits.length || 1}`,
+            done: liveHabits.length > 0 && done >= liveHabits.length,
+          },
+          {
+            key: "tasks",
+            label: "Tasks",
+            detail: todayTodos.length
+              ? `${tasksDone}/${todayTodos.length}`
+              : "set list",
+            done: todayTodos.length > 0 && tasksDone === todayTodos.length,
+            href: "/tasks",
+          },
+          {
+            key: "night",
+            label: "Night",
+            detail: bedtime || sleepGoal,
+            done: Boolean(bedtime),
+            href: "/sleep",
+          },
+        ]}
+      />
+
       {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
 
-      <section className="ui-card space-y-4">
-        <div>
-          <p className="ui-card-label">{actionLabel}</p>
-          {actionHelp ? <p className="ui-section-help">{actionHelp}</p> : null}
-        </div>
-
-        {!wakeTime ? (
-          <MorningRitual
-            pledge={profile?.pledgeText}
-            whyLine={undefined}
-            challengeDay={undefined}
-            challengeTotal={challenge?.total || 7}
-            planGoal={undefined}
-            planWake={todayPlan?.wakeGoal || wakeGoal}
-            disabled={saving || !wakeWindowOpen}
-            alreadyUp={false}
-            windowOpen={wakeWindowOpen}
-            windowStart={wakeHabit?.windowStart}
-            windowEnd={wakeHabit?.windowEnd}
-            opensInMin={wakeHabit?.opensInMin}
-            onRise={() => void wokeUp()}
-          />
-        ) : null}
-
-        <MorningAfterWake
-          open={showAfter}
-          initialStep={morningFlow === "todos" ? "todos" : "reminders"}
-          onDone={() => {
-            setShowAfterWake(false);
-            setMorningFlow("done");
-            setBanner({
-              tone: "success",
-              text: "Morning set. Mark habits when they open.",
-            });
-            void load();
-          }}
+      {!wakeTime ? (
+        <MorningRitual
+          pledge={profile?.pledgeText}
+          planWake={todayPlan?.wakeGoal || wakeGoal}
+          disabled={saving || !wakeWindowOpen}
+          alreadyUp={false}
+          windowOpen={wakeWindowOpen}
+          windowStart={wakeHabit?.windowStart}
+          windowEnd={wakeHabit?.windowEnd}
+          opensInMin={wakeHabit?.opensInMin}
+          onRise={() => void wokeUp()}
         />
+      ) : nextLine ? (
+        <p className="text-sm text-[var(--color-mist)]">{nextLine}</p>
+      ) : null}
 
-        {wakeTime && !showAfter ? (
-          <div className="space-y-6">
-            {todayTodos.length > 0 ? (
-              <div>
-                <div className="mb-3 flex items-baseline justify-between gap-2">
-                  <p className="ui-section-title">Tasks</p>
-                  <p className="text-xs text-[var(--color-mist)]">
-                    {todayTodos.filter((t) => t.done).length}/{todayTodos.length}
-                  </p>
-                </div>
-                <ul className="space-y-2">
-                  {todayTodos.map((t) => (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        onClick={() => void toggleTodo(t)}
-                        className={`ui-row ${t.done ? "is-done" : ""}`}
-                      >
-                        <span className={`ui-check ${t.done ? "is-on" : ""}`}>
-                          ✓
-                        </span>
-                        <span
-                          className={`text-sm ${
-                            t.done
-                              ? "text-[var(--color-mist)] line-through"
-                              : "text-white"
-                          }`}
-                        >
-                          {t.text}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            <div>
-              <div className="mb-3 flex items-baseline justify-between gap-2">
-                <p className="ui-section-title">Habits</p>
-                <Link
-                  href="/settings?tab=habits"
-                  className="ui-btn-text shrink-0 text-xs"
+      <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-[15px] font-medium text-white">Morning habits</h2>
+          <Link href="/settings?tab=habits" className="text-xs text-[var(--color-mist)]">
+            Edit
+          </Link>
+        </div>
+        <ul className="space-y-2">
+          {sortedHabits.map((h) => {
+            const isDone = Boolean(checks[h.key]);
+            const locked = !isDone && !h.canSubmit;
+            return (
+              <li key={h.key}>
+                <button
+                  type="button"
+                  onClick={() => void toggleHabit(h)}
+                  disabled={saving}
+                  className={`ui-row ${isDone ? "is-done" : ""} ${locked ? "is-locked" : ""}`}
                 >
-                  Edit
-                </Link>
-              </div>
-              <ul className="space-y-2">
-                {sortedHabits.map((h) => {
-                  const isDone = Boolean(checks[h.key]);
-                  const locked = !isDone && !h.canSubmit;
-                  return (
-                    <li key={h.key}>
-                      <button
-                        type="button"
-                        onClick={() => void toggleHabit(h)}
-                        disabled={saving}
-                        className={`ui-row ${isDone ? "is-done" : ""} ${
-                          locked ? "is-locked" : ""
-                        }`}
-                      >
-                        <span className={`ui-check ${isDone ? "is-on" : ""}`}>
-                          ✓
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-medium text-white">
-                            {h.label}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
-                            {locked
-                              ? h.opensInMin
-                                ? `Opens in ${formatDuration(h.opensInMin)}`
-                                : `From ${h.windowStart || "—"}`
-                              : isDone
-                                ? "Done"
-                                : `Open · until ${h.windowEnd}`}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            {(dayMode === "evening" || dayMode === "night" || bedtime) && (
-              <CloseDayPanel
-                sleepGoal={sleepGoal}
-                wakeGoal={wakeGoal}
-                bedtimeLogged={Boolean(bedtime)}
-                onSleepNow={() => void goingToSleep()}
-                onSaved={() => void load()}
-              />
-            )}
-          </div>
-        ) : null}
+                  <span className={`ui-check ${isDone ? "is-on" : ""}`}>
+                    ✓
+                  </span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block font-medium text-white">
+                      {h.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
+                      {isDone
+                        ? "Done"
+                        : locked
+                          ? h.opensInMin
+                            ? `Opens in ${formatDuration(h.opensInMin)}`
+                            : `From ${h.windowStart || "—"}`
+                          : `Tap · until ${h.windowEnd}`}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
-      {!notifyReady && !wakeTime ? (
+      {reminders.length ? (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-[15px] font-medium text-white">Reminders</h2>
+            <Link href="/settings?tab=reminders" className="text-xs text-[var(--color-mist)]">
+              Edit
+            </Link>
+          </div>
+          <ul className="space-y-1.5">
+            {reminders.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm"
+              >
+                <span className="text-white">{r.title}</span>
+                <span className="tabular-nums text-[var(--color-dawn)]">{r.time}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <TodayTasks
+        date={today}
+        todos={todayTodos}
+        onChange={setTodayTodos}
+        onError={(text) => setBanner({ tone: "error", text })}
+        title="Today’s tasks"
+        hint="None yet. Add them in Tasks — they show up here to check off."
+        allowAdd={false}
+        addHref="/tasks"
+        addLabel="Add in Tasks"
+      />
+
+      <p className="text-xs text-[var(--color-mist)]">
+        Loop rewards: wake + habits in-window, +18 XP for clearing Tasks, +22
+        XP closing night, +40 XP if you finish the whole day.
+      </p>
+
+      {inSleepWindow ? (
+        <CloseDayPanel
+          sleepGoal={sleepGoal}
+          wakeGoal={wakeGoal}
+          bedtimeLogged={Boolean(bedtime)}
+          onSleepNow={() => void goingToSleep()}
+          onSaved={() => void load()}
+        />
+      ) : null}
+
+      {!notifyReady ? (
         <button
           type="button"
           onClick={() => void enableNotifications()}

@@ -7,6 +7,7 @@ import { PersonalBriefCard } from "@/components/PersonalBriefCard";
 
 type Question = {
   id: string;
+  section?: string;
   prompt: string;
   hint?: string;
   options?: readonly string[];
@@ -59,6 +60,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
   const [tonightTip, setTonightTip] = useState("");
   const [brief, setBrief] = useState<LifeBrief | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [lockedHabits, setLockedHabits] = useState<Suggestion[]>([]);
   const [usedAi, setUsedAi] = useState(false);
   const [provider, setProvider] = useState<string | null>(null);
 
@@ -183,6 +185,22 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
     advance({ ...answers, [q.id]: combined });
   }
 
+  function skipQuestion() {
+    const q = questions[step];
+    if (!q) return;
+    advance({ ...answers });
+  }
+
+  function skipRemaining() {
+    const q = questions[step];
+    const text = draftText.trim();
+    const choice = picked.trim();
+    const combined = [choice, text].filter(Boolean).join(" — ");
+    const next =
+      q && combined ? { ...answers, [q.id]: combined } : { ...answers };
+    void runAnalysis(next);
+  }
+
   async function runAnalysis(ans: Record<string, string>) {
     setAnalyzing(true);
     setInterviewing(false);
@@ -202,9 +220,12 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
     setFocus(data.focus || "");
     setTonightTip(data.tonightTip || "");
     setSuggestions(data.suggestedHabits || []);
+    setLockedHabits(data.lockedHabits || []);
     setUsedAi(Boolean(data.usedAi));
     setProvider(data.provider || null);
     if (data.personalBrief) setBrief(data.personalBrief);
+    await load();
+    onChanged?.();
   }
 
   async function addSuggestion(s: Suggestion) {
@@ -228,8 +249,9 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
       <div className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.06] p-5">
         <h2 className="font-display text-3xl text-white">Know your life</h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Not multiple-choice fluff. Work, home, nights, why mornings matter —
-          Dawn uses this to show dynamic coaching on Today, not static tips.
+          Wide questions so Dawn actually knows you — work, home, nights, what
+          already failed. Skip any that don’t help. When you finish, Dawn locks
+          2–4 habits onto Today from your answers (AI if it’s on).
         </p>
 
         {brief && !interviewing && !analyzing ? (
@@ -248,17 +270,18 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
               setPicked("");
               setAnalysis("");
               setSuggestions([]);
+              setLockedHabits([]);
             }}
             className="mt-5 rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)]"
           >
-            {hasProfile ? "Update personal answers" : "Start deep questions"}
+            {hasProfile ? "Update personal answers" : "Tell Dawn your life"}
           </button>
         )}
 
         {interviewing && currentQ && (
           <div className="mt-6 space-y-4">
-            <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-mist)]">
-              {step + 1} / {questions.length}
+            <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-dawn)]">
+              {currentQ.section || "You"} · {step + 1} / {questions.length}
             </p>
             <p className="text-xl text-white">{currentQ.prompt}</p>
             {currentQ.hint ? (
@@ -303,7 +326,21 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                 onClick={() => continueQuestion()}
                 className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-40"
               >
-                {step + 1 >= questions.length ? "Build my profile" : "Continue"}
+                {step + 1 >= questions.length ? "Lock my habits" : "Continue"}
+              </button>
+              <button
+                type="button"
+                onClick={() => skipQuestion()}
+                className="text-sm text-[var(--color-mist)] hover:text-white"
+              >
+                Skip this
+              </button>
+              <button
+                type="button"
+                onClick={() => skipRemaining()}
+                className="text-sm text-[var(--color-mist)] hover:text-white"
+              >
+                Skip remaining
               </button>
               {step > 0 && (
                 <button
@@ -318,17 +355,30 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                   Back
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setInterviewing(false);
+                  setDraftText("");
+                  setPicked("");
+                }}
+                className="text-sm text-[var(--color-mist)] hover:text-white"
+              >
+                Not now
+              </button>
             </div>
           </div>
         )}
 
         {analyzing && (
           <p className="mt-5 text-[var(--color-mist)]">
-            Reading your answers and logs — building a personal brief…
+            Reading your life + logs — locking a small habit stack…
           </p>
         )}
 
-        {(analysis || suggestions.length > 0) && !interviewing && !analyzing && (
+        {(analysis || suggestions.length > 0 || lockedHabits.length > 0) &&
+          !interviewing &&
+          !analyzing && (
           <div className="mt-5 space-y-4 border-t border-white/10 pt-5">
             {analysis && (
               <p className="text-[var(--color-cloud)] leading-relaxed">
@@ -343,10 +393,36 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                 Tonight: {tonightTip}
               </p>
             )}
+            {lockedHabits.length > 0 ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-leaf)]">
+                  Locked on Today
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {lockedHabits.map((s) => (
+                    <li
+                      key={s.key}
+                      className="rounded-xl border border-[var(--color-leaf)]/25 bg-[var(--color-leaf)]/[0.06] px-4 py-3"
+                    >
+                      <p className="font-medium text-white">{s.label}</p>
+                      <p className="text-sm text-[var(--color-mist)]">
+                        {s.description}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-leaf)]">
+                        {s.reason}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-[var(--color-mist)]">
+                  Hide any from Habits below if you don’t want it.
+                </p>
+              </div>
+            ) : null}
             <p className="text-xs text-[var(--color-mist)]">
               {usedAi
-                ? `Personalized via ${provider || "AI"}`
-                : "Local personalization (AI offline / fallback)"}
+                ? `Prescribed via ${provider || "AI"}`
+                : "Local prescription (AI offline / fallback)"}
             </p>
             <ul className="space-y-2">
               {suggestions.map((s) => (

@@ -27,6 +27,9 @@ function nowHHMM() {
 }
 
 async function ping(source: string) {
+  const now = Date.now();
+  if (now - lastPingAt < 45_000 && source !== "cold") return;
+  lastPingAt = now;
   try {
     await fetch("/api/opens", {
       method: "POST",
@@ -42,6 +45,8 @@ async function ping(source: string) {
     /* offline — ignore */
   }
 }
+
+let lastPingAt = 0;
 
 export function AppPresenceTracker() {
   const { status } = useSession();

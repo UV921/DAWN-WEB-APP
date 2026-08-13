@@ -14,5 +14,10 @@ export default async function SleepPage() {
   });
   if (!user?.onboardingDone) redirect("/onboarding");
 
-  return <SleepClient />;
+  return (
+    <SleepClient
+      wakeGoal={session.user.wakeGoal || "06:00"}
+      sleepGoal={session.user.sleepGoal || "23:00"}
+    />
+  );
 }

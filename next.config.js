@@ -4,6 +4,8 @@ const path = require("path");
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   eslint: { ignoreDuringBuilds: true },
+  compress: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "cdn.discordapp.com" },

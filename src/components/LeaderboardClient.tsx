@@ -89,8 +89,11 @@ export function LeaderboardClient() {
 
   if (!session?.user) {
     return (
-      <main className="dawn-bg flex min-h-screen items-center justify-center text-[var(--color-mist)]">
-        Loading…
+      <main className="dawn-bg min-h-screen">
+        <div className="app-shell mx-auto max-w-3xl">
+          <AppNav active="leaderboard" />
+          <p className="mt-10 text-sm text-[var(--color-mist)]">Loading board…</p>
+        </div>
       </main>
     );
   }

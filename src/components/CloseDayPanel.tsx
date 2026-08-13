@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FlowSteps, IconPlus, IconSparkles } from "@/components/icons";
+import { NightClosed } from "@/components/NightClosed";
 
 type Props = {
   sleepGoal: string;
@@ -26,6 +27,7 @@ export function CloseDayPanel({
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [nightDone, setNightDone] = useState(Boolean(bedtimeLogged));
   const [msg, setMsg] = useState("");
   const [tip, setTip] = useState("");
   const [aiReady, setAiReady] = useState(false);
@@ -33,6 +35,10 @@ export function CloseDayPanel({
   useEffect(() => {
     setWake(wakeGoal);
   }, [wakeGoal]);
+
+  useEffect(() => {
+    if (bedtimeLogged) setNightDone(true);
+  }, [bedtimeLogged]);
 
   useEffect(() => {
     void fetch("/api/day-plan")
@@ -107,14 +113,42 @@ export function CloseDayPanel({
       setMsg("Could not save tonight’s plan.");
       return;
     }
+    const data = await res.json();
     setSaved(true);
-    setMsg("Tomorrow is set. Phone down after bed.");
+    setMsg(
+      data.xpGained
+        ? `Tomorrow is set · +${data.xpGained} XP. Log sleep to keep the streak.`
+        : "Tomorrow is set. Log sleep to keep the streak."
+    );
     onSaved?.();
   }
 
   async function saveAndSleep() {
-    await savePlan();
+    setBusy(true);
+    setMsg("");
+    const res = await fetch("/api/day-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wakeGoal: wake,
+        goalText,
+        todos,
+        replaceTodos: true,
+      }),
+    });
+    if (!res.ok) {
+      setBusy(false);
+      setMsg("Could not save tonight’s plan.");
+      return;
+    }
+    setNightDone(true);
     if (!bedtimeLogged) await onSleepNow();
+    onSaved?.();
+    setBusy(false);
+  }
+
+  if (nightDone) {
+    return <NightClosed sleepGoal={sleepGoal} wakeGoal={wake} />;
   }
 
   return (
@@ -124,8 +158,8 @@ export function CloseDayPanel({
         Set tomorrow before you sleep
       </h2>
       <p className="ui-sub mt-2">
-        Sleep target {sleepGoal}. What you write here shows up on Tomorrow’s
-        morning screen.
+        Sleep target {sleepGoal}. Set tomorrow’s tasks now so you don’t
+        procrastinate in the morning. Closing night keeps the streak and pays XP.
       </p>
 
       {aiReady ? (

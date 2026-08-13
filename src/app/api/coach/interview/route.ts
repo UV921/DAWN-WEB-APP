@@ -15,8 +15,14 @@ import {
   LIFE_QUESTIONS,
   buildLocalLifeBrief,
   parseLifeJson,
+  wantsStrictLock,
   type LifeBrief,
 } from "@/lib/personal-life";
+import {
+  lockHabitsForUser,
+  pickFocusKey,
+  prescribeFromAnswers,
+} from "@/lib/prescribe-habits";
 
 const SuggestSchema = z.object({
   analysis: z.string(),
@@ -153,8 +159,23 @@ export async function POST(req: Request) {
     },
   });
 
-  const suggested = (aiResult?.suggestedHabits || ruleSuggestions).filter(
-    (s) => !existingKeys.has(s.key)
+  const fromAi = aiResult?.suggestedHabits || [];
+  const fromRules = ruleSuggestions;
+  const suggested = [...fromAi];
+  for (const r of fromRules) {
+    if (!suggested.some((s) => s.key === r.key)) suggested.push(r);
+  }
+
+  const autoLock = wantsStrictLock(answers);
+  const maxLock = answers.failedBefore?.toLowerCase().includes("too many")
+    ? 3
+    : 4;
+  const toLock = autoLock ? suggested.slice(0, maxLock) : [];
+  const focusKey = pickFocusKey(answers, toLock);
+  const lockedHabits = await lockHabitsForUser(
+    session.user.id,
+    toLock,
+    focusKey
   );
 
   return NextResponse.json({
@@ -163,7 +184,11 @@ export async function POST(req: Request) {
     focus: aiResult?.focus || brief.focus,
     tonightTip: aiResult?.tonightTip || brief.nightAngle,
     personalBrief: brief,
-    suggestedHabits: suggested,
+    suggestedHabits: suggested.filter(
+      (s) => !lockedHabits.some((l) => l.key === s.key)
+    ),
+    lockedHabits,
+    autoLock,
     existingHabits: habits,
     dataSnapshot: {
       wakeOnTimeRate: week.wakeOnTimeRate,
@@ -181,98 +206,7 @@ function buildRuleSuggestions(
   answers: Record<string, string>,
   existing: Set<string>
 ) {
-  const out: {
-    key: string;
-    label: string;
-    description: string;
-    reason: string;
-  }[] = [];
-
-  const add = (
-    key: string,
-    label: string,
-    description: string,
-    reason: string
-  ) => {
-    if (existing.has(key) || out.some((o) => o.key === key)) return;
-    out.push({ key, label, description, reason });
-  };
-
-  const blob = Object.values(answers).join(" ").toLowerCase();
-
-  add(
-    "sleepEarly",
-    "Sleep early",
-    "In bed by your sleep goal",
-    "Foundation for waking early"
-  );
-  add(
-    "wakeEarly",
-    "Wake early",
-    "Up by your wake goal",
-    "Locks your body clock"
-  );
-
-  if (
-    blob.includes("phone") ||
-    blob.includes("scroll") ||
-    blob.includes("snooze")
-  ) {
-    add(
-      "noPhone",
-      "No phone",
-      "Phone away first 30–60 min",
-      "You mentioned phone / snooze stealing the first minutes"
-    );
-  }
-  if (blob.includes("quran") || blob.includes("prayer") || blob.includes("faith") || blob.includes("fajr")) {
-    add("quran", "Quran", "Morning Quran reading", "You tied mornings to faith");
-    add("fajr", "Fajr", "Pray Fajr on time", "You mentioned prayer / faith");
-  }
-  if (blob.includes("read")) {
-    add("reading", "Reading", "Morning reading session", "You want mind fuel");
-  }
-  if (blob.includes("journal") || blob.includes("overthink") || blob.includes("anxiety")) {
-    add(
-      "journal",
-      "Journal",
-      "5–10 min morning dump",
-      "Helps clear night noise you described"
-    );
-  }
-  if (blob.includes("gym") || blob.includes("body") || blob.includes("health") || blob.includes("move")) {
-    add("gym", "Gym / move", "Morning training or walk", "You care about body / health");
-  }
-  if (blob.includes("walk") || blob.includes("sun")) {
-    add("walk", "Morning walk", "10–20 min walk / sunlight", "Light + movement");
-  }
-  if (blob.includes("work") || blob.includes("career") || blob.includes("deep work")) {
-    add(
-      "deepWork",
-      "Deep work block",
-      "25–50 min focused work after wake",
-      "You want mornings for career edge"
-    );
-  }
-  if (blob.includes("routine") || blob.includes("stick")) {
-    add(
-      "makeBed",
-      "Make bed",
-      "Make bed right after waking",
-      "Tiny win that starts momentum"
-    );
-  }
-
-  // Focus from nonNegotiable
-  const focus = (answers.nonNegotiable || "").toLowerCase();
-  if (focus.includes("phone")) {
-    add("noPhone", "No phone", "Phone away first hour", "Your one win");
-  }
-  if (focus.includes("sleep")) {
-    add("sleepEarly", "Sleep early", "Protect bedtime", "Your one win");
-  }
-
-  return out.slice(0, 6);
+  return prescribeFromAnswers(answers, existing);
 }
 
 function buildRuleAnalysis(
@@ -314,12 +248,14 @@ async function runInterviewAi(opts: {
   const backend = resolveAiBackend();
   if (!backend) return { ok: false };
 
-  const system = `You are Dawn — a personal morning coach, not a generic habit app.
-The user answered deep questions about their real life (work, home, night friction, why they care).
-Write analysis that quotes / reflects THEIR specifics — never generic "consistency is key" filler.
-Respect "avoid" boundaries.
-Suggest 2-5 NEW habits they don't already have, with reasons tied to their answers.
-Also produce personalBrief: dynamic copy for their dashboard (headline, todayAngle, nightAngle, focus, avoid, anchors[] of short personal facts).
+  const system = `You are Dawn — a high-level habit architect, not a chatbot.
+The user answered a wide life interview (work, home, body clock, nights, failed plans, what they refuse).
+Your job: PRESCRIBE 2-4 daily habits Dawn will lock onto Today. Do not ask. Do not hedge.
+Quote their specifics. Never say "consistency is key". Respect "avoid" boundaries.
+If they already failed at too many habits, lock fewer, smaller ones.
+Wake early + sleep early should almost always be in the set unless they already live that.
+suggestedHabits[].key must be camelCase. Reasons must mention THEIR answer, not generic science.
+Also produce personalBrief: headline, todayAngle, nightAngle, focus, avoid, anchors[] of short personal facts.
 Return ONLY JSON.`;
 
   const user = JSON.stringify({

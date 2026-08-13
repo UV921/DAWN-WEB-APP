@@ -24,13 +24,13 @@ import {
   isInWindow,
   nowMins,
 } from "@/lib/habit-windows";
-import { parseLifeJson } from "@/lib/personal-life";
 import {
   challengeProgress,
   nextCalendarDate,
-  nextOpenStreak,
   resolveDayMode,
 } from "@/lib/daily-loop";
+import { parseLifeJson } from "@/lib/personal-life";
+import { summarizeWeek } from "@/lib/morning-pulse";
 
 function toClientLog(log: {
   date: string;
@@ -70,21 +70,87 @@ export async function GET(req: Request) {
 
   const wakeGoal = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
-
-  const habitsRaw = await ensureDefaultHabits(session.user.id);
-  const habits = enrichHabitsWithWindows(habitsRaw, wakeGoal, sleepGoal);
-  const habitKeys = habits.map((h) => h.key);
+  const userId = session.user.id;
 
   const { searchParams } = new URL(req.url);
-  const days = Math.min(Number(searchParams.get("days") || 60), 400);
+  const lite = searchParams.get("lite") === "1";
+  const days = Math.min(
+    Number(searchParams.get("days") || (lite ? 42 : 60)),
+    lite ? 90 : 400
+  );
   const since = formatLocalDate(
     new Date(Date.now() - days * 24 * 60 * 60 * 1000)
   );
+  const today = formatLocalDate(new Date());
+  const tomorrow = nextCalendarDate(today);
 
-  const rawLogs = await prisma.habitLog.findMany({
-    where: { userId: session.user.id, date: { gte: since } },
-    orderBy: { date: "asc" },
-  });
+  const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, tomorrowPlan, tomorrowTodos, todoHistory] =
+    await Promise.all([
+      ensureDefaultHabits(userId),
+      prisma.habitLog.findMany({
+        where: { userId, date: { gte: since } },
+        orderBy: { date: "asc" },
+        select: {
+          date: true,
+          wakeTime: true,
+          bedtime: true,
+          checks: true,
+          sleepEarly: true,
+          noPhone: true,
+          wakeEarly: true,
+          gym: true,
+          reading: true,
+          quran: true,
+          notes: true,
+        },
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          xp: true,
+          level: true,
+          focusHabitKey: true,
+          identityLine: true,
+          whyLine: true,
+          totalEarlyWakes: true,
+          bestWakeStreak: true,
+          onboardingJson: true,
+          onboardingDone: true,
+          challengeStartDate: true,
+          challengeDays: true,
+          pledgeText: true,
+          lastOpenDate: true,
+          openStreak: true,
+          bestOpenStreak: true,
+          lifeJson: true,
+        },
+      }),
+      prisma.dayPlan.findUnique({
+        where: { userId_date: { userId, date: today } },
+      }),
+      prisma.todo.findMany({
+        where: { userId, date: today },
+        orderBy: { createdAt: "asc" },
+      }),
+      lite
+        ? Promise.resolve(null)
+        : prisma.dayPlan.findUnique({
+            where: { userId_date: { userId, date: tomorrow } },
+          }),
+      lite
+        ? Promise.resolve([])
+        : prisma.todo.findMany({
+            where: { userId, date: tomorrow },
+            orderBy: { createdAt: "asc" },
+          }),
+      prisma.todo.findMany({
+        where: { userId, date: { gte: since } },
+        select: { date: true, done: true },
+      }),
+    ]);
+
+  const habits = enrichHabitsWithWindows(habitsRaw, wakeGoal, sleepGoal);
+  const habitKeys = habits.map((h) => h.key);
   const logs = rawLogs.map(toClientLog);
 
   const streaks: Record<string, { current: number; longest: number }> = {
@@ -94,81 +160,29 @@ export async function GET(req: Request) {
     streaks[h.key] = computeStreak(logs, (l) => isHabitDone(l, h.key));
   }
 
-  const today = formatLocalDate(new Date());
   const todayLog = logs.find((l) => l.date === today) || null;
-  const tomorrow = nextCalendarDate(today);
-
-  const profile = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      xp: true,
-      level: true,
-      focusHabitKey: true,
-      identityLine: true,
-      whyLine: true,
-      totalEarlyWakes: true,
-      bestWakeStreak: true,
-      onboardingJson: true,
-      onboardingDone: true,
-      lifeJson: true,
-      challengeStartDate: true,
-      challengeDays: true,
-      pledgeText: true,
-      lastOpenDate: true,
-      openStreak: true,
-      bestOpenStreak: true,
-    },
-  });
-
-  // Habit of opening the app — count once per day
-  let openStreak = profile?.openStreak ?? 0;
-  let bestOpenStreak = profile?.bestOpenStreak ?? 0;
-  let lastOpenDate = profile?.lastOpenDate ?? null;
-  const openNext = nextOpenStreak(lastOpenDate, openStreak, today);
-  if (openNext.isNewDay) {
-    openStreak = openNext.openStreak;
-    lastOpenDate = openNext.lastOpenDate;
-    bestOpenStreak = Math.max(bestOpenStreak, openStreak);
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        lastOpenDate,
-        openStreak,
-        bestOpenStreak,
-      },
-    });
-  }
-
   const lvl = levelFromXp(profile?.xp ?? 0);
   const earlyStreak = computeStreak(logs, (l) => isHabitDone(l, "wakeEarly"));
-  const life = parseLifeJson(profile?.lifeJson);
   const challenge = challengeProgress(
     profile?.challengeStartDate,
     today,
     profile?.challengeDays || 7
   );
-  const dayMode = resolveDayMode(wakeGoal, sleepGoal);
-
-  const [todayPlan, todayTodos, tomorrowPlan, tomorrowTodos] =
-    await Promise.all([
-      prisma.dayPlan.findUnique({
-        where: { userId_date: { userId: session.user.id, date: today } },
-      }),
-      prisma.todo.findMany({
-        where: { userId: session.user.id, date: today },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.dayPlan.findUnique({
-        where: { userId_date: { userId: session.user.id, date: tomorrow } },
-      }),
-      prisma.todo.findMany({
-        where: { userId: session.user.id, date: tomorrow },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
+  const life = parseLifeJson(profile?.lifeJson);
+  const weekPulse = summarizeWeek(logs, habitKeys, 7);
+  const todoByDate = new Map<string, { total: number; done: number }>();
+  for (const t of todoHistory) {
+    const cur = todoByDate.get(t.date) || { total: 0, done: 0 };
+    cur.total += 1;
+    if (t.done) cur.done += 1;
+    todoByDate.set(t.date, cur);
+  }
+  const todoStats = [...todoByDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({ date, ...v }));
 
   return NextResponse.json({
-    logs,
+    logs: lite ? undefined : logs,
     streaks,
     todayLog,
     today,
@@ -176,38 +190,45 @@ export async function GET(req: Request) {
     habits,
     wakeGoal,
     sleepGoal,
-    dayMode,
+    dayMode: resolveDayMode(wakeGoal, sleepGoal),
     challenge,
     todayPlan,
     todayTodos,
     tomorrowPlan,
     tomorrowTodos,
+    morningFlow: todayPlan?.morningFlow || "none",
+    weekPulse,
+    todoStats,
     profile: {
-      ...profile,
-      lifeJson: undefined,
-      lifeBrief: life.brief,
-      hasLifeProfile: Object.keys(life.answers).length >= 4,
+      xp: profile?.xp ?? 0,
+      focusHabitKey: profile?.focusHabitKey,
+      identityLine: profile?.identityLine,
+      whyLine: profile?.whyLine,
+      totalEarlyWakes: profile?.totalEarlyWakes,
+      bestWakeStreak: profile?.bestWakeStreak,
+      onboardingDone: profile?.onboardingDone,
+      todayAngle: life.brief?.todayAngle || "",
+      hasLifeProfile: Boolean(life.brief),
       level: lvl.level,
       intoLevel: lvl.intoLevel,
       need: lvl.need,
       progress: lvl.progress,
       earlyStreak: earlyStreak.current,
-      openStreak,
-      bestOpenStreak,
-      lastOpenDate,
+      openStreak: profile?.openStreak ?? 0,
+      bestOpenStreak: profile?.bestOpenStreak ?? 0,
+      lastOpenDate: profile?.lastOpenDate ?? null,
       pledgeText: profile?.pledgeText || "",
       challengeStartDate: profile?.challengeStartDate || null,
-      celebrate:
-        (() => {
-          try {
-            const j = JSON.parse(profile?.onboardingJson || "{}") as {
-              celebrate?: string;
-            };
-            return j.celebrate === "chill" ? "chill" : "big";
-          } catch {
-            return "big";
-          }
-        })(),
+      celebrate: (() => {
+        try {
+          const j = JSON.parse(profile?.onboardingJson || "{}") as {
+            celebrate?: string;
+          };
+          return j.celebrate === "chill" ? "chill" : "big";
+        } catch {
+          return "big";
+        }
+      })(),
     },
   });
 }
@@ -382,6 +403,8 @@ export async function POST(req: Request) {
 
   const hadWake = Boolean(existing?.wakeTime);
   const firstWakeToday = Boolean(wakeTime) && !hadWake && wakeAccepted;
+  const hadBed = Boolean(existing?.bedtime);
+  const firstBedToday = Boolean(bedtime) && !hadBed;
   const wakeEarlyNow = Boolean(checks.wakeEarly);
   const wakeEarlyNew =
     wakeEarlyNow && !prevChecks.wakeEarly && (wakeAccepted || firstWakeToday);
@@ -449,7 +472,18 @@ export async function POST(req: Request) {
   } | null = null;
 
   const awardHabits = newlyDone.filter((k) => k !== "wakeEarly" || wakeAccepted);
-  if (firstWakeToday || wakeEarlyNew || awardHabits.length > 0 || perfectNew) {
+  const habitsDoneNow = habitKeys.filter((k) => Boolean(checks[k])).length;
+  const loopComplete =
+    firstBedToday &&
+    Boolean(wakeTime) &&
+    habitsDoneNow >= Math.max(1, Math.ceil(habitKeys.length * 0.5));
+  if (
+    firstWakeToday ||
+    wakeEarlyNew ||
+    awardHabits.length > 0 ||
+    perfectNew ||
+    firstBedToday
+  ) {
     const award = awardCheckInXp({
       wakeLogged: firstWakeToday,
       wakeOnTime: Boolean(wakeEarlyNew || (firstWakeToday && wakeEarlyNow)),
@@ -457,6 +491,8 @@ export async function POST(req: Request) {
       habitsNewlyDone: awardHabits.filter((k) => k !== "wakeEarly").length,
       focusDone: focusDoneNew && focusKey !== "wakeEarly",
       allDone: perfectNew,
+      nightClosed: firstBedToday,
+      loopComplete,
     });
     if (award.xp > 0) {
       const newXp = (userRow?.xp ?? 0) + award.xp;
@@ -485,14 +521,22 @@ export async function POST(req: Request) {
         need: lvl.need,
         streak: earlyStreak.current,
         title:
-          wakeEarlyNew || (firstWakeToday && wakeEarlyNow)
+          loopComplete
+            ? "Daily loop complete"
+            : firstBedToday
+              ? "Night closed"
+              : wakeEarlyNew || (firstWakeToday && wakeEarlyNow)
             ? "On-time wake"
             : perfectNew
               ? "Morning complete"
               : newlyDone.length
                 ? "Habit logged"
                 : "Check-in saved",
-        subtitle: wakeEarlyNow
+        subtitle: loopComplete
+          ? "+40 loop bonus. Same thing tomorrow."
+          : firstBedToday
+            ? "Streak lives through the night."
+            : wakeEarlyNow
           ? "Logged in your wake window — that counts."
           : newlyDone.length
             ? "Logged while the window was open."

@@ -48,14 +48,6 @@ export function SettingsClient() {
     if (session?.user?.sleepGoal) setSleepGoal(session.user.sleepGoal);
   }, [session?.user?.wakeGoal, session?.user?.sleepGoal]);
 
-  if (!session?.user) {
-    return (
-      <main className="dawn-bg flex min-h-screen items-center justify-center text-[var(--color-mist)]">
-        Loading…
-      </main>
-    );
-  }
-
   return (
     <main className="dawn-bg noise relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto max-w-2xl">
@@ -66,6 +58,17 @@ export function SettingsClient() {
           <p className="ui-sub mt-3">
             Wake time first — then habits, reminders, Discord, and your mission.
             Each tab has one job.
+          </p>
+          <p className="mt-4 flex flex-wrap gap-4 text-sm">
+            <a href="/leaderboard" className="text-[var(--color-dawn)]">
+              Board
+            </a>
+            <a href="/circle" className="text-[var(--color-dawn)]">
+              Friends
+            </a>
+            <a href="/tasks" className="text-[var(--color-dawn)]">
+              Tasks
+            </a>
           </p>
 
           <div

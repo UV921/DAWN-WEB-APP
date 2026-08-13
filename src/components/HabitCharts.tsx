@@ -2,20 +2,13 @@
 
 import { useMemo, useState } from "react";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
   completedCount,
   isHabitDone,
   type HabitDef,
   type HabitLogLike,
 } from "@/lib/habits";
+import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
+import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-chart";
 
 type Props = {
   logs: HabitLogLike[];
@@ -167,6 +160,13 @@ export function HabitCharts({ logs, habits = [] }: Props) {
     .filter((c) => c.level > 0)
     .reduce((n, c) => n + Math.max(0, c.score), 0);
 
+  const wakeConfig = {
+    minutes: {
+      label: "Wake",
+      colors: { light: ["#f0b45a"], dark: ["#f0b45a"] },
+    },
+  } satisfies ChartConfig;
+
   return (
     <section className="animate-rise-delay space-y-10 pt-4">
       <div>
@@ -311,70 +311,28 @@ export function HabitCharts({ logs, habits = [] }: Props) {
               Enter your wake time above to fill this graph.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={wakeData}>
-                <defs>
-                  <linearGradient id="wakeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f0b45a" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#f0b45a" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#8ba3b8"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis
-                  stroke="#8ba3b8"
-                  fontSize={12}
-                  tickLine={false}
-                  tickFormatter={(v) => {
-                    const h = Math.floor(Number(v) / 60);
-                    const m = Number(v) % 60;
-                    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-                  }}
-                  domain={["dataMin - 30", "dataMax + 30"]}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#0d1b2a",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 12,
-                  }}
-                  labelFormatter={(_, payload) => {
-                    const p = payload?.[0]?.payload as
-                      | { label?: string }
-                      | undefined;
-                    return p?.label || "";
-                  }}
-                  formatter={(value, _name, item) => {
-                    const v = Number(value);
-                    const h = Math.floor(v / 60);
-                    const m = v % 60;
-                    const row = item?.payload as {
-                      bedtime?: string | null;
-                      score?: number;
-                    };
-                    const wake = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-                    return [
-                      `${wake}${row?.bedtime ? ` · slept ${row.bedtime}` : ""}${
-                        row?.score != null ? ` · ${row.score}/6` : ""
-                      }`,
-                      "Wake",
-                    ];
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="minutes"
-                  stroke="#f0b45a"
-                  fill="url(#wakeFill)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <EvilAreaChart
+              data={wakeData}
+              config={wakeConfig}
+              className="h-full w-full aspect-auto p-1"
+              xDataKey="date"
+            >
+              <EvilAreaChart.Grid />
+              <EvilAreaChart.XAxis dataKey="date" />
+              <EvilAreaChart.YAxis
+                domain={["dataMin - 30", "dataMax + 30"]}
+                tickFormatter={(v: number) => {
+                  const h = Math.floor(Number(v) / 60);
+                  const m = Number(v) % 60;
+                  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                }}
+              />
+              <EvilAreaChart.Tooltip />
+              <EvilAreaChart.Area dataKey="minutes" variant="gradient">
+                <EvilAreaChart.Dot variant="border" />
+                <EvilAreaChart.ActiveDot variant="colored-border" />
+              </EvilAreaChart.Area>
+            </EvilAreaChart>
           )}
         </div>
       </div>

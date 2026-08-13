@@ -44,6 +44,22 @@ export function OnboardingClient() {
     setAnswers((a) => ({ ...a, ...patch }));
   }
 
+  function skip() {
+    if (!current) return;
+    if (current.id === "focusHabit") {
+      nextAfterPatch({
+        focusHabitKey: answers.focusHabitKey || "wakeEarly",
+        focusLabel: answers.focusLabel || "Wake early",
+      });
+      return;
+    }
+    next();
+  }
+
+  function skipRest() {
+    void finish();
+  }
+
   function next() {
     if (step < visibleSteps.length - 1) {
       setStep(step + 1);
@@ -294,7 +310,7 @@ export function OnboardingClient() {
           )}
         </div>
 
-        <div className="mt-auto flex justify-between pt-10">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-10">
           <button
             type="button"
             onClick={back}
@@ -303,9 +319,31 @@ export function OnboardingClient() {
           >
             Back
           </button>
-          {busy && (
-            <span className="text-sm text-[var(--color-dawn)]">Building your plan…</span>
-          )}
+          <div className="flex flex-wrap items-center gap-4">
+            {"skippable" in current && current.skippable ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={skip}
+                className="text-sm text-[var(--color-mist)] hover:text-white"
+              >
+                Skip this
+              </button>
+            ) : null}
+            {current.type !== "analysis" ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={skipRest}
+                className="text-sm text-[var(--color-mist)] hover:text-white"
+              >
+                Skip remaining
+              </button>
+            ) : null}
+            {busy ? (
+              <span className="text-sm text-[var(--color-dawn)]">Saving…</span>
+            ) : null}
+          </div>
         </div>
       </div>
     </main>

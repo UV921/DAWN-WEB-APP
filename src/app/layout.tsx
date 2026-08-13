@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${sora.variable}`}>
+    <html lang="en" className={`dark ${fraunces.variable} ${sora.variable}`}>
       <body
         className="antialiased"
         style={

@@ -1,30 +1,70 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { SunIcon } from "@/components/animated-icons/sun";
+import { MoonIcon } from "@/components/animated-icons/moon";
+import { ChartColumnIcon } from "@/components/animated-icons/chart-column";
+import { FlameIcon } from "@/components/animated-icons/flame";
+import { UsersIcon } from "@/components/animated-icons/users";
+import { SettingsIcon } from "@/components/animated-icons/settings";
+import { ListTodoIcon } from "@/components/animated-icons/list-todo";
+import type { AnimatedIconHandle } from "@/components/animated-icons/use-icon-animation";
 
-const LINKS = [
-  { href: "/dashboard", key: "dashboard", label: "Today", short: "Today" },
-  { href: "/sleep", key: "sleep", label: "Sleep", short: "Sleep" },
-  { href: "/progress", key: "progress", label: "Progress", short: "Stats" },
-  { href: "/leaderboard", key: "leaderboard", label: "Board", short: "Board" },
-  { href: "/circle", key: "circle", label: "Friends", short: "Friends" },
-  { href: "/settings", key: "settings", label: "Settings", short: "More" },
+const DESKTOP = [
+  { href: "/dashboard", key: "dashboard", label: "Today", Icon: SunIcon },
+  { href: "/tasks", key: "tasks", label: "Tasks", Icon: ListTodoIcon },
+  { href: "/sleep", key: "sleep", label: "Sleep", Icon: MoonIcon },
+  { href: "/progress", key: "progress", label: "Progress", Icon: ChartColumnIcon },
+  { href: "/leaderboard", key: "leaderboard", label: "Board", Icon: FlameIcon },
+  { href: "/circle", key: "circle", label: "Friends", Icon: UsersIcon },
+  { href: "/settings", key: "settings", label: "Settings", Icon: SettingsIcon },
 ] as const;
 
-export type NavKey = (typeof LINKS)[number]["key"];
+const MOBILE = [
+  { href: "/dashboard", key: "dashboard", label: "Today", Icon: SunIcon },
+  { href: "/tasks", key: "tasks", label: "Tasks", Icon: ListTodoIcon },
+  { href: "/sleep", key: "sleep", label: "Night", Icon: MoonIcon },
+  { href: "/progress", key: "progress", label: "Stats", Icon: ChartColumnIcon },
+  { href: "/settings", key: "settings", label: "More", Icon: SettingsIcon },
+] as const;
+
+export type NavKey = (typeof DESKTOP)[number]["key"];
+
+function NavGlyph({
+  Icon,
+  active,
+}: {
+  Icon: (typeof MOBILE)[number]["Icon"];
+  active: boolean;
+}) {
+  const ref = useRef<AnimatedIconHandle>(null);
+
+  useEffect(() => {
+    if (active) ref.current?.startAnimation();
+  }, [active]);
+
+  return (
+    <Icon
+      ref={ref}
+      size={22}
+      className="floating-nav-icon pointer-events-none"
+    />
+  );
+}
 
 export function AppNav({ active }: { active: NavKey }) {
   const { data } = useSession();
-  const activeIndex = Math.max(
+  const mapped: NavKey =
+    active === "leaderboard" || active === "circle" ? "settings" : active;
+  const mobileIndex = Math.max(
     0,
-    LINKS.findIndex((l) => l.key === active)
+    MOBILE.findIndex((l) => l.key === mapped)
   );
 
   return (
     <>
-      {/* Desktop / tablet top nav */}
       <header className="hidden items-center justify-between pb-5 md:flex">
         <div className="flex items-center gap-6 lg:gap-8">
           <Link
@@ -34,11 +74,12 @@ export function AppNav({ active }: { active: NavKey }) {
             Dawn
           </Link>
           <nav className="flex flex-wrap gap-4 lg:gap-5">
-            {LINKS.map((l) => (
+            {DESKTOP.map((l) => (
               <Link
                 key={l.key}
                 href={l.href}
-                className={`text-sm transition duration-300 ${
+                prefetch
+                className={`text-sm transition ${
                   active === l.key
                     ? "text-[var(--color-dawn)]"
                     : "text-[var(--color-mist)] hover:text-white"
@@ -50,14 +91,14 @@ export function AppNav({ active }: { active: NavKey }) {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          {data?.user?.image && (
+          {data?.user?.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={data.user.image}
               alt=""
               className="h-8 w-8 rounded-full border border-white/20"
             />
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/" })}
@@ -68,75 +109,67 @@ export function AppNav({ active }: { active: NavKey }) {
         </div>
       </header>
 
-      {/* Mobile top brand bar */}
-      <header className="flex items-center justify-between pb-4 md:hidden">
+      <header className="flex items-center justify-between pb-3 md:hidden">
         <Link
           href="/dashboard"
           className="font-display text-xl tracking-tight text-[var(--color-dawn)]"
         >
           Dawn
         </Link>
-        <div className="flex items-center gap-3">
-          {data?.user?.image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.user.image}
-              alt=""
-              className="h-7 w-7 rounded-full border border-white/20"
-            />
-          )}
+        {data?.user?.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.user.image}
+            alt=""
+            className="h-7 w-7 rounded-full border border-white/20"
+          />
+        ) : (
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/" })}
             className="text-xs text-[var(--color-mist)]"
           >
-            Out
+            Sign out
           </button>
-        </div>
+        )}
       </header>
 
-      {/* Mobile floating dock */}
       <nav
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center md:hidden"
         style={{
-          paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+          paddingBottom: "max(0.65rem, env(safe-area-inset-bottom))",
         }}
         aria-label="Primary"
       >
         <div className="floating-nav pointer-events-auto mx-3 w-full max-w-md">
           <ul
-            className="relative grid grid-cols-6 gap-0.5 p-1.5"
+            className="relative grid grid-cols-5 p-1"
             style={
               {
-                "--nav-count": LINKS.length,
-                "--nav-active": activeIndex,
+                "--nav-count": MOBILE.length,
+                "--nav-active": mobileIndex,
               } as CSSProperties
             }
           >
             <li
               aria-hidden
-              className="floating-nav-pill pointer-events-none absolute top-1.5 bottom-1.5 rounded-full"
+              className="floating-nav-pill pointer-events-none absolute top-1 bottom-1 rounded-[1.15rem]"
             />
-            {LINKS.map((l) => {
-              const isActive = active === l.key;
+            {MOBILE.map((l) => {
+              const isActive = mapped === l.key;
               return (
                 <li key={l.key} className="relative z-10">
                   <Link
                     href={l.href}
-                    className={`floating-nav-link flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-full px-0.5 text-[10px] font-medium sm:text-[11px] ${
+                    prefetch
+                    className={`floating-nav-link flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-[1.1rem] px-0.5 text-[10px] font-medium ${
                       isActive
                         ? "is-active text-[var(--color-night)]"
                         : "text-[var(--color-mist)]"
                     }`}
                   >
-                    <span
-                      className={`h-1 w-1 rounded-full transition-all duration-300 ${
-                        isActive
-                          ? "scale-100 bg-[var(--color-night)]/70"
-                          : "scale-50 bg-transparent"
-                      }`}
-                    />
-                    <span>{l.short}</span>
+                    <NavGlyph Icon={l.Icon} active={isActive} />
+                    <span className="leading-none">{l.label}</span>
                   </Link>
                 </li>
               );

@@ -89,8 +89,8 @@ export function ReminderWatcher() {
 
     void refreshList();
     void tick();
-    const listId = window.setInterval(() => void refreshList(), 60_000);
-    const tickId = window.setInterval(() => void tick(), 20_000);
+    const listId = window.setInterval(() => void refreshList(), 180_000);
+    const tickId = window.setInterval(() => void tick(), 60_000);
     return () => {
       window.clearInterval(listId);
       window.clearInterval(tickId);

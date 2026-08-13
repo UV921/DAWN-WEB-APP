@@ -14,5 +14,10 @@ export default async function DashboardPage() {
   });
   if (!user?.onboardingDone) redirect("/onboarding");
 
-  return <DashboardClient />;
+  return (
+    <DashboardClient
+      wakeGoal={session.user.wakeGoal || "06:00"}
+      sleepGoal={session.user.sleepGoal || "23:00"}
+    />
+  );
 }
