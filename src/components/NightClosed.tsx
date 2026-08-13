@@ -4,13 +4,15 @@ import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import type { AnimatedIconHandle } from "@/components/animated-icons/use-icon-animation";
+import { cn } from "@/lib/utils";
 
 type Props = {
   sleepGoal: string;
   wakeGoal: string;
+  className?: string;
 };
 
-export function NightClosed({ sleepGoal, wakeGoal }: Props) {
+export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
   const moonRef = useRef<AnimatedIconHandle>(null);
 
   useEffect(() => {
@@ -24,7 +26,10 @@ export function NightClosed({ sleepGoal, wakeGoal }: Props) {
       initial={{ opacity: 0, y: 18, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className="relative overflow-hidden rounded-3xl border border-[var(--color-dawn)]/25 bg-[#081018] px-5 py-8 text-center sm:px-8"
+      className={cn(
+        "relative overflow-hidden rounded-3xl border border-[var(--color-dawn)]/25 bg-[#081018] px-5 py-8 text-center sm:px-8",
+        className
+      )}
     >
       <div className="pointer-events-none absolute inset-0 night-closed-glow" />
       {STARS.map((s) => (
