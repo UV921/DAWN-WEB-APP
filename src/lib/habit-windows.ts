@@ -23,6 +23,13 @@ function parseMins(hhmm: string): number {
   return ((h % 24) * 60 + (m % 60) + 24 * 60) % (24 * 60);
 }
 
+/** 00:00 as an *end* time means midnight tonight (24:00), not 12:00am as start of day. */
+function parseEndMins(end: string, startMins: number): number {
+  const e = parseMins(end);
+  if (e === 0 && startMins > 0) return 24 * 60;
+  return e;
+}
+
 export function formatMins(total: number): string {
   const n = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
   const h = Math.floor(n / 60);
@@ -39,7 +46,7 @@ export function nowMins(d = new Date(), timeZone?: string): number {
 export function isInWindow(t: string | number, start: string, end: string): boolean {
   const tm = typeof t === "number" ? t : parseMins(t);
   const s = parseMins(start);
-  const e = parseMins(end);
+  const e = parseEndMins(end, s);
   if (s === e) return true; // full day
   if (s < e) return tm >= s && tm <= e;
   return tm >= s || tm <= e;
@@ -53,7 +60,8 @@ export function minutesUntilOpen(now: number, start: string, end: string): numbe
 
 export function minutesUntilClose(now: number, start: string, end: string): number {
   if (!isInWindow(now, start, end)) return 0;
-  const e = parseMins(end);
+  const s = parseMins(start);
+  const e = parseEndMins(end, s);
   return (e - now + 24 * 60) % (24 * 60);
 }
 
@@ -162,12 +170,12 @@ export function formatDuration(mins: number): string {
 /** Wake/bed log must be close to "now" — no backdating for progress. */
 export function isHonestClockTime(
   chosen: string,
-  now: Date = new Date(),
+  now: Date | number = new Date(),
   graceMins = 20,
   timeZone?: string
 ): boolean {
   const chosenM = parseMins(chosen);
-  const nowM = nowMins(now, timeZone);
+  const nowM = typeof now === "number" ? now : nowMins(now, timeZone);
   const diff = Math.min(
     Math.abs(chosenM - nowM),
     24 * 60 - Math.abs(chosenM - nowM)

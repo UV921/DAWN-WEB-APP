@@ -263,7 +263,15 @@ export async function POST(req: Request) {
   const wakeGoal = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
   const tz = session.user.timezone || DEFAULT_TZ;
-  const now = nowMins(new Date(), tz);
+  const tzNow = nowMins(new Date(), tz);
+  const clientNow =
+    typeof body.nowMins === "number" &&
+    Number.isFinite(body.nowMins) &&
+    body.nowMins >= 0 &&
+    body.nowMins < 24 * 60
+      ? Math.round(body.nowMins)
+      : null;
+  const now = clientNow ?? tzNow;
 
   const existing = await prisma.habitLog.findUnique({
     where: { userId_date: { userId: session.user.id, date } },
@@ -347,7 +355,7 @@ export async function POST(req: Request) {
         key: "wakeTime",
         reason: `Wake window is ${win.start}–${win.end}.`,
       });
-    } else if (!isHonestClockTime(wakeTime, new Date(), 20, tz)) {
+    } else if (!isHonestClockTime(wakeTime, now, 20, tz)) {
       wakeTime = null;
       rejected.push({
         key: "wakeTime",
@@ -388,7 +396,7 @@ export async function POST(req: Request) {
         key: "bedtime",
         reason: `Sleep window is ${win.start}–${win.end}.`,
       });
-    } else if (!isHonestClockTime(bedtime, new Date(), 20, tz)) {
+    } else if (!isHonestClockTime(bedtime, now, 20, tz)) {
       bedtime = null;
       rejected.push({
         key: "bedtime",

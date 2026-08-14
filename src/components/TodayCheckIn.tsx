@@ -298,6 +298,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             date,
+            nowMins: nowMins(new Date(), tzRef.current),
             ...(send.wake ? { wakeTime: nextWake || null } : {}),
             ...(send.bed ? { bedtime: nextBed || null } : {}),
             checks: checksPayload,

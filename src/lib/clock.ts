@@ -18,7 +18,7 @@ export function zonedClock(timeZone = DEFAULT_TZ, at = new Date()) {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false,
+      hourCycle: "h23",
     }).formatToParts(at);
     const y = part(parts, "year");
     const mo = part(parts, "month");
