@@ -139,7 +139,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   >([]);
   const [notifyReady, setNotifyReady] = useState(false);
   const [pulse, setPulse] = useState<MorningPulse | null>(null);
-  const [pulseAi, setPulseAi] = useState(false);
+  const [timezone, setTimezone] = useState<string | undefined>();
+  const tzRef = useRef<string | undefined>();
   const [, setTick] = useState(0);
 
   const checksRef = useRef(checks);
@@ -154,9 +155,16 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   defsRef.current = habitDefs;
 
   const applyHabits = useCallback(
-    (defs: HabitRow[]) => {
+    (defs: HabitRow[], tz = tzRef.current) => {
+      if (tz) tzRef.current = tz;
       setHabitDefs(
-        enrichHabitsWithWindows(defs, wakeGoal, sleepGoal) as HabitRow[]
+        enrichHabitsWithWindows(
+          defs,
+          wakeGoal,
+          sleepGoal,
+          new Date(),
+          tzRef.current
+        ) as HabitRow[]
       );
     },
     [wakeGoal, sleepGoal]
@@ -175,7 +183,11 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
       setStreaks(data.streaks);
-      applyHabits(defs);
+      if (typeof data.timezone === "string") {
+        tzRef.current = data.timezone;
+        setTimezone(data.timezone);
+      }
+      applyHabits(defs, data.timezone);
       setDayMode(data.dayMode || "day");
       setChallenge(data.challenge || null);
       setTodayPlan(data.todayPlan || null);
@@ -204,33 +216,15 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         streak: data.profile?.earlyStreak || 0,
         runDay: data.challenge?.active ? data.challenge.day : undefined,
         runTotal: data.challenge?.total,
+        nextHabit:
+          defs.find((h) => !nextChecks[h.key] && h.canSubmit)?.label ||
+          defs.find((h) => !nextChecks[h.key])?.label,
+        tasksLeft: Math.max(
+          0,
+          todos.length - todos.filter((x) => x.done).length
+        ),
       });
       setPulse(localPulse);
-      setPulseAi(false);
-      void fetch("/api/coach/pulse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          week: data.weekPulse,
-          todayWake: Boolean(tlog?.wakeTime),
-          habitsDone: defs.filter((h) => nextChecks[h.key]).length,
-          habitsTotal: defs.length || 1,
-          tasksDone: todos.filter((x) => x.done).length,
-          tasksTotal: todos.length,
-          nightClosed: Boolean(tlog?.bedtime),
-          streak: data.profile?.earlyStreak || 0,
-          runDay: data.challenge?.active ? data.challenge.day : undefined,
-          runTotal: data.challenge?.total,
-        }),
-      })
-        .then((r) => r.json())
-        .then((d: { pulse?: MorningPulse; usedAi?: boolean }) => {
-          if (d.pulse?.headline) {
-            setPulse(d.pulse);
-            setPulseAi(Boolean(d.usedAi));
-          }
-        })
-        .catch(() => undefined);
       void fetch("/api/reminders")
         .then((r) => r.json())
         .then((d: { reminders?: { id: string; title: string; time: string; enabled: boolean }[] }) => {
@@ -285,7 +279,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     async (
       nextChecks: Record<string, boolean>,
       nextWake: string,
-      nextBed: string
+      nextBed: string,
+      send: { wake?: boolean; bed?: boolean; checkKeys?: string[] } = {}
     ) => {
       const date = todayRef.current;
       if (!date) return false;
@@ -293,14 +288,19 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       setStatus("idle");
       setBanner(null);
       try {
+        const checksPayload = send.checkKeys
+          ? Object.fromEntries(
+              send.checkKeys.map((k) => [k, Boolean(nextChecks[k])])
+            )
+          : nextChecks;
         const res = await fetch("/api/habits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             date,
-            wakeTime: nextWake || null,
-            bedtime: nextBed || null,
-            checks: nextChecks,
+            ...(send.wake ? { wakeTime: nextWake || null } : {}),
+            ...(send.bed ? { bedtime: nextBed || null } : {}),
+            checks: checksPayload,
           }),
         });
         setSaving(false);
@@ -356,7 +356,9 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     const live = enrichHabitsWithWindows(
       defsRef.current,
       wakeGoal,
-      sleepGoal
+      sleepGoal,
+      new Date(),
+      tzRef.current
     ) as HabitRow[];
     const row = live.find((x) => x.key === h.key) || h;
     const done = checksRef.current[h.key];
@@ -364,34 +366,52 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       setBanner({
         tone: "tip",
         text: row.opensInMin
-          ? `${h.label} opens in ${formatDuration(row.opensInMin)}`
-          : `${h.label} isn’t open yet.`,
+          ? `${h.label} opens in ${formatDuration(row.opensInMin)} (${row.windowStart}–${row.windowEnd})`
+          : `${h.label} isn’t open yet. Window ${row.windowStart}–${row.windowEnd}.`,
       });
       return;
     }
     const prev = checksRef.current;
     const next = { ...prev, [h.key]: !done };
     setChecks(next);
-    const ok = await persist(next, wakeRef.current, bedRef.current);
+    const ok = await persist(next, wakeRef.current, bedRef.current, {
+      checkKeys: [h.key],
+    });
     if (!ok) setChecks(prev);
   }
 
   async function wokeUp() {
     if (wakeRef.current) return;
     const t = nowHHMM();
-    const next = { ...checksRef.current, wakeEarly: true };
+    const prevChecks = checksRef.current;
+    const next = { ...prevChecks, wakeEarly: true };
     setWakeTime(t);
     setChecks(next);
-    await persist(next, t, bedRef.current);
+    const ok = await persist(next, t, bedRef.current, {
+      wake: true,
+      checkKeys: ["wakeEarly"],
+    });
+    if (!ok) {
+      setWakeTime("");
+      setChecks(prevChecks);
+    }
   }
 
   async function goingToSleep() {
     if (bedRef.current) return;
     const t = nowHHMM();
-    const next = { ...checksRef.current, sleepEarly: true };
+    const prevChecks = checksRef.current;
+    const next = { ...prevChecks, sleepEarly: true };
     setBedtime(t);
     setChecks(next);
-    await persist(next, wakeRef.current, t);
+    const ok = await persist(next, wakeRef.current, t, {
+      bed: true,
+      checkKeys: ["sleepEarly"],
+    });
+    if (!ok) {
+      setBedtime("");
+      setChecks(prevChecks);
+    }
   }
 
   async function startChallenge(days: number) {
@@ -431,7 +451,9 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const liveHabits = enrichHabitsWithWindows(
     habitDefs,
     wakeGoal,
-    sleepGoal
+    sleepGoal,
+    new Date(),
+    tzRef.current || timezone
   ) as HabitRow[];
 
   if (loading) {
@@ -487,7 +509,11 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     sleepHabit?.windowStart && sleepHabit?.windowEnd
       ? { start: sleepHabit.windowStart, end: sleepHabit.windowEnd }
       : defaultWindowForKey("sleepEarly", wakeGoal, sleepGoal);
-  const inSleepWindow = isInWindow(nowMins(), sleepWin.start, sleepWin.end);
+  const inSleepWindow = isInWindow(
+    nowMins(new Date(), tzRef.current || timezone),
+    sleepWin.start,
+    sleepWin.end
+  );
 
   const tasksDone = todayTodos.filter((t) => t.done).length;
   const nextLine = wakeTime
@@ -526,7 +552,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         ) : null}
       </header>
 
-      {pulse ? <MorningPulseCard pulse={pulse} usedAi={pulseAi} /> : null}
+      {pulse ? <MorningPulseCard pulse={pulse} /> : null}
 
       <TodayOverview
         earlyStreak={profile?.earlyStreak || 0}

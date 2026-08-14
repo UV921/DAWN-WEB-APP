@@ -1,3 +1,5 @@
+import { formatDateInZone } from "@/lib/clock";
+
 export const DEFAULT_HABITS = [
   {
     key: "sleepEarly",
@@ -215,7 +217,8 @@ export function computeStreak(
   return { current, longest: Math.max(longest, current) };
 }
 
-export function formatLocalDate(d: Date): string {
+export function formatLocalDate(d: Date, timeZone?: string): string {
+  if (timeZone) return formatDateInZone(timeZone, d);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

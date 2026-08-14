@@ -91,7 +91,7 @@ export function LandingPage({ snap }: Props) {
     if (reduce) return;
     const id = window.setInterval(() => {
       setLoopStep((n) => (n + 1) % LOOP.length);
-    }, 1600);
+    }, 3200);
     return () => window.clearInterval(id);
   }, [reduce]);
 
@@ -100,23 +100,10 @@ export function LandingPage({ snap }: Props) {
       <section className="relative min-h-[100dvh] overflow-hidden">
         <motion.div
           className="absolute inset-0"
-          initial={reduce ? false : { scale: 1.08, opacity: 0.65 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: reduce ? 0 : 1.8, ease: EASE }}
+          initial={reduce ? false : { opacity: 0.75 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: reduce ? 0 : 0.8, ease: EASE }}
         >
-          <motion.div
-            className="absolute inset-0"
-            animate={
-              reduce
-                ? undefined
-                : { scale: [1, 1.06], x: ["0%", "-1.2%"], y: ["0%", "1%"] }
-            }
-            transition={
-              reduce
-                ? undefined
-                : { duration: 28, ease: "linear", repeat: Infinity, repeatType: "reverse" }
-            }
-          >
             <Image
               src="/images/landing-dawn.jpg"
               alt="Quiet field at first light"
@@ -126,16 +113,13 @@ export function LandingPage({ snap }: Props) {
               className="object-cover object-[center_60%]"
             />
           </motion.div>
-        </motion.div>
         <div
           aria-hidden
           className="absolute inset-0 bg-gradient-to-t from-[#0a0e12] via-[#0a0e12]/55 to-[#0a0e12]/25"
         />
         <motion.div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f0b45a]/15 to-transparent"
-          animate={reduce ? undefined : { opacity: [0.35, 0.7, 0.35] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f0b45a]/20 to-transparent"
         />
 
         <div className="relative z-10 flex min-h-[100dvh] flex-col">

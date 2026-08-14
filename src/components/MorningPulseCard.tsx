@@ -28,27 +28,25 @@ const TONE: Record<
   },
 };
 
-export function MorningPulseCard({
-  pulse,
-  usedAi,
-}: {
-  pulse: MorningPulse;
-  usedAi?: boolean;
-}) {
+export function MorningPulseCard({ pulse }: { pulse: MorningPulse }) {
   const t = TONE[pulse.tone];
   return (
-    <section className={`rounded-2xl border px-4 py-4 ${t.border} ${t.bg}`}>
+    <section className={`relative overflow-hidden rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
       <p className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-[var(--color-dawn)]">
         {t.kicker}
-        {usedAi ? " · AI" : ""}
       </p>
-      <h2 className="font-display mt-2 text-2xl leading-snug text-white">
+      <h2 className="font-display mt-2 text-[1.85rem] leading-[1.15] text-white">
         {pulse.headline}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-[var(--color-cloud)]">
         {pulse.body}
       </p>
-      <p className="mt-3 text-sm text-white">{pulse.nextMove}</p>
+      <div className="mt-4 border-l-2 border-[var(--color-dawn)] bg-black/20 px-3 py-2.5">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
+          Next
+        </p>
+        <p className="mt-1 text-sm font-medium text-white">{pulse.nextMove}</p>
+      </div>
     </section>
   );
 }

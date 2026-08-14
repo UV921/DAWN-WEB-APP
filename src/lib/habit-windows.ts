@@ -1,5 +1,7 @@
 /** Time windows for when a habit can be logged (and earn progress). */
 
+import { minsInZone } from "@/lib/clock";
+
 export type HabitWindow = {
   start: string; // HH:MM
   end: string; // HH:MM
@@ -28,7 +30,8 @@ export function formatMins(total: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export function nowMins(d = new Date()): number {
+export function nowMins(d = new Date(), timeZone?: string): number {
+  if (timeZone) return minsInZone(timeZone, d);
   return d.getHours() * 60 + d.getMinutes();
 }
 
@@ -160,10 +163,11 @@ export function formatDuration(mins: number): string {
 export function isHonestClockTime(
   chosen: string,
   now: Date = new Date(),
-  graceMins = 20
+  graceMins = 20,
+  timeZone?: string
 ): boolean {
   const chosenM = parseMins(chosen);
-  const nowM = nowMins(now);
+  const nowM = nowMins(now, timeZone);
   const diff = Math.min(
     Math.abs(chosenM - nowM),
     24 * 60 - Math.abs(chosenM - nowM)
@@ -173,8 +177,14 @@ export function isHonestClockTime(
 
 export function enrichHabitsWithWindows<
   T extends HabitWithWindow & Record<string, unknown>,
->(habits: T[], wakeGoal: string, sleepGoal: string, now = new Date()) {
-  const nm = nowMins(now);
+>(
+  habits: T[],
+  wakeGoal: string,
+  sleepGoal: string,
+  now = new Date(),
+  timeZone?: string
+) {
+  const nm = nowMins(now, timeZone);
   return habits.map((h) => {
     const window = resolveHabitWindow(h, wakeGoal, sleepGoal);
     const st = windowStatus(window, nm);

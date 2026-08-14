@@ -30,7 +30,7 @@ import {
   resolveDayMode,
 } from "@/lib/daily-loop";
 import { parseLifeJson } from "@/lib/personal-life";
-import { summarizeWeek } from "@/lib/morning-pulse";
+import { formatDateInZone, DEFAULT_TZ } from "@/lib/clock";
 
 function toClientLog(log: {
   date: string;
@@ -70,6 +70,7 @@ export async function GET(req: Request) {
 
   const wakeGoal = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
+  const tz = session.user.timezone || DEFAULT_TZ;
   const userId = session.user.id;
 
   const { searchParams } = new URL(req.url);
@@ -78,10 +79,11 @@ export async function GET(req: Request) {
     Number(searchParams.get("days") || (lite ? 42 : 60)),
     lite ? 90 : 400
   );
+  const today = formatDateInZone(tz);
   const since = formatLocalDate(
-    new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    new Date(Date.now() - days * 24 * 60 * 60 * 1000),
+    tz
   );
-  const today = formatLocalDate(new Date());
   const tomorrow = nextCalendarDate(today);
 
   const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, tomorrowPlan, tomorrowTodos, todoHistory] =
@@ -149,7 +151,13 @@ export async function GET(req: Request) {
       }),
     ]);
 
-  const habits = enrichHabitsWithWindows(habitsRaw, wakeGoal, sleepGoal);
+  const habits = enrichHabitsWithWindows(
+    habitsRaw,
+    wakeGoal,
+    sleepGoal,
+    new Date(),
+    tz
+  );
   const habitKeys = habits.map((h) => h.key);
   const logs = rawLogs.map(toClientLog);
 
@@ -190,6 +198,7 @@ export async function GET(req: Request) {
     habits,
     wakeGoal,
     sleepGoal,
+    timezone: tz,
     dayMode: resolveDayMode(wakeGoal, sleepGoal),
     challenge,
     todayPlan,
@@ -243,7 +252,7 @@ export async function POST(req: Request) {
   const habitKeys = habits.map((h) => h.key);
 
   const body = await req.json();
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone || DEFAULT_TZ);
   const date = (body.date as string) || today;
   const onlyToday = date === today;
 
@@ -253,6 +262,8 @@ export async function POST(req: Request) {
 
   const wakeGoal = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
+  const tz = session.user.timezone || DEFAULT_TZ;
+  const now = nowMins(new Date(), tz);
 
   const existing = await prisma.habitLog.findUnique({
     where: { userId_date: { userId: session.user.id, date } },
@@ -299,7 +310,7 @@ export async function POST(req: Request) {
     }
 
     const win = resolveHabitWindow(h, wakeGoal, sleepGoal);
-    if (!isInWindow(nowMins(), win.start, win.end)) {
+    if (!isInWindow(now, win.start, win.end)) {
       rejected.push({
         key: h.key,
         reason: `Opens ${win.start}–${win.end}. Come back in that window.`,
@@ -330,13 +341,13 @@ export async function POST(req: Request) {
     } else if (existing?.wakeTime) {
       // Keep existing wake — don't overwrite with backdated pickers
       wakeTime = existing.wakeTime;
-    } else if (!isInWindow(nowMins(), win.start, win.end)) {
+    } else if (!isInWindow(now, win.start, win.end)) {
       wakeTime = null;
       rejected.push({
         key: "wakeTime",
         reason: `Wake window is ${win.start}–${win.end}.`,
       });
-    } else if (!isHonestClockTime(wakeTime)) {
+    } else if (!isHonestClockTime(wakeTime, new Date(), 20, tz)) {
       wakeTime = null;
       rejected.push({
         key: "wakeTime",
@@ -371,13 +382,13 @@ export async function POST(req: Request) {
       });
     } else if (existing?.bedtime) {
       bedtime = existing.bedtime;
-    } else if (!isInWindow(nowMins(), win.start, win.end)) {
+    } else if (!isInWindow(now, win.start, win.end)) {
       bedtime = null;
       rejected.push({
         key: "bedtime",
         reason: `Sleep window is ${win.start}–${win.end}.`,
       });
-    } else if (!isHonestClockTime(bedtime)) {
+    } else if (!isHonestClockTime(bedtime, new Date(), 20, tz)) {
       bedtime = null;
       rejected.push({
         key: "bedtime",
@@ -556,7 +567,13 @@ export async function POST(req: Request) {
     streak: streak.current,
   });
 
-  const enriched = enrichHabitsWithWindows(habits, wakeGoal, sleepGoal);
+  const enriched = enrichHabitsWithWindows(
+    habits,
+    wakeGoal,
+    sleepGoal,
+    new Date(),
+    tz
+  );
 
   return NextResponse.json({
     log: toClientLog(log),
