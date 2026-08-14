@@ -31,6 +31,7 @@ import {
 } from "@/lib/daily-loop";
 import { parseLifeJson } from "@/lib/personal-life";
 import { formatDateInZone, DEFAULT_TZ } from "@/lib/clock";
+import { summarizeWeek } from "@/lib/morning-pulse";
 
 function toClientLog(log: {
   date: string;

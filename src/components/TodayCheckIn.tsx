@@ -140,7 +140,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const [notifyReady, setNotifyReady] = useState(false);
   const [pulse, setPulse] = useState<MorningPulse | null>(null);
   const [timezone, setTimezone] = useState<string | undefined>();
-  const tzRef = useRef<string | undefined>();
+  const tzRef = useRef<string | undefined>(undefined);
   const [, setTick] = useState(0);
 
   const checksRef = useRef(checks);
