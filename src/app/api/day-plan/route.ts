@@ -6,6 +6,7 @@ import { formatLocalDate } from "@/lib/habits";
 import { nextCalendarDate } from "@/lib/daily-loop";
 import { grantXp } from "@/lib/grant-xp";
 import { resolveHabitWindow } from "@/lib/habit-windows";
+import { normalizeListTitle } from "@/lib/todo-lists";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -164,8 +165,9 @@ export async function PATCH(req: Request) {
     if (count >= 50) {
       return NextResponse.json({ error: "Too many tasks today" }, { status: 400 });
     }
+    const title = normalizeListTitle(body.title);
     const todo = await prisma.todo.create({
-      data: { userId: session.user.id, date, text },
+      data: { userId: session.user.id, date, title, text },
     });
     return NextResponse.json({ todo });
   }

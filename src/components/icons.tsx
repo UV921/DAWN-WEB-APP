@@ -118,6 +118,16 @@ export function IconTrophy(props: IconProps) {
   );
 }
 
+export function IconShare(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v10" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+    </svg>
+  );
+}
+
 /** Small inline flow: A · B · C with chevrons between */
 export function FlowSteps({ steps }: { steps: string[] }) {
   return (

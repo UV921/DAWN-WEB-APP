@@ -21,6 +21,17 @@ export type StudyStats = {
   monthMinutes?: number;
   monthLabel?: string;
   monthDaysWithStudy?: number;
+  yearMinutes?: number;
+  yearLabel?: string;
+  allMinutes?: number;
+  allLabel?: string;
+  periods?: {
+    today: { minutes: number; label: string };
+    week: { minutes: number; label: string };
+    month: { minutes: number; label: string };
+    year: { minutes: number; label: string };
+    all: { minutes: number; label: string };
+  };
   streak?: number;
   bestDay?: { date: string; minutes: number; label: string } | null;
   status: StudyStatus;
@@ -107,20 +118,21 @@ export function StudyStatusPanel({
         {data.status.body}
       </p>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Mini
           label="Today"
-          value={data.today.label}
+          value={data.periods?.today.label || data.today.label}
           live={data.today.live}
         />
-        <Mini label="This week" value={data.weekLabel} />
+        <Mini label="Week" value={data.periods?.week.label || data.weekLabel} />
         <Mini
-          label={data.streak ? "Study streak" : "Days this week"}
-          value={
-            data.streak
-              ? `${data.streak}d`
-              : `${data.weekDaysWithStudy ?? data.week.filter((d) => d.minutes > 0).length}`
-          }
+          label="Month"
+          value={data.periods?.month.label || data.monthLabel || "0m"}
+        />
+        <Mini label="Year" value={data.periods?.year.label || "0m"} />
+        <Mini
+          label="All time"
+          value={data.periods?.all.label || data.allLabel || "0m"}
         />
       </div>
 

@@ -325,6 +325,8 @@ model Todo {
   userId    String
   /// Day this todo is for (YYYY-MM-DD)
   date      String
+  /// List / section name — e.g. Today, Buy, Share on X
+  title     String   @default("Today")
   text      String
   done      Boolean  @default(false)
   createdAt DateTime @default(now())

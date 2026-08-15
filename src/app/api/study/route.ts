@@ -9,6 +9,9 @@ import {
   lastNDates,
   minutesOnLocalDate,
   parseStudyVoiceIds,
+  sessionMinutes,
+  startOfMonth,
+  startOfYear,
   todayInZone,
 } from "@/lib/study-time";
 import { buildStudyStatus, studyStreak } from "@/lib/study-status";
@@ -51,15 +54,17 @@ export async function GET(req: Request) {
   const today = todayInZone(tz);
   const rangeDates = lastNDates(today, range);
   const weekDates = rangeDates.slice(-7);
-  const since = rangeDates[0];
+  const monthStart = startOfMonth(today);
+  const yearStart = startOfYear(today);
+  const weekStart = weekDates[0];
   const guildId = process.env.DISCORD_GUILD_ID?.trim() || null;
   const now = new Date();
 
-  const [sessions, rooms, user] = await Promise.all([
+  const [sessions, rooms, user, closedSums, open] = await Promise.all([
     prisma.studySession.findMany({
       where: {
         userId: session.user.id,
-        OR: [{ date: { gte: since } }, { endedAt: null }],
+        OR: [{ date: { gte: weekStart } }, { endedAt: null }],
       },
       orderBy: { startedAt: "asc" },
     }),
@@ -68,11 +73,41 @@ export async function GET(req: Request) {
       where: { id: session.user.id },
       select: { discordId: true },
     }),
+    prisma.studySession.groupBy({
+      by: ["date"],
+      where: {
+        userId: session.user.id,
+        endedAt: { not: null },
+      },
+      _sum: { minutes: true },
+    }),
+    prisma.studySession.findFirst({
+      where: { userId: session.user.id, endedAt: null },
+    }),
   ]);
+
+  const closedByDate = new Map<string, number>();
+  for (const row of closedSums) {
+    closedByDate.set(row.date, row._sum.minutes || 0);
+  }
+  let liveExtra = 0;
+  let liveDate = today;
+  if (open) {
+    liveExtra = sessionMinutes(open.startedAt, now);
+    liveDate = open.date;
+    closedByDate.set(liveDate, (closedByDate.get(liveDate) || 0) + liveExtra);
+  }
+
+  function sumSince(gte: string | null) {
+    let n = 0;
+    for (const [date, mins] of closedByDate) {
+      if (!gte || date >= gte) n += mins;
+    }
+    return n;
+  }
 
   const byDate = new Map<string, number>();
   for (const d of rangeDates) byDate.set(d, 0);
-
   for (const s of sessions) {
     const end = s.endedAt || now;
     for (const d of rangeDates) {
@@ -94,13 +129,17 @@ export async function GET(req: Request) {
     minutes: Math.round(byDate.get(date) || 0),
   }));
   const week = series.slice(-7);
-  const todayMinutes = byDate.get(today) || 0;
-  const weekMinutes = week.reduce((a, b) => a + b.minutes, 0);
-  const monthMinutes = series.reduce((a, b) => a + b.minutes, 0);
-  const live = sessions.find((s) => !s.endedAt) || null;
+  const todayMinutes = Math.round(closedByDate.get(today) || byDate.get(today) || 0);
+  const weekMinutes = sumSince(weekStart);
+  const monthMinutes = sumSince(monthStart);
+  const yearMinutes = sumSince(yearStart);
+  const allMinutes = sumSince(null);
+  const live = open;
   const configured = rooms.length > 0;
   const weekDaysWithStudy = week.filter((d) => d.minutes > 0).length;
-  const monthDaysWithStudy = series.filter((d) => d.minutes > 0).length;
+  const monthDaysWithStudy = [...closedByDate.entries()].filter(
+    ([d, m]) => d >= monthStart && m > 0
+  ).length;
   const best = [...week].sort((a, b) => b.minutes - a.minutes)[0];
   const status = buildStudyStatus({
     configured,
@@ -112,25 +151,38 @@ export async function GET(req: Request) {
     bestDayMinutes: best?.minutes || 0,
   });
 
+  const periods = {
+    today: { minutes: todayMinutes, label: formatStudyDuration(todayMinutes) },
+    week: { minutes: Math.round(weekMinutes), label: formatStudyDuration(weekMinutes) },
+    month: { minutes: Math.round(monthMinutes), label: formatStudyDuration(monthMinutes) },
+    year: { minutes: Math.round(yearMinutes), label: formatStudyDuration(yearMinutes) },
+    all: { minutes: Math.round(allMinutes), label: formatStudyDuration(allMinutes) },
+  };
+
   return NextResponse.json({
     configured,
     hasDiscord: Boolean(user?.discordId),
     rooms,
     today: {
       date: today,
-      minutes: Math.round(todayMinutes),
-      label: formatStudyDuration(todayMinutes),
+      minutes: todayMinutes,
+      label: periods.today.label,
       live: Boolean(live),
       liveStartedAt: live?.startedAt?.toISOString() || null,
     },
     week,
-    weekMinutes: Math.round(weekMinutes),
-    weekLabel: formatStudyDuration(weekMinutes),
+    weekMinutes: periods.week.minutes,
+    weekLabel: periods.week.label,
     weekDaysWithStudy,
     month: series,
-    monthMinutes: Math.round(monthMinutes),
-    monthLabel: formatStudyDuration(monthMinutes),
+    monthMinutes: periods.month.minutes,
+    monthLabel: periods.month.label,
     monthDaysWithStudy,
+    yearMinutes: periods.year.minutes,
+    yearLabel: periods.year.label,
+    allMinutes: periods.all.minutes,
+    allLabel: periods.all.label,
+    periods,
     streak: studyStreak(series),
     bestDay: best
       ? { date: best.date, minutes: best.minutes, label: formatStudyDuration(best.minutes) }

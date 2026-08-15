@@ -4,13 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { AppNav } from "@/components/AppNav";
 import { IconChevronRight } from "@/components/icons";
+import { formatStudyDuration } from "@/lib/study-time";
 
 type Metric =
   | "earlyStreak"
   | "openStreak"
   | "xp"
   | "consistency"
-  | "totalEarly";
+  | "totalEarly"
+  | "studyWeek"
+  | "studyTotal"
+  | "habits";
 
 type Row = {
   rank: number;
@@ -28,6 +32,9 @@ type Row = {
   totalEarlyWakes: number;
   wakeOnTime7: number;
   consistency: number;
+  studyWeek?: number;
+  studyTotal?: number;
+  habits?: number;
   score: number;
   isMe: boolean;
 };
@@ -35,6 +42,9 @@ type Row = {
 type CircleOpt = { id: string; name: string };
 
 const METRICS: { id: Metric; label: string; unit: string }[] = [
+  { id: "studyWeek", label: "Study · week", unit: "studied" },
+  { id: "studyTotal", label: "Study · all time", unit: "studied" },
+  { id: "habits", label: "Habits · 7d", unit: "%" },
   { id: "earlyStreak", label: "Early streak", unit: "days" },
   { id: "openStreak", label: "Open streak", unit: "days" },
   { id: "consistency", label: "7-day on-time", unit: "%" },
@@ -49,9 +59,19 @@ function medal(rank: number) {
   return String(rank);
 }
 
+function formatScore(metric: Metric, score: number) {
+  if (metric === "studyWeek" || metric === "studyTotal") {
+    return formatStudyDuration(score);
+  }
+  if (metric === "consistency" || metric === "habits") {
+    return `${score}%`;
+  }
+  return String(score);
+}
+
 export function LeaderboardClient() {
   const { data: session } = useSession();
-  const [metric, setMetric] = useState<Metric>("earlyStreak");
+  const [metric, setMetric] = useState<Metric>("studyWeek");
   const [scope, setScope] = useState<"discord" | "global" | "circle">("discord");
   const [circleId, setCircleId] = useState("");
   const [circles, setCircles] = useState<CircleOpt[]>([]);
@@ -110,10 +130,10 @@ export function LeaderboardClient() {
           <h1 className="ui-title mt-2">Who showed up</h1>
           <p className="ui-sub mt-3">
             {scope === "discord"
-              ? "People on your Discord server who use Dawn — ranked by early wakes and streaks."
+              ? "People on your Discord server who logged into Dawn — ranked by study hours, habits, and streaks. Time only counts after they sign in with Discord."
               : scope === "circle"
                 ? "Your friend circle only. Invite people from Friends if this looks empty."
-                : "Everyone on Dawn — ranked by early wakes, open streaks, and XP."}{" "}
+                : "Everyone on Dawn — ranked by study, habits, and streaks."}{" "}
             {today ? `Updated for ${today}.` : ""}
           </p>
 
@@ -234,7 +254,7 @@ export function LeaderboardClient() {
                 </div>
                 <div className="text-right">
                   <p className="font-display text-2xl text-[var(--color-dawn)]">
-                    {metric === "consistency" ? `${me.score}%` : me.score}
+                    {formatScore(metric, me.score)}
                   </p>
                   <p className="text-xs text-[var(--color-mist)]">
                     {metricMeta.unit}
@@ -282,7 +302,7 @@ export function LeaderboardClient() {
                       {r.isMe ? "You" : r.name}
                     </p>
                     <p className="mt-1 font-display text-xl text-[var(--color-dawn)]">
-                      {metric === "consistency" ? `${r.score}%` : r.score}
+                      {formatScore(metric, r.score)}
                     </p>
                   </div>
                 );
@@ -351,7 +371,7 @@ export function LeaderboardClient() {
                     </div>
                     <div className="text-right">
                       <p className="font-display text-xl text-[var(--color-dawn)]">
-                        {metric === "consistency" ? `${r.score}%` : r.score}
+                        {formatScore(metric, r.score)}
                       </p>
                       <p className="text-[10px] uppercase tracking-wider text-[var(--color-mist)]">
                         {metricMeta.unit}

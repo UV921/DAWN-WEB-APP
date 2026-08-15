@@ -97,3 +97,11 @@ export function lastNDates(today: string, n: number): string[] {
 export function todayInZone(timeZone?: string | null): string {
   return formatDateInZone(timeZone || DEFAULT_TZ);
 }
+
+export function startOfMonth(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+export function startOfYear(iso: string): string {
+  return `${iso.slice(0, 4)}-01-01`;
+}

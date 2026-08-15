@@ -119,8 +119,34 @@ async function openSession(
   });
 }
 
+const loginNudgeAt = new Map<string, number>();
+
+async function nudgeDawnLogin(client: Client, discordId: string) {
+  const last = loginNudgeAt.get(discordId) || 0;
+  if (Date.now() - last < 12 * 60 * 60 * 1000) return;
+  loginNudgeAt.set(discordId, Date.now());
+  const base = (process.env.NEXTAUTH_URL || "").replace(/\/$/, "");
+  const url = base ? `${base}/login` : "Dawn → Login → Continue with Discord";
+  try {
+    const user = await client.users.fetch(discordId);
+    await user.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xf0b45a)
+          .setTitle("Log into Dawn to count study time")
+          .setDescription(
+            `You’re in a study voice channel, but Dawn doesn’t have your account yet.\n\nOpen **${url}** and tap **Continue with Discord**. After that, time in this room is tracked and you appear on the Discord friends leaderboard.`
+          ),
+      ],
+    });
+  } catch {
+    /* DMs closed */
+  }
+}
+
 export async function handleVoiceStateUpdate(
   prisma: PrismaClient,
+  client: Client,
   oldState: VoiceState,
   newState: VoiceState
 ) {
@@ -139,7 +165,10 @@ export async function handleVoiceStateUpdate(
   if (!leftStudy && !joinedStudy) return;
 
   const user = await findDawnUser(prisma, discordId);
-  if (!user) return;
+  if (!user) {
+    if (joinedStudy) await nudgeDawnLogin(client, discordId);
+    return;
+  }
 
   if (leftStudy && !joinedStudy) {
     const open = await prisma.studySession.findFirst({
@@ -207,7 +236,7 @@ export async function reconcileOpenSessions(
 
 export function attachStudyVoice(client: Client, prisma: PrismaClient) {
   client.on("voiceStateUpdate", (oldState, newState) => {
-    void handleVoiceStateUpdate(prisma, oldState, newState).catch((e) =>
+    void handleVoiceStateUpdate(prisma, client, oldState, newState).catch((e) =>
       console.error("study voice update failed", e)
     );
   });

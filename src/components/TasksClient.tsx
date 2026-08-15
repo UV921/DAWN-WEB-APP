@@ -61,8 +61,8 @@ export function TasksClient() {
             <p className="ui-kicker">Tasks</p>
             <h1 className="ui-title mt-2">Dump it here</h1>
             <p className="ui-sub mt-3">
-              Work, calls, errands — out of your head so the morning isn’t
-              stall. Finish them or cut them. Night close needs a clear list.
+              Name a list — Buy, Share on X, Today — then dump items. Share a
+              gold card as a PNG to X, WhatsApp, or a friend.
             </p>
           </header>
 
@@ -94,7 +94,7 @@ export function TasksClient() {
                 onChange={setTodayTodos}
                 onError={setError}
                 title="Today"
-                hint="Dump work here so you don’t stall the morning."
+                hint="Pick Buy or Share on X, add items, then tap Share for a card."
               />
               {inSleepWindow ? (
                 <TodayTasks

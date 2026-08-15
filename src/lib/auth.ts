@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
+import { enrollDiscordFriend } from "@/lib/discord-enroll";
 
 const discordConfigured =
   Boolean(process.env.DISCORD_CLIENT_ID?.trim()) &&
@@ -198,6 +199,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         user.id = dbUser.id;
+        void enrollDiscordFriend({
+          userId: dbUser.id,
+          discordId,
+        }).catch((e) => console.error("Discord enroll failed", e));
       }
       return true;
     },

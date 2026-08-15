@@ -4,17 +4,22 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   computeStreak,
+  completedCount,
   formatLocalDate,
   isHabitDone,
   mergeLogChecks,
 } from "@/lib/habits";
+import { enrollDiscordFriend } from "@/lib/discord-enroll";
 
 export type LeaderboardMetric =
   | "earlyStreak"
   | "openStreak"
   | "xp"
   | "consistency"
-  | "totalEarly";
+  | "totalEarly"
+  | "studyWeek"
+  | "studyTotal"
+  | "habits";
 
 type Scope = "discord" | "global" | "circle";
 
@@ -35,37 +40,7 @@ function toLog(l: {
 
 /** Ensure this web user is on the Dawn Discord board for their guild. */
 async function ensureOnDiscordBoard(userId: string, discordId: string | null) {
-  if (!discordId) return;
-  const guildId = process.env.DISCORD_GUILD_ID?.trim();
-  const channelId = process.env.DISCORD_CHANNEL_ID?.trim();
-  if (!guildId || !channelId) return;
-
-  const tracked = await prisma.trackedChannel.upsert({
-    where: { channelId },
-    create: {
-      channelId,
-      guildId,
-      name: "Morning board",
-    },
-    update: {},
-  });
-
-  await prisma.trackedMember.upsert({
-    where: {
-      trackedChannelId_userId: {
-        trackedChannelId: tracked.id,
-        userId,
-      },
-    },
-    create: { trackedChannelId: tracked.id, userId },
-    update: {},
-  });
-
-  // Keep discordId set
-  await prisma.user.updateMany({
-    where: { id: userId, discordId: null },
-    data: { discordId },
-  });
+  await enrollDiscordFriend({ userId, discordId });
 }
 
 /**
@@ -291,6 +266,61 @@ export async function GET(req: Request) {
     logsByUser.set(l.userId, list);
   }
 
+  const userIdsForStudy = users.map((u) => u.id);
+  const [studyWeekRows, studyAllRows, openSessions, habitDefs] = await Promise.all([
+    prisma.studySession.groupBy({
+      by: ["userId"],
+      where: {
+        userId: { in: userIdsForStudy },
+        endedAt: { not: null },
+        date: { gte: weekStart },
+      },
+      _sum: { minutes: true },
+    }),
+    prisma.studySession.groupBy({
+      by: ["userId"],
+      where: {
+        userId: { in: userIdsForStudy },
+        endedAt: { not: null },
+      },
+      _sum: { minutes: true },
+    }),
+    prisma.studySession.findMany({
+      where: { userId: { in: userIdsForStudy }, endedAt: null },
+      select: { userId: true, startedAt: true, date: true },
+    }),
+    prisma.habit.findMany({
+      where: { userId: { in: userIdsForStudy }, active: true },
+      select: { userId: true, key: true },
+    }),
+  ]);
+
+  const studyWeekMap = new Map<string, number>();
+  const studyTotalMap = new Map<string, number>();
+  for (const r of studyWeekRows) {
+    studyWeekMap.set(r.userId, r._sum.minutes || 0);
+  }
+  for (const r of studyAllRows) {
+    studyTotalMap.set(r.userId, r._sum.minutes || 0);
+  }
+  const now = Date.now();
+  for (const s of openSessions) {
+    const extra = Math.max(
+      0,
+      Math.round((now - s.startedAt.getTime()) / 60_000)
+    );
+    studyTotalMap.set(s.userId, (studyTotalMap.get(s.userId) || 0) + extra);
+    if (s.date >= weekStart) {
+      studyWeekMap.set(s.userId, (studyWeekMap.get(s.userId) || 0) + extra);
+    }
+  }
+  const habitKeysByUser = new Map<string, string[]>();
+  for (const h of habitDefs) {
+    const list = habitKeysByUser.get(h.userId) || [];
+    list.push(h.key);
+    habitKeysByUser.set(h.userId, list);
+  }
+
   const rows = users.map((u) => {
     const ulogs = logsByUser.get(u.id) || [];
     const earlyStreak = computeStreak(ulogs, (l) =>
@@ -304,6 +334,13 @@ export async function GET(req: Request) {
     const todayLog = ulogs.find((l) => l.date === today);
     const upToday = Boolean(todayLog?.wakeTime);
     const onTimeToday = Boolean(todayLog && isHabitDone(todayLog, "wakeEarly"));
+    const keys = habitKeysByUser.get(u.id) || [];
+    const habitHits = week.reduce(
+      (n, l) => n + completedCount(l, keys.length ? keys : undefined),
+      0
+    );
+    const habitSlots = Math.max(1, keys.length) * 7;
+    const habitPct = Math.round((habitHits / habitSlots) * 100);
 
     const scores: Record<LeaderboardMetric, number> = {
       earlyStreak,
@@ -311,6 +348,9 @@ export async function GET(req: Request) {
       xp: u.xp,
       consistency,
       totalEarly: u.totalEarlyWakes,
+      studyWeek: studyWeekMap.get(u.id) || 0,
+      studyTotal: studyTotalMap.get(u.id) || 0,
+      habits: habitPct,
     };
 
     return {
@@ -332,6 +372,9 @@ export async function GET(req: Request) {
       wakeOnTime7,
       checkedIn7,
       consistency,
+      studyWeek: studyWeekMap.get(u.id) || 0,
+      studyTotal: studyTotalMap.get(u.id) || 0,
+      habits: habitPct,
       score: scores[metric] ?? earlyStreak,
       isMe: u.id === session.user.id,
     };
@@ -369,6 +412,15 @@ export async function GET(req: Request) {
       xp: "Total XP",
       consistency: "7-day on-time %",
       totalEarly: "Lifetime early wakes",
+      studyWeek: "Study hours this week",
+      studyTotal: "Study hours all time",
+      habits: "Habit completion · 7 days",
     },
+    scoreKind:
+      metric === "studyWeek" || metric === "studyTotal"
+        ? "duration"
+        : metric === "consistency" || metric === "habits"
+          ? "percent"
+          : "number",
   });
 }
