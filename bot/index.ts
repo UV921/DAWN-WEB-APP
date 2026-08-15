@@ -795,11 +795,21 @@ const PUBLIC_COMMANDS = new Set([
 ]);
 
 async function ackSlash(interaction: ChatInputCommandInteraction) {
-  if (interaction.deferred || interaction.replied) return;
   const ephemeral = !PUBLIC_COMMANDS.has(interaction.commandName);
-  await interaction.deferReply({
-    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
-  });
+  try {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({
+        flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+      });
+    }
+    console.log(
+      `[cmd] deferred /${interaction.commandName} ephemeral=${ephemeral}`
+    );
+  } catch (e) {
+    console.error(
+      `[cmd] defer-failed /${interaction.commandName} ${errText(e)}`
+    );
+  }
   const reply = interaction.reply.bind(interaction);
   const edit = interaction.editReply.bind(interaction);
   (
@@ -807,18 +817,27 @@ async function ackSlash(interaction: ChatInputCommandInteraction) {
       reply: ChatInputCommandInteraction["reply"];
     }
   ).reply = (async (options) => {
-    if (interaction.deferred || interaction.replied) {
-      const data =
-        typeof options === "string" ? { content: options } : { ...options };
-      delete (data as { flags?: unknown }).flags;
-      delete (data as { ephemeral?: unknown }).ephemeral;
-      return edit(data);
+    const data =
+      typeof options === "string" ? { content: options } : { ...options };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        delete (data as { flags?: unknown }).flags;
+        delete (data as { ephemeral?: unknown }).ephemeral;
+        return edit(data);
+      }
+      return reply(options);
+    } catch (e) {
+      const text =
+        typeof options === "string"
+          ? options
+          : String((data as { content?: string }).content || "Done.");
+      console.error(`[cmd] slash-reply-failed ${errText(e)}`);
+      await interaction.user.send(text).catch((dm) => {
+        console.error(`[cmd] dm-failed ${errText(dm)}`);
+      });
+      return undefined as never;
     }
-    return reply(options);
   }) as ChatInputCommandInteraction["reply"];
-  console.log(
-    `[cmd] deferred /${interaction.commandName} ephemeral=${ephemeral}`
-  );
 }
 
 client.once("ready", () => {

@@ -22,6 +22,7 @@ import {
   sessionMinutes,
   todayInZone,
 } from "../src/lib/study-time";
+import { safeRespond } from "./respond";
 
 type RoomCache = { ids: Set<string>; at: number };
 let roomCache: RoomCache | null = null;
@@ -261,10 +262,7 @@ export async function handleStudyRoomCommand(
   const sub = interaction.options.getSubcommand();
   console.log(`[cmd] study-room ${sub} guild=${interaction.guildId || "none"}`);
   if (!interaction.guildId) {
-    await interaction.reply({
-      content: "Run this in your study server.",
-      ephemeral: true,
-    });
+    await safeRespond(interaction, "Run this in your study server.");
     return;
   }
 
@@ -280,12 +278,12 @@ export async function handleStudyRoomCommand(
         .filter((id) => !rows.some((r) => r.channelId === id))
         .map((id) => `• env \`${id}\``),
     ];
-    await interaction.reply({
-      content: lines.length
+    await safeRespond(
+      interaction,
+      lines.length
         ? `**Study voice rooms**\n${lines.join("\n")}\n\nSit in one of these — Dawn counts time while the bot is online.`
-        : "No study rooms yet. Use `/study-room add` and pick a voice channel.",
-      ephemeral: true,
-    });
+        : "No study rooms yet. Use `/study-room add` and pick a voice channel."
+    );
     return;
   }
 
@@ -293,10 +291,10 @@ export async function handleStudyRoomCommand(
     interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)
   );
   if (!canManage) {
-    await interaction.reply({
-      content: "Need **Manage Channels** to add or remove study rooms.",
-      ephemeral: true,
-    });
+    await safeRespond(
+      interaction,
+      "Need **Manage Channels** to add or remove study rooms."
+    );
     return;
   }
 
@@ -305,10 +303,7 @@ export async function handleStudyRoomCommand(
     channel.type !== ChannelType.GuildVoice &&
     channel.type !== ChannelType.GuildStageVoice
   ) {
-    await interaction.reply({
-      content: "Pick a **voice** channel.",
-      ephemeral: true,
-    });
+    await safeRespond(interaction, "Pick a **voice** channel.");
     return;
   }
 
@@ -327,10 +322,12 @@ export async function handleStudyRoomCommand(
       },
     });
     invalidateStudyRoomCache();
-    await interaction.reply({
-      content: `Counting **${"name" in channel ? channel.name : "that VC"}** as study time. Join it with Discord linked in Dawn.`,
-      ephemeral: true,
-    });
+    const name = "name" in channel ? channel.name : "that VC";
+    console.log(`[cmd] study-room saved ${channel.id} ${name}`);
+    await safeRespond(
+      interaction,
+      `Counting **${name}** as study time. Join it with Discord linked in Dawn.`
+    );
     return;
   }
 
@@ -339,12 +336,12 @@ export async function handleStudyRoomCommand(
       where: { channelId: channel.id, guildId: interaction.guildId },
     });
     invalidateStudyRoomCache();
-    await interaction.reply({
-      content: deleted.count
+    await safeRespond(
+      interaction,
+      deleted.count
         ? `Stopped counting **${"name" in channel ? channel.name : "that VC"}**.`
-        : "That channel was not a study room.",
-      ephemeral: true,
-    });
+        : "That channel was not a study room."
+    );
   }
 }
 
@@ -354,11 +351,10 @@ export async function handleStudiedCommand(
 ) {
   const user = await findDawnUser(prisma, interaction.user.id);
   if (!user) {
-    await interaction.reply({
-      content:
-        "Link Discord in Dawn first (open the app → Login with Discord), then sit in a marked study VC.",
-      ephemeral: true,
-    });
+    await safeRespond(
+      interaction,
+      "Link Discord in Dawn first (open the app → Login with Discord), then sit in a marked study VC."
+    );
     return;
   }
 
@@ -413,5 +409,16 @@ export async function handleStudiedCommand(
       text: "Dawn tracks marked study VCs — not LionBot. Bot must stay online.",
     });
 
-  await interaction.reply({ embeds: [embed], ephemeral: true });
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({ embeds: [embed] });
+    } else {
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  } catch {
+    await safeRespond(
+      interaction,
+      `**Today** ${formatStudyDuration(todayMin)}${live ? " · live" : ""}\n**This week** ${formatStudyDuration(weekMin)}`
+    );
+  }
 }
