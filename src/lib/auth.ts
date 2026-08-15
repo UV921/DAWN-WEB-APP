@@ -29,6 +29,71 @@ async function uniqueEmailOrKeep(
   return currentEmail ?? nextEmail;
 }
 
+function isSnowflake(id: string | undefined | null): id is string {
+  return Boolean(id && /^\d{16,22}$/.test(id));
+}
+
+const sessionUserSelect = {
+  id: true,
+  discordId: true,
+  wakeGoal: true,
+  sleepGoal: true,
+  timezone: true,
+  name: true,
+  image: true,
+  email: true,
+  onboardingDone: true,
+  focusHabitKey: true,
+  identityLine: true,
+  whyLine: true,
+  xp: true,
+  level: true,
+} as const;
+
+/** Same Discord person → same Dawn row (web, bot, or leftover snowflake JWT). */
+async function findUserByDiscord(discordId: string) {
+  return prisma.user.findFirst({
+    where: {
+      OR: [
+        { discordId },
+        {
+          accounts: {
+            some: { provider: "discord", providerAccountId: discordId },
+          },
+        },
+      ],
+    },
+    select: sessionUserSelect,
+  });
+}
+
+async function resolveSessionUser(token: {
+  sub?: string;
+  discordId?: unknown;
+}) {
+  const discordId =
+    typeof token.discordId === "string"
+      ? token.discordId
+      : isSnowflake(token.sub)
+        ? token.sub
+        : null;
+
+  if (token.sub && !isSnowflake(token.sub)) {
+    const byId = await prisma.user.findUnique({
+      where: { id: token.sub },
+      select: sessionUserSelect,
+    });
+    if (byId) return byId;
+  }
+
+  if (discordId) {
+    const byDiscord = await findUserByDiscord(discordId);
+    if (byDiscord) return byDiscord;
+  }
+
+  return null;
+}
+
 export const authOptions: NextAuthOptions = {
   // No PrismaAdapter — Credentials + JWT is more reliable for demo login.
   // Discord users are upserted in the signIn callback.
@@ -137,49 +202,41 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account, profile }) {
-      if (user?.id) {
-        token.sub = user.id;
-      }
       if (account?.provider === "discord" && profile && "id" in profile) {
-        token.discordId = String((profile as { id: string }).id);
+        const discordId = String((profile as { id: string }).id);
+        token.discordId = discordId;
+        const dbUser = await findUserByDiscord(discordId);
+        if (dbUser) token.sub = dbUser.id;
+        else if (user?.id && !isSnowflake(user.id)) token.sub = user.id;
+      } else if (user?.id && !isSnowflake(user.id)) {
+        token.sub = user.id;
+      } else if (isSnowflake(token.sub) || token.discordId) {
+        const dbUser = await resolveSessionUser(token);
+        if (dbUser) token.sub = dbUser.id;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.sub) {
+      if (!session.user) return session;
+      const dbUser = await resolveSessionUser(token);
+      if (dbUser) {
+        session.user.id = dbUser.id;
+        session.user.discordId = dbUser.discordId;
+        session.user.wakeGoal = dbUser.wakeGoal;
+        session.user.sleepGoal = dbUser.sleepGoal;
+        session.user.timezone = dbUser.timezone;
+        session.user.name = dbUser.name ?? session.user.name;
+        session.user.image = dbUser.image ?? session.user.image;
+        session.user.email = dbUser.email ?? session.user.email;
+        session.user.onboardingDone = dbUser.onboardingDone;
+        session.user.focusHabitKey = dbUser.focusHabitKey;
+        session.user.identityLine = dbUser.identityLine;
+        session.user.whyLine = dbUser.whyLine;
+        session.user.xp = dbUser.xp;
+        session.user.level = dbUser.level;
+      } else if (token.sub && !isSnowflake(token.sub)) {
         session.user.id = token.sub;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: {
-            discordId: true,
-            wakeGoal: true,
-            sleepGoal: true,
-            timezone: true,
-            name: true,
-            image: true,
-            email: true,
-            onboardingDone: true,
-            focusHabitKey: true,
-            identityLine: true,
-            whyLine: true,
-            xp: true,
-            level: true,
-          },
-        });
-        session.user.discordId =
-          dbUser?.discordId ?? (token.discordId as string | undefined) ?? null;
-        session.user.wakeGoal = dbUser?.wakeGoal ?? "06:00";
-        session.user.sleepGoal = dbUser?.sleepGoal ?? "23:00";
-        session.user.timezone = dbUser?.timezone ?? "Asia/Kolkata";
-        session.user.name = dbUser?.name ?? session.user.name;
-        session.user.image = dbUser?.image ?? session.user.image;
-        session.user.email = dbUser?.email ?? session.user.email;
-        session.user.onboardingDone = dbUser?.onboardingDone ?? false;
-        session.user.focusHabitKey = dbUser?.focusHabitKey ?? "wakeEarly";
-        session.user.identityLine = dbUser?.identityLine ?? "";
-        session.user.whyLine = dbUser?.whyLine ?? "";
-        session.user.xp = dbUser?.xp ?? 0;
-        session.user.level = dbUser?.level ?? 1;
+        session.user.onboardingDone = false;
       }
       return session;
     },

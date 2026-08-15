@@ -65,21 +65,21 @@ export function AppNav({ active }: { active: NavKey }) {
 
   return (
     <>
-      <header className="hidden items-center justify-between pb-5 md:flex">
-        <div className="flex items-center gap-6 lg:gap-8">
+      <header className="relative left-1/2 hidden w-screen max-w-[100vw] -translate-x-1/2 pb-5 md:block">
+        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6">
           <Link
             href="/dashboard"
-            className="font-display text-xl tracking-tight text-[var(--color-dawn)]"
+            className="font-display shrink-0 text-xl tracking-tight text-[var(--color-dawn)]"
           >
             Dawn
           </Link>
-          <nav className="flex flex-wrap gap-4 lg:gap-5">
+          <nav className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap [scrollbar-width:none] lg:gap-5 [&::-webkit-scrollbar]:hidden">
             {DESKTOP.map((l) => (
               <Link
                 key={l.key}
                 href={l.href}
                 prefetch
-                className={`text-sm transition ${
+                className={`shrink-0 text-[13px] transition lg:text-sm ${
                   active === l.key
                     ? "text-[var(--color-dawn)]"
                     : "text-[var(--color-mist)] hover:text-white"
@@ -89,23 +89,23 @@ export function AppNav({ active }: { active: NavKey }) {
               </Link>
             ))}
           </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          {data?.user?.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.user.image}
-              alt=""
-              className="h-8 w-8 rounded-full border border-white/20"
-            />
-          ) : null}
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-sm text-[var(--color-mist)] hover:text-white"
-          >
-            Sign out
-          </button>
+          <div className="flex shrink-0 items-center gap-3">
+            {data?.user?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.user.image}
+                alt=""
+                className="h-8 w-8 rounded-full border border-white/20"
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="text-[13px] text-[var(--color-mist)] hover:text-white lg:text-sm"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 

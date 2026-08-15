@@ -73,7 +73,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => signIn("discord", { callbackUrl: "/onboarding" })}
+            onClick={() => signIn("discord", { callbackUrl: "/dashboard" })}
             className="mt-2 rounded-full bg-[#5865F2] px-6 py-3.5 text-sm font-semibold text-white hover:bg-[#4752c4]"
           >
             Continue with Discord
