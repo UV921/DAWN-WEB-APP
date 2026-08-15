@@ -51,6 +51,7 @@ export const ONBOARDING_STEPS = [
     prompt: "What time do you usually wake now?",
     hint: "Be honest — we measure the gap, not perfection.",
     type: "time" as const,
+    skippable: true,
     default: "08:00",
   },
   {
@@ -58,6 +59,7 @@ export const ONBOARDING_STEPS = [
     prompt: "What wake time are you locking?",
     hint: "Pick a time you can hit most days.",
     type: "time" as const,
+    skippable: true,
     default: "06:00",
   },
   {
@@ -65,6 +67,7 @@ export const ONBOARDING_STEPS = [
     prompt: "What bedtime makes that wake realistic?",
     hint: "Aim for about 7.5–8.5 hours.",
     type: "time" as const,
+    skippable: true,
     default: "22:30",
   },
   {

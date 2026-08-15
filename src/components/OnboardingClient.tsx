@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -28,6 +28,15 @@ export function OnboardingClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    void fetch("/api/onboarding")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { user?: { onboardingDone?: boolean } } | null) => {
+        if (d?.user?.onboardingDone) router.replace("/dashboard");
+      })
+      .catch(() => undefined);
+  }, [router]);
+
   const visibleSteps = useMemo(() => {
     return ONBOARDING_STEPS.filter((s) => {
       if ("when" in s && typeof s.when === "function") {
@@ -51,6 +60,18 @@ export function OnboardingClient() {
         focusHabitKey: answers.focusHabitKey || "wakeEarly",
         focusLabel: answers.focusLabel || "Wake early",
       });
+      return;
+    }
+    if (current.id === "currentWake" || current.id === "wakeGoal" || current.id === "sleepGoal") {
+      const key = current.id;
+      const val =
+        (answers[key] as string) ||
+        ("default" in current ? current.default : "06:00");
+      nextAfterPatch({ [key]: val });
+      return;
+    }
+    if (current.id === "whyCustom" || current.id === "focusCustom" || current.id === "identity") {
+      next();
       return;
     }
     next();
@@ -99,7 +120,11 @@ export function OnboardingClient() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError("Could not save. Try again.");
+      setError(
+        res.status === 401
+          ? "Session expired. Sign in with Discord again — not the demo."
+          : "Could not save. Try Skip setup once more."
+      );
       return;
     }
     await update();
@@ -186,7 +211,19 @@ export function OnboardingClient() {
           paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
         }}
       >
-        <p className="font-display text-xl text-[var(--color-dawn)]">Dawn</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-display text-xl text-[var(--color-dawn)]">Dawn</p>
+          {current.type !== "analysis" ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={skipRest}
+              className="rounded-full border border-white/15 px-3.5 py-1.5 text-sm text-[var(--color-cloud)] hover:border-[var(--color-dawn)]/50 hover:text-white disabled:opacity-40"
+            >
+              {busy ? "Saving…" : "Skip setup"}
+            </button>
+          ) : null}
+        </div>
         <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-[var(--color-dawn)] transition-all duration-500"
@@ -310,7 +347,7 @@ export function OnboardingClient() {
           )}
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-10">
+        <div className="sticky bottom-0 mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-[var(--color-night)]/90 py-4 backdrop-blur-md">
           <button
             type="button"
             onClick={back}
@@ -319,25 +356,15 @@ export function OnboardingClient() {
           >
             Back
           </button>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             {"skippable" in current && current.skippable ? (
               <button
                 type="button"
                 disabled={busy}
                 onClick={skip}
-                className="text-sm text-[var(--color-mist)] hover:text-white"
+                className="rounded-full px-3 py-1.5 text-sm text-[var(--color-cloud)] hover:bg-white/5 hover:text-white"
               >
                 Skip this
-              </button>
-            ) : null}
-            {current.type !== "analysis" ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={skipRest}
-                className="text-sm text-[var(--color-mist)] hover:text-white"
-              >
-                Skip remaining
               </button>
             ) : null}
             {busy ? (
