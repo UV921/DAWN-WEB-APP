@@ -103,10 +103,10 @@ export const Card = ({
         boxShadow:
           "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
       }}
-      className="mx-auto mt-10 h-[30rem] w-full max-w-5xl rounded-[30px] border-4 border-[#6C6C6C] bg-[#222222] p-2 shadow-2xl md:mt-14 md:h-[40rem] md:p-6"
+      className="mac-chassis mx-auto mt-10 h-[30rem] w-full max-w-5xl md:mt-14 md:h-[40rem]"
     >
-      <div className="h-full w-full overflow-hidden rounded-2xl bg-[#0a0e12]">
-        {children}
+      <div className="mac-bezel">
+        <div className="mac-glass">{children}</div>
       </div>
     </motion.div>
   );
