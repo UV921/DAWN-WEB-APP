@@ -783,8 +783,53 @@ function runJob(name: string, fn: () => Promise<unknown>) {
   void fn().catch((e) => console.error(`${name} failed`, e));
 }
 
+const PUBLIC_COMMANDS = new Set([
+  "woke",
+  "checkin",
+  "leaderboard",
+  "board",
+  "report",
+  "ping",
+  "week",
+  "grid",
+]);
+
+async function ackSlash(interaction: ChatInputCommandInteraction) {
+  if (interaction.deferred || interaction.replied) return;
+  const ephemeral = !PUBLIC_COMMANDS.has(interaction.commandName);
+  await interaction.deferReply({
+    flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+  });
+  const reply = interaction.reply.bind(interaction);
+  const edit = interaction.editReply.bind(interaction);
+  (
+    interaction as ChatInputCommandInteraction & {
+      reply: ChatInputCommandInteraction["reply"];
+    }
+  ).reply = (async (options) => {
+    if (interaction.deferred || interaction.replied) {
+      const data =
+        typeof options === "string" ? { content: options } : { ...options };
+      delete (data as { flags?: unknown }).flags;
+      delete (data as { ephemeral?: unknown }).ephemeral;
+      return edit(data);
+    }
+    return reply(options);
+  }) as ChatInputCommandInteraction["reply"];
+  console.log(
+    `[cmd] deferred /${interaction.commandName} ephemeral=${ephemeral}`
+  );
+}
+
 client.once("ready", () => {
+  const startedAt = new Date().toISOString();
   console.log(`Dawn bot online as ${client.user?.tag}`);
+  console.log(`[alive] process up at ${startedAt} — if you do not see this repeating, you are on old logs`);
+  setInterval(() => {
+    console.log(
+      `[alive] ${client.user?.tag || "bot"} since ${startedAt} ready=${client.isReady()}`
+    );
+  }, 30_000);
   runJob("reminders", () => fireDueReminders());
   runJob("morning", () => runMorningScheduler(client, prisma));
   runJob("wind-down", () => sendWindDownDms(client, prisma));
@@ -853,10 +898,14 @@ client.on("interactionCreate", async (interaction) => {
   const label = describeInteraction(interaction);
   console.log(`[cmd] start ${label}`);
   try {
-    if (interaction.isChatInputCommand()) await handleCommand(interaction);
-    else if (interaction.isButton()) await handleButton(interaction);
-    else if (interaction.isModalSubmit()) await handleModal(interaction);
-    else {
+    if (interaction.isChatInputCommand()) {
+      await ackSlash(interaction);
+      await handleCommand(interaction);
+    } else if (interaction.isButton()) {
+      await handleButton(interaction);
+    } else if (interaction.isModalSubmit()) {
+      await handleModal(interaction);
+    } else {
       console.log(`[cmd] ignored ${label}`);
       return;
     }
@@ -1291,7 +1340,9 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       });
       return;
     }
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply();
+    }
     const synced = await syncChannelMembers(
       interaction.channelId,
       interaction.guildId,
@@ -1419,7 +1470,9 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       });
       return;
     }
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply();
+    }
     // Re-sync so everyone in the channel is tracked (not only /join)
     if (interaction.guildId) {
       await syncChannelMembers(
@@ -1883,7 +1936,9 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   }
 
   if (interaction.commandName === "review") {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    }
     const result = await sendNightReviewDms(client, prisma, {
       forceUserId: user.id,
       force: true,
@@ -1915,7 +1970,9 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       });
       return;
     }
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply();
+    }
     const report = await buildConsistencyReport(prisma, tracked, client, {
       date,
     });
