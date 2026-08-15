@@ -113,8 +113,8 @@ export function LandingPhilosophyFilm({
         aria-hidden
         className="philosophy-mist pointer-events-none absolute inset-x-0 bottom-[28%] h-[22%]"
         animate={
-          reduce
-            ? undefined
+          reduce || !inView
+            ? { opacity: scene === 3 ? 0.08 : 0.22 }
             : { opacity: scene === 3 ? 0.08 : [0.18, 0.35, 0.18] }
         }
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -311,7 +311,7 @@ function WakeCard({
         <SunIcon ref={iconRef} size={22} />
         <p className="text-[10px] uppercase tracking-[0.16em]">Wake</p>
       </div>
-      <p className="font-display mt-2 text-[2.15rem] leading-none text-white">
+      <p className="font-display mt-2 text-[clamp(1.5rem,5vw,2.15rem)] leading-none text-white">
         05:52
       </p>
       <p className="mt-1 text-[12px] text-[#c5ced6]">

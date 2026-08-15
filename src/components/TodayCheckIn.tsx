@@ -691,7 +691,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         todos={todayTodos}
         onChange={setTodayTodos}
         onError={(text) => setBanner({ tone: "error", text })}
-        title="Today’s tasks"
+        title="Check off"
         hint="None yet. Add them in Tasks — they show up here to check off."
         allowAdd={false}
         addHref="/tasks"

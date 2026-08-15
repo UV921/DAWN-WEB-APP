@@ -20,7 +20,7 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
           {done}/{steps.length} · XP for finishing
         </span>
       </div>
-      <ol className="grid grid-cols-4 gap-1.5">
+      <ol className="grid grid-cols-4 gap-1 sm:gap-1.5">
         {steps.map((s, i) => {
           const inner = (
             <>
@@ -32,14 +32,14 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
                 {i + 1}
               </span>
               <span
-                className={`mt-1 block text-xs font-semibold ${
+                className={`mt-1 block truncate text-xs font-semibold ${
                   s.done ? "text-[var(--color-night)]" : "text-white"
                 }`}
               >
                 {s.label}
               </span>
               <span
-                className={`mt-0.5 block text-[10px] leading-tight ${
+                className={`mt-0.5 block truncate text-[10px] leading-tight ${
                   s.done ? "text-[var(--color-night)]/70" : "text-[var(--color-mist)]"
                 }`}
               >
@@ -47,7 +47,7 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
               </span>
             </>
           );
-          const cls = `rounded-xl border px-2 py-2.5 text-left ${
+          const cls = `rounded-xl border px-1.5 py-2 text-left sm:px-2 sm:py-2.5 ${
             s.done
               ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]"
               : "border-white/12 bg-white/[0.03]"

@@ -165,195 +165,223 @@ export function TodayTasks({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-[15px] font-medium text-white">{title}</h2>
-        <span className="flex items-center gap-3">
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a121a]">
+      <header className="flex items-end justify-between gap-3 border-b border-white/[0.08] bg-[linear-gradient(160deg,rgba(240,180,90,0.12),transparent_70%)] px-4 py-4">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
+            Named lists
+          </p>
+          <h2 className="font-display mt-1 truncate text-2xl text-white">
+            {title}
+          </h2>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           {!allowAdd && addHref ? (
-            <Link href={addHref} className="text-xs text-[var(--color-dawn)]">
+            <Link
+              href={addHref}
+              className="text-[11px] font-medium text-[var(--color-dawn)]"
+            >
               {addLabel}
             </Link>
           ) : null}
-          <span className="text-xs tabular-nums text-[var(--color-mist)]">
-            {todos.length ? `${done}/${todos.length}` : "none yet"}
+          <span className="font-display text-lg tabular-nums text-[var(--color-dawn)]">
+            {todos.length ? `${done}/${todos.length}` : "0"}
           </span>
-        </span>
-      </div>
+        </div>
+      </header>
 
-      {allowAdd ? (
-        <form
-          className="space-y-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void addTask();
-          }}
-        >
-          <div className="flex flex-wrap gap-1.5">
-            {LIST_PRESETS.map((preset) => {
-              const on = !customOpen && listTitle === preset;
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    setCustomOpen(false);
-                    setListTitle(preset);
-                  }}
-                  className={`rounded-full border px-3 py-1.5 text-xs ${
-                    on
-                      ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
-                      : "border-white/12 text-[var(--color-mist)] hover:border-white/25 hover:text-white"
-                  }`}
-                >
-                  {preset}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => {
-                setCustomOpen(true);
-                if (LIST_PRESETS.includes(listTitle as (typeof LIST_PRESETS)[number])) {
-                  setListTitle("");
-                }
-              }}
-              className={`rounded-full border px-3 py-1.5 text-xs ${
-                customOpen
-                  ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
-                  : "border-white/12 text-[var(--color-mist)] hover:border-white/25 hover:text-white"
-              }`}
-            >
-              Custom
-            </button>
-          </div>
-          {customOpen ? (
-            <input
-              value={listTitle}
-              onChange={(e) => setListTitle(e.target.value)}
-              placeholder="List title — Want to buy, Post on X…"
-              className="ui-field w-full !py-2.5"
-              autoComplete="off"
-              maxLength={40}
-            />
-          ) : null}
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={`Add to ${normalizeListTitle(listTitle)} — then Enter`}
-              className="ui-field flex-1 !py-3"
-              autoComplete="off"
-              enterKeyHint="done"
-              maxLength={120}
-            />
-            <button
-              type="submit"
-              disabled={busy || !draft.trim()}
-              className="ui-btn ui-btn-primary !min-h-12 !px-3.5"
-              aria-label="Add task"
-            >
-              <IconPlus size={18} />
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      {todos.length === 0 ? (
-        <p className="mt-3 text-sm text-[var(--color-mist)]">
-          {hint ||
-            (allowAdd
-              ? "Pick a list title, type an item, hit Enter. Share a card when you’re ready."
-              : "No tasks for today.")}
-        </p>
-      ) : (
-        <div className={`${allowAdd ? "mt-4" : ""} space-y-4`}>
-          {groups.map(([name, items]) => {
-            const listDone = items.filter((t) => t.done).length;
-            return (
-              <div key={name}>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    {allowAdd ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCustomOpen(!LIST_PRESETS.includes(name as (typeof LIST_PRESETS)[number]));
-                          setListTitle(name);
-                          inputRef.current?.focus();
-                        }}
-                        className="truncate text-left font-display text-lg text-[var(--color-dawn)]"
-                      >
-                        {name}
-                      </button>
-                    ) : (
-                      <p className="truncate font-display text-lg text-[var(--color-dawn)]">
-                        {name}
-                      </p>
-                    )}
-                    <p className="text-[11px] tabular-nums text-[var(--color-mist)]">
-                      {listDone}/{items.length}
-                    </p>
-                  </div>
+      <div className="space-y-4 p-4">
+        {allowAdd ? (
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void addTask();
+            }}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {LIST_PRESETS.map((preset) => {
+                const on = !customOpen && listTitle === preset;
+                return (
                   <button
+                    key={preset}
                     type="button"
-                    onClick={() => void shareList(name, items)}
-                    disabled={Boolean(sharing)}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-dawn)]/35 bg-[var(--color-dawn)]/10 px-3 py-1.5 text-xs font-medium text-[var(--color-dawn)] disabled:opacity-50"
+                    onClick={() => {
+                      setCustomOpen(false);
+                      setListTitle(preset);
+                    }}
+                    className={chipClass(on)}
                   >
-                    <IconShare size={13} />
-                    {sharing === name ? "Making…" : "Share"}
+                    {preset}
                   </button>
-                </div>
-                {shareNote?.name === name ? (
-                  <p className="mb-2 text-[11px] text-[var(--color-mist)]">
-                    {shareNote.text}
-                  </p>
-                ) : null}
-                <ul className="space-y-1.5">
-                  {items.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/20"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => void toggle(t)}
-                        className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left ${
-                          t.done ? "opacity-55" : ""
-                        }`}
-                      >
-                        <span className={`ui-check ${t.done ? "is-on" : ""}`}>
-                          ✓
-                        </span>
-                        <span
-                          className={`min-w-0 flex-1 text-sm leading-snug ${
-                            t.done
-                              ? "text-[var(--color-mist)] line-through"
-                              : "text-white"
-                          }`}
-                        >
-                          {t.text}
-                        </span>
-                      </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomOpen(true);
+                  if (
+                    LIST_PRESETS.includes(
+                      listTitle as (typeof LIST_PRESETS)[number]
+                    )
+                  ) {
+                    setListTitle("");
+                  }
+                }}
+                className={chipClass(customOpen)}
+              >
+                Custom
+              </button>
+            </div>
+            {customOpen ? (
+              <input
+                value={listTitle}
+                onChange={(e) => setListTitle(e.target.value)}
+                placeholder="List title — Want to buy, Post on X…"
+                className="ui-field w-full !py-2.5"
+                autoComplete="off"
+                maxLength={40}
+              />
+            ) : null}
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={`Add to ${normalizeListTitle(listTitle)}`}
+                className="ui-field flex-1 !py-3"
+                autoComplete="off"
+                enterKeyHint="done"
+                maxLength={120}
+              />
+              <button
+                type="submit"
+                disabled={busy || !draft.trim()}
+                className="ui-btn ui-btn-primary !min-h-12 !px-3.5"
+                aria-label="Add item"
+              >
+                <IconPlus size={18} />
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {todos.length === 0 ? (
+          <div className="border border-dashed border-white/12 px-4 py-8 text-center">
+            <p className="font-display text-lg text-[var(--color-dawn)]">
+              {allowAdd ? "Start a list" : "Nothing here yet"}
+            </p>
+            <p className="mx-auto mt-2 max-w-[28ch] text-sm text-[var(--color-mist)]">
+              {hint ||
+                (allowAdd
+                  ? "Pick Buy, Share on X, or Today. Add items. Share a gold PNG."
+                  : "Add lists in Tasks — they show up here to check off.")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {groups.map(([name, items]) => {
+              const listDone = items.filter((t) => t.done).length;
+              return (
+                <article
+                  key={name}
+                  className="overflow-hidden border border-white/10 bg-black/25"
+                >
+                  <div className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
+                    <div className="min-w-0">
                       {allowAdd ? (
                         <button
                           type="button"
-                          onClick={() => void remove(t)}
-                          className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--color-mist)] hover:text-white"
-                          aria-label={`Remove ${t.text}`}
+                          onClick={() => {
+                            setCustomOpen(
+                              !LIST_PRESETS.includes(
+                                name as (typeof LIST_PRESETS)[number]
+                              )
+                            );
+                            setListTitle(name);
+                            inputRef.current?.focus();
+                          }}
+                          className="truncate text-left font-display text-xl text-[var(--color-dawn)]"
                         >
-                          <IconX size={14} />
+                          {name}
                         </button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                      ) : (
+                        <p className="truncate font-display text-xl text-[var(--color-dawn)]">
+                          {name}
+                        </p>
+                      )}
+                      <p className="text-[11px] tabular-nums text-[var(--color-mist)]">
+                        {listDone} of {items.length}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void shareList(name, items)}
+                      disabled={Boolean(sharing)}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/12 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-[var(--color-dawn)] disabled:opacity-50"
+                    >
+                      <IconShare size={13} />
+                      {sharing === name ? "Making…" : "Share PNG"}
+                    </button>
+                  </div>
+                  {shareNote?.name === name ? (
+                    <p className="border-b border-white/[0.06] px-3 py-2 text-[11px] text-[var(--color-mist)]">
+                      {shareNote.text}
+                    </p>
+                  ) : null}
+                  <ul>
+                    {items.map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex items-center border-b border-white/[0.06] last:border-0"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void toggle(t)}
+                          className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left ${
+                            t.done ? "opacity-50" : ""
+                          }`}
+                        >
+                          <span className={`ui-check ${t.done ? "is-on" : ""}`}>
+                            ✓
+                          </span>
+                          <span
+                            className={`min-w-0 flex-1 text-sm leading-snug ${
+                              t.done
+                                ? "text-[var(--color-mist)] line-through"
+                                : "text-white"
+                            }`}
+                          >
+                            {t.text}
+                          </span>
+                        </button>
+                        {allowAdd ? (
+                          <button
+                            type="button"
+                            onClick={() => void remove(t)}
+                            className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
+                            aria-label={`Remove ${t.text}`}
+                          >
+                            <IconX size={14} />
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </section>
   );
+}
+
+function chipClass(on: boolean) {
+  return `rounded-full px-3 py-1.5 text-[11px] font-medium tracking-wide transition ${
+    on
+      ? "bg-[var(--color-dawn)] text-[var(--color-night)]"
+      : "border border-white/12 text-[var(--color-mist)] hover:border-[var(--color-dawn)]/55 hover:text-[var(--color-dawn)]"
+  }`;
 }

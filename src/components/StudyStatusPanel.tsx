@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { GraduationCapIcon } from "@/components/ui/graduation-cap";
 import { ShareCardButton } from "@/components/ShareCardButton";
 import { shareStudyCard } from "@/lib/share-study-card";
 import { formatStudyDuration } from "@/lib/study-time";
@@ -102,11 +103,17 @@ export function StudyStatusPanel({
   return (
     <section className={`rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
       <div className="flex items-start justify-between gap-3">
-        <p
-          className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${t.kicker}`}
-        >
-          {data.status.kicker}
-        </p>
+        <div className="flex items-center gap-3">
+          <GraduationCapIcon
+            size={26}
+            className="shrink-0 text-[var(--color-dawn)]"
+          />
+          <p
+            className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${t.kicker}`}
+          >
+            {data.status.kicker}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           {data.configured ? (
             <ShareCardButton

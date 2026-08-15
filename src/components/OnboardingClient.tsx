@@ -213,16 +213,14 @@ export function OnboardingClient() {
       >
         <div className="flex items-center justify-between gap-3">
           <p className="font-display text-xl text-[var(--color-dawn)]">Dawn</p>
-          {current.type !== "analysis" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={skipRest}
-              className="rounded-full border border-white/15 px-3.5 py-1.5 text-sm text-[var(--color-cloud)] hover:border-[var(--color-dawn)]/50 hover:text-white disabled:opacity-40"
-            >
-              {busy ? "Saving…" : "Skip setup"}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={skipRest}
+            className="rounded-full border border-[var(--color-dawn)]/50 bg-[var(--color-dawn)]/15 px-3.5 py-1.5 text-sm font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/25 disabled:opacity-40"
+          >
+            {busy ? "Saving…" : "Skip setup"}
+          </button>
         </div>
         <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/10">
           <div
@@ -357,16 +355,25 @@ export function OnboardingClient() {
             Back
           </button>
           <div className="flex flex-wrap items-center gap-3">
-            {"skippable" in current && current.skippable ? (
+            {current.type !== "analysis" ? (
               <button
                 type="button"
                 disabled={busy}
                 onClick={skip}
-                className="rounded-full px-3 py-1.5 text-sm text-[var(--color-cloud)] hover:bg-white/5 hover:text-white"
+                className="rounded-full border border-white/15 px-3 py-1.5 text-sm text-[var(--color-cloud)] hover:bg-white/5 hover:text-white"
               >
                 Skip this
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={skipRest}
+                className="rounded-full border border-[var(--color-dawn)]/40 px-3 py-1.5 text-sm text-[var(--color-dawn)]"
+              >
+                Skip setup
+              </button>
+            )}
             {busy ? (
               <span className="text-sm text-[var(--color-dawn)]">Saving…</span>
             ) : null}
@@ -459,6 +466,14 @@ function AnalysisPanel({
         className="w-full rounded-full bg-[var(--color-dawn)] px-8 py-3.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-60"
       >
         {busy ? "Saving…" : "Start Dawn"}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onStart}
+        className="w-full text-sm text-[var(--color-dawn)] underline-offset-2 hover:underline disabled:opacity-40"
+      >
+        Skip — go to Today
       </button>
     </div>
   );

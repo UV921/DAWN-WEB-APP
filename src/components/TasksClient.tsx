@@ -59,10 +59,9 @@ export function TasksClient() {
         <div className="mt-4 space-y-6 sm:mt-8">
           <header>
             <p className="ui-kicker">Tasks</p>
-            <h1 className="ui-title mt-2">Dump it here</h1>
+            <h1 className="ui-title mt-2">Named lists</h1>
             <p className="ui-sub mt-3">
-              Name a list — Buy, Share on X, Today — then dump items. Share a
-              gold card as a PNG to X, WhatsApp, or a friend.
+              Buy, Share on X, Errands, Today. Dump items. Share a gold PNG.
             </p>
           </header>
 

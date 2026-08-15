@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import type { AnimatedIconHandle } from "@/components/animated-icons/use-icon-animation";
 import { cn } from "@/lib/utils";
@@ -14,15 +14,19 @@ type Props = {
 
 export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
   const moonRef = useRef<AnimatedIconHandle>(null);
+  const root = useRef<HTMLElement>(null);
+  const inView = useInView(root, { margin: "-80px" });
 
   useEffect(() => {
+    if (!inView) return;
     moonRef.current?.startAnimation();
     const id = window.setInterval(() => moonRef.current?.startAnimation(), 2800);
     return () => window.clearInterval(id);
-  }, []);
+  }, [inView]);
 
   return (
     <motion.section
+      ref={root}
       initial={{ opacity: 0, y: 18, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -37,7 +41,11 @@ export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
           key={s.id}
           className="pointer-events-none absolute h-1 w-1 rounded-full bg-[var(--color-dawn)]"
           style={{ left: s.left, top: s.top }}
-          animate={{ opacity: [0.15, 0.9, 0.15], scale: [0.8, 1.3, 0.8] }}
+          animate={
+            inView
+              ? { opacity: [0.15, 0.9, 0.15], scale: [0.8, 1.3, 0.8] }
+              : { opacity: 0.4, scale: 1 }
+          }
           transition={{ duration: s.dur, repeat: Infinity, delay: s.delay }}
         />
       ))}
