@@ -122,6 +122,13 @@ if (!token || !clientId) {
   process.exit(1);
 }
 
+if (!process.env.DATABASE_URL?.trim()) {
+  console.error(
+    "Set DATABASE_URL on this host (same Neon URL as Vercel). The bot cannot stay online without it."
+  );
+  process.exit(1);
+}
+
 const LEGACY = ["sleepEarly", "noPhone", "wakeEarly", "gym", "reading", "quran"] as const;
 
 type SetupState = {
@@ -772,19 +779,23 @@ const client = new Client({
   ],
 });
 
+function runJob(name: string, fn: () => Promise<unknown>) {
+  void fn().catch((e) => console.error(`${name} failed`, e));
+}
+
 client.once("ready", () => {
   console.log(`Dawn bot online as ${client.user?.tag}`);
-  void fireDueReminders();
-  void runMorningScheduler(client, prisma);
-  void sendWindDownDms(client, prisma);
-  void sendNightReviewDms(client, prisma);
-  void postConsistencyReports(client, prisma);
-  setInterval(() => void fireDueReminders(), 30_000);
+  runJob("reminders", () => fireDueReminders());
+  runJob("morning", () => runMorningScheduler(client, prisma));
+  runJob("wind-down", () => sendWindDownDms(client, prisma));
+  runJob("night-review", () => sendNightReviewDms(client, prisma));
+  runJob("consistency", () => postConsistencyReports(client, prisma));
+  setInterval(() => runJob("reminders", () => fireDueReminders()), 30_000);
   setInterval(() => {
-    void runMorningScheduler(client, prisma);
-    void sendWindDownDms(client, prisma);
-    void sendNightReviewDms(client, prisma);
-    void postConsistencyReports(client, prisma);
+    runJob("morning", () => runMorningScheduler(client, prisma));
+    runJob("wind-down", () => sendWindDownDms(client, prisma));
+    runJob("night-review", () => sendNightReviewDms(client, prisma));
+    runJob("consistency", () => postConsistencyReports(client, prisma));
   }, 20_000);
 });
 
@@ -801,23 +812,78 @@ async function fireDueReminders() {
   }
 }
 
+function describeInteraction(interaction: {
+  user: { username: string; id: string };
+  guildId: string | null;
+  isChatInputCommand(): boolean;
+  isButton(): boolean;
+  isModalSubmit(): boolean;
+  commandName?: string;
+  customId?: string;
+  options?: ChatInputCommandInteraction["options"];
+}): string {
+  const who = `${interaction.user.username} (${interaction.user.id})`;
+  const where = interaction.guildId || "dm";
+  if (interaction.isChatInputCommand()) {
+    let name = `/${interaction.commandName}`;
+    try {
+      const sub = interaction.options.getSubcommand(false);
+      if (sub) name += ` ${sub}`;
+    } catch {
+      /* no subcommand */
+    }
+    return `${name} user=${who} guild=${where}`;
+  }
+  if (interaction.isButton()) {
+    return `button ${interaction.customId} user=${who} guild=${where}`;
+  }
+  if (interaction.isModalSubmit()) {
+    return `modal ${interaction.customId} user=${who} guild=${where}`;
+  }
+  return `interaction user=${who} guild=${where}`;
+}
+
+function errText(e: unknown): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`;
+  return String(e);
+}
+
 client.on("interactionCreate", async (interaction) => {
+  const started = Date.now();
+  const label = describeInteraction(interaction);
+  console.log(`[cmd] start ${label}`);
   try {
     if (interaction.isChatInputCommand()) await handleCommand(interaction);
     else if (interaction.isButton()) await handleButton(interaction);
     else if (interaction.isModalSubmit()) await handleModal(interaction);
+    else {
+      console.log(`[cmd] ignored ${label}`);
+      return;
+    }
+    const ms = Date.now() - started;
+    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+      console.error(`[cmd] no-reply ${label} ${ms}ms — handler returned without answering Discord`);
+      await interaction.reply({
+        content: "Dawn got the command but sent no reply. Check Northflank logs for `[cmd]`.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    console.log(`[cmd] ok ${label} ${ms}ms`);
   } catch (e) {
+    const ms = Date.now() - started;
+    console.error(`[cmd] fail ${label} ${ms}ms ${errText(e)}`);
     console.error(e);
     if (interaction.isRepliable()) {
-      const msg = "Something went wrong — try again.";
+      const msg = `Dawn hit an error (${errText(e).slice(0, 120)}). Try again.`;
       try {
         if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({ content: msg, ephemeral: true });
+          await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral });
         } else {
-          await interaction.reply({ content: msg, ephemeral: true });
+          await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
         }
-      } catch {
-        /* ignore */
+      } catch (replyErr) {
+        console.error(`[cmd] reply-failed ${label} ${errText(replyErr)}`);
       }
     }
   }
@@ -1155,10 +1221,12 @@ async function buildMorningBoard(trackedId: string, date: string) {
 }
 
 async function handleCommand(interaction: ChatInputCommandInteraction) {
+  console.log(`[cmd] db-user /${interaction.commandName}`);
   const user = await findOrCreateUser(
     interaction.user.id,
     interaction.user.displayName || interaction.user.username
   );
+  console.log(`[cmd] db-ok user=${user.id} /${interaction.commandName}`);
   const date = todayStr();
   const habits = await ensureHabits(user.id);
   const habitKeys = habits.map((h) => h.key);

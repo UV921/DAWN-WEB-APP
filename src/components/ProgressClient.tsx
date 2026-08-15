@@ -42,7 +42,7 @@ export function ProgressClient() {
           <h1 className="ui-title mt-2">What the week is saying</h1>
           <p className="ui-sub mt-3">
             Not a gallery of charts — a read on mornings, tasks, sleep, and
-            study hours, plus what to do next.
+            study hours. Share a gold card of the week when you want to post it.
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your week…</p>

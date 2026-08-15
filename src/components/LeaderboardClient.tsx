@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { AppNav } from "@/components/AppNav";
 import { IconChevronRight } from "@/components/icons";
+import { ShareCardButton } from "@/components/ShareCardButton";
+import { shareLeaderboardCard } from "@/lib/share-leaderboard-card";
 import { formatStudyDuration } from "@/lib/study-time";
 
 type Metric =
@@ -134,7 +136,8 @@ export function LeaderboardClient() {
               : scope === "circle"
                 ? "Your friend circle only. Invite people from Friends if this looks empty."
                 : "Everyone on Dawn — ranked by study, habits, and streaks."}{" "}
-            {today ? `Updated for ${today}.` : ""}
+            {today ? `Updated for ${today}.` : ""}{" "}
+            Share a card of your rank or the board.
           </p>
 
           {scope === "discord" && discordBoardName ? (
@@ -240,9 +243,41 @@ export function LeaderboardClient() {
           {/* Your rank card */}
           {me ? (
             <section className="mt-6 rounded-2xl border border-[var(--color-dawn)]/35 bg-[var(--color-dawn)]/10 px-5 py-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-                Your place
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
+                  Your place
+                </p>
+                <ShareCardButton
+                  label="Share board"
+                  disabled={loading || (!me && rows.length === 0)}
+                  make={() =>
+                    shareLeaderboardCard({
+                      metricLabel: labels[metric] || metricMeta.label,
+                      scopeLabel:
+                        scope === "discord"
+                          ? discordBoardName || "Discord circle"
+                          : scope === "circle"
+                            ? circles.find((c) => c.id === circleId)?.name ||
+                              "Friend circle"
+                            : "Global",
+                      date: today,
+                      me: me
+                        ? {
+                            rank: me.rank,
+                            name: me.name,
+                            scoreLabel: formatScore(metric, me.score),
+                          }
+                        : null,
+                      rows: rows.slice(0, 8).map((r) => ({
+                        rank: r.rank,
+                        name: r.name,
+                        scoreLabel: formatScore(metric, r.score),
+                        isMe: r.isMe,
+                      })),
+                    })
+                  }
+                />
+              </div>
               <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="font-display text-3xl text-white">
@@ -312,7 +347,34 @@ export function LeaderboardClient() {
 
           {/* Full table */}
           <section className="mt-8">
-            <h2 className="font-display text-2xl text-white">Full board</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-2xl text-white">Full board</h2>
+              {!me && rows.length > 0 ? (
+                <ShareCardButton
+                  label="Share board"
+                  make={() =>
+                    shareLeaderboardCard({
+                      metricLabel: labels[metric] || metricMeta.label,
+                      scopeLabel:
+                        scope === "discord"
+                          ? discordBoardName || "Discord circle"
+                          : scope === "circle"
+                            ? circles.find((c) => c.id === circleId)?.name ||
+                              "Friend circle"
+                            : "Global",
+                      date: today,
+                      me: null,
+                      rows: rows.slice(0, 8).map((r) => ({
+                        rank: r.rank,
+                        name: r.name,
+                        scoreLabel: formatScore(metric, r.score),
+                        isMe: r.isMe,
+                      })),
+                    })
+                  }
+                />
+              ) : null}
+            </div>
             {loading ? (
               <p className="mt-4 text-[var(--color-mist)]">Loading ranks…</p>
             ) : emptyReason ? (

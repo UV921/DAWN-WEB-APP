@@ -259,6 +259,7 @@ export async function handleStudyRoomCommand(
   interaction: ChatInputCommandInteraction
 ) {
   const sub = interaction.options.getSubcommand();
+  console.log(`[cmd] study-room ${sub} guild=${interaction.guildId || "none"}`);
   if (!interaction.guildId) {
     await interaction.reply({
       content: "Run this in your study server.",

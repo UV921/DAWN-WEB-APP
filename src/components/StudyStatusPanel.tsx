@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { ShareCardButton } from "@/components/ShareCardButton";
+import { shareStudyCard } from "@/lib/share-study-card";
 import { formatStudyDuration } from "@/lib/study-time";
 import type { StudyStatus, StudyStatusTone } from "@/lib/study-status";
 
@@ -91,24 +94,51 @@ export function StudyStatusPanel({
   data: StudyStats;
   compact?: boolean;
 }) {
+  const { data: session } = useSession();
   const t = TONE[data.status.tone];
   const bars = compact ? data.week : data.month?.slice(-14) || data.week;
   const maxBar = Math.max(1, ...bars.map((d) => d.minutes));
 
   return (
     <section className={`rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <p
           className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${t.kicker}`}
         >
           {data.status.kicker}
         </p>
-        <Link
-          href="/settings?tab=discord"
-          className="text-xs text-[var(--color-mist)]"
-        >
-          Rooms
-        </Link>
+        <div className="flex items-center gap-3">
+          {data.configured ? (
+            <ShareCardButton
+              label="Share hours"
+              make={() =>
+                shareStudyCard({
+                  name: session?.user?.name || undefined,
+                  date: data.today.date,
+                  headline: data.status.headline,
+                  today: data.periods?.today.label || data.today.label,
+                  week: data.periods?.week.label || data.weekLabel,
+                  month: data.periods?.month.label || data.monthLabel || "0m",
+                  year: data.periods?.year.label || "0m",
+                  all: data.periods?.all.label || data.allLabel || "0m",
+                  live: data.today.live,
+                  streak: data.streak,
+                  bars: bars.map((d) => ({
+                    date: d.date,
+                    minutes: d.minutes,
+                    label: formatStudyDuration(d.minutes),
+                  })),
+                })
+              }
+            />
+          ) : null}
+          <Link
+            href="/settings?tab=discord"
+            className="text-xs text-[var(--color-mist)]"
+          >
+            Rooms
+          </Link>
+        </div>
       </div>
 
       <h2 className="font-display mt-2 text-[1.65rem] leading-[1.2] text-white">

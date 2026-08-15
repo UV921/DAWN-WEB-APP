@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
 import {
   completedCount,
   formatLocalDate,
@@ -9,6 +10,8 @@ import {
   type HabitDef,
   type HabitLogLike,
 } from "@/lib/habits";
+import { ShareCardButton } from "@/components/ShareCardButton";
+import { shareProgressCard } from "@/lib/share-progress-card";
 import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { EvilComposedChart } from "@/components/evilcharts/charts/recharts-composed-chart";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
@@ -87,6 +90,7 @@ function series(label: string, colors: string[]) {
 }
 
 export function ProgressDetail({ logs, habits, todoStats, study }: Props) {
+  const { data: session } = useSession();
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
   const habitCount = Math.max(habitKeys.length, 1);
   const todoMap = useMemo(
@@ -303,11 +307,33 @@ export function ProgressDetail({ logs, habits, todoStats, study }: Props) {
   return (
     <section className="space-y-12">
       <div className={`rounded-2xl border px-5 py-5 ${briefTone.border} ${briefTone.bg}`}>
-        <p
-          className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${briefTone.kicker}`}
-        >
-          {brief.kicker}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p
+            className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${briefTone.kicker}`}
+          >
+            {brief.kicker}
+          </p>
+          <ShareCardButton
+            label="Share week"
+            make={() =>
+              shareProgressCard({
+                name: session?.user?.name || undefined,
+                date: last7[last7.length - 1]?.date || formatLocalDate(new Date()),
+                headline: brief.headline,
+                habitPct7,
+                taskPct7,
+                fullHabitDays7,
+                studyWeekLabel: study?.weekLabel,
+                habits: perHabit.map((h) => ({ label: h.label, pct: h.pct })),
+                last7: last7.map((d) => ({
+                  label: d.weekday.slice(0, 1),
+                  habitPct: d.habitPct,
+                  logged: d.logged,
+                })),
+              })
+            }
+          />
+        </div>
         <h2 className="font-display mt-2 text-[1.7rem] leading-[1.2] text-white">
           {brief.headline}
         </h2>
