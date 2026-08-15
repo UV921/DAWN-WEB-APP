@@ -2,7 +2,7 @@
  * Dawn Discord bot
  *
  * /setup /woke /checkin /habit /today /me /streak /focus /why /board
- * /week /grid /track /join /morning
+ * /week /grid /track /join /morning /study-room /studied
  * /ping — DM every member now "are you awake?"
  * /leaderboard — post who woke + habit ranks
  *
@@ -31,9 +31,11 @@ import {
   MessageComponentInteraction,
   MessageFlags,
   PermissionFlagsBits,
+  ChannelType,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { existsSync, readFileSync } from "fs";
+import { createServer } from "http";
 import { resolve } from "path";
 import {
   buildLeaderboardEmbed,
@@ -85,6 +87,11 @@ import {
   sendNightReviewDms,
   syncDayProgress,
 } from "./day-flow";
+import {
+  attachStudyVoice,
+  handleStudiedCommand,
+  handleStudyRoomCommand,
+} from "./study-voice";
 
 (function loadEnv() {
   const p = resolve(process.cwd(), ".env");
@@ -704,6 +711,45 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName("report")
       .setDescription("Post today's consistency report (on track vs needs focus)"),
+    new SlashCommandBuilder()
+      .setName("study-room")
+      .setDescription("Mark voice channels Dawn counts as study time")
+      .addSubcommand((s) =>
+        s
+          .setName("add")
+          .setDescription("Count this voice channel")
+          .addChannelOption((o) =>
+            o
+              .setName("channel")
+              .setDescription("Study voice channel")
+              .addChannelTypes(
+                ChannelType.GuildVoice,
+                ChannelType.GuildStageVoice
+              )
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((s) =>
+        s
+          .setName("remove")
+          .setDescription("Stop counting this voice channel")
+          .addChannelOption((o) =>
+            o
+              .setName("channel")
+              .setDescription("Voice channel to remove")
+              .addChannelTypes(
+                ChannelType.GuildVoice,
+                ChannelType.GuildStageVoice
+              )
+              .setRequired(true)
+          )
+      )
+      .addSubcommand((s) =>
+        s.setName("list").setDescription("List marked study voice channels")
+      ),
+    new SlashCommandBuilder()
+      .setName("studied")
+      .setDescription("Your Dawn study hours from marked voice channels"),
   ].map((c) => c.toJSON());
 
   const rest = new REST({ version: "10" }).setToken(token!);
@@ -719,7 +765,11 @@ async function registerCommands() {
 }
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
 });
 
 client.once("ready", () => {
@@ -1125,6 +1175,16 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
         interaction.guildId
       );
     }
+  }
+
+  if (interaction.commandName === "study-room") {
+    await handleStudyRoomCommand(prisma, interaction);
+    return;
+  }
+
+  if (interaction.commandName === "studied") {
+    await handleStudiedCommand(prisma, interaction);
+    return;
   }
 
   if (interaction.commandName === "setup") {
@@ -2855,6 +2915,22 @@ async function handleModal(interaction: ModalSubmitInteraction) {
     await completeSetup(interaction, state);
   }
 }
+
+attachStudyVoice(client, prisma);
+
+function startHealthServer() {
+  const port = Number(process.env.PORT || 8080);
+  if (!Number.isFinite(port) || port <= 0) return;
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end(client.isReady() ? "dawn-bot ok" : "dawn-bot starting");
+  });
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Health server on :${port}`);
+  });
+}
+
+startHealthServer();
 
 registerCommands()
   .then(() => client.login(token))

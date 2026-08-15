@@ -176,7 +176,9 @@ export function HabitCharts({ logs, habits = [] }: Props) {
               {totalInView} habits · {range === "month" ? "this month" : "this year"}
             </h2>
             <p className="mt-1 text-sm text-[var(--color-mist)]">
-              Hover a square for date, wake time, and habits.
+              Each square is a day you showed up. Hover for wake time and which
+              habits landed — empty squares are missed check-ins, not failure
+              forever.
             </p>
           </div>
           <div className="flex rounded-full border border-white/15 p-1">

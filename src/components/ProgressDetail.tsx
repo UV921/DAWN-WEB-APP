@@ -14,6 +14,11 @@ import { EvilComposedChart } from "@/components/evilcharts/charts/recharts-compo
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
 import { EvilPieChart } from "@/components/evilcharts/charts/recharts-pie-chart";
 import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-chart";
+import { buildProgressBrief } from "@/lib/progress-brief";
+import {
+  StudyStatusPanel,
+  type StudyStats,
+} from "@/components/StudyStatusPanel";
 
 export type TodoStat = { date: string; total: number; done: number };
 
@@ -21,6 +26,7 @@ type Props = {
   logs: HabitLogLike[];
   habits: HabitDef[];
   todoStats: TodoStat[];
+  study?: StudyStats | null;
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -29,6 +35,19 @@ const DAWN = ["#f0b45a"];
 const LEAF = ["#6fbf8a"];
 const EMBER = ["#e07a3a"];
 const MIST = ["#8ba3b8"];
+
+function prettyWeekdayLong(name: string) {
+  const map: Record<string, string> = {
+    Sun: "Sundays",
+    Mon: "Mondays",
+    Tue: "Tuesdays",
+    Wed: "Wednesdays",
+    Thu: "Thursdays",
+    Fri: "Fridays",
+    Sat: "Saturdays",
+  };
+  return map[name] || name;
+}
 
 function pretty(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString(undefined, {
@@ -67,7 +86,7 @@ function series(label: string, colors: string[]) {
   return { label, colors: { light: colors, dark: colors } };
 }
 
-export function ProgressDetail({ logs, habits, todoStats }: Props) {
+export function ProgressDetail({ logs, habits, todoStats, study }: Props) {
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
   const habitCount = Math.max(habitKeys.length, 1);
   const todoMap = useMemo(
@@ -119,7 +138,6 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
   const lessDays = days.filter(
     (d) => (d.logged || d.hasTasks) && d.effort < meanEffort
   );
-  const allTaskDays = days.filter((d) => d.allTasks).length;
   const allHabitDays = days.filter((d) => d.allHabits).length;
   const best = [...days].sort((a, b) => b.effort - a.effort)[0];
   const worst = [...days]
@@ -219,37 +237,141 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
     pct: series("Hit rate", DAWN),
   } satisfies ChartConfig;
 
+  const habitPct7 = avg(last7.map((d) => d.habitPct));
+  const taskPct7 =
+    avg(last7.filter((d) => d.hasTasks).map((d) => d.taskPct || 0)) || 0;
+  const fullHabitDays7 = last7.filter((d) => d.allHabits).length;
+  const allTaskDays7 = last7.filter((d) => d.allTasks).length;
+  const loggedDays7 = last7.filter((d) => d.logged || d.hasTasks).length;
+  const sleepAvg =
+    sleepData.length > 0
+      ? Math.round(
+          (sleepData.reduce((a, r) => a + r.hours, 0) / sleepData.length) * 10
+        ) / 10
+      : null;
+  const weekdayRank = [...weekday].sort((a, b) => a.Habits - b.Habits);
+  const hasWeekdaySignal = weekday.some((w) => w.Habits > 0);
+  const weakestWeekday = hasWeekdaySignal ? weekdayRank[0].name : null;
+  const strongestWeekday = hasWeekdaySignal
+    ? weekdayRank[weekdayRank.length - 1].name
+    : null;
+  const brief = buildProgressBrief({
+    habitPct7,
+    taskPct7,
+    fullHabitDays7,
+    allTaskDays7,
+    loggedDays7,
+    sleepAvg,
+    weakestWeekday,
+    strongestWeekday,
+    studyWeekMinutes: study?.weekMinutes ?? null,
+    studyTodayMinutes: study?.today.minutes ?? null,
+  });
+  const briefTone =
+    brief.tone === "good"
+      ? {
+          border: "border-[var(--color-leaf)]/35",
+          bg: "bg-[var(--color-leaf)]/[0.08]",
+          kicker: "text-[var(--color-leaf)]",
+        }
+      : brief.tone === "slip"
+        ? {
+            border: "border-[var(--color-ember)]/40",
+            bg: "bg-[var(--color-ember)]/[0.08]",
+            kicker: "text-[var(--color-ember)]",
+          }
+        : {
+            border: "border-white/12",
+            bg: "bg-white/[0.04]",
+            kicker: "text-[var(--color-dawn)]",
+          };
+
+  const weakestHabit = [...perHabit].sort((a, b) => a.pct - b.pct)[0];
+  const weekdayInsight =
+    strongestWeekday &&
+    weakestWeekday &&
+    strongestWeekday !== weakestWeekday
+      ? `${prettyWeekdayLong(strongestWeekday)} are your strongest mornings. ${prettyWeekdayLong(weakestWeekday)} leak the most — that’s the day to protect, not the day to “start over.”`
+      : "Need a few more logged days before weekday patterns are honest.";
+  const sleepInsight =
+    sleepAvg == null
+      ? "Log bedtime and wake on consecutive days to see real sleep length."
+      : sleepAvg < 6.5
+        ? `Average ${sleepAvg}h. Under ~7h, gym and study willpower crash — this chart is why mornings feel hard.`
+        : `Average ${sleepAvg}h from bed to wake. Hold this and wake time stays cheaper.`;
+
   return (
     <section className="space-y-12">
+      <div className={`rounded-2xl border px-5 py-5 ${briefTone.border} ${briefTone.bg}`}>
+        <p
+          className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${briefTone.kicker}`}
+        >
+          {brief.kicker}
+        </p>
+        <h2 className="font-display mt-2 text-[1.7rem] leading-[1.2] text-white">
+          {brief.headline}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-cloud)]">
+          {brief.body}
+        </p>
+        <div className="mt-4 border-l-2 border-[var(--color-dawn)] bg-black/20 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
+            Do this
+          </p>
+          <p className="mt-1 text-sm font-medium text-white">{brief.next}</p>
+        </div>
+      </div>
+
+      {study?.status ? <StudyStatusPanel data={study} /> : null}
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat
-          label="Habits 7d"
-          value={`${avg(last7.map((d) => d.habitPct))}%`}
-          hint={`${last7.filter((d) => d.allHabits).length} full mornings`}
+          label="Habits this week"
+          value={`${habitPct7}%`}
+          hint={
+            fullHabitDays7 >= 4
+              ? `${fullHabitDays7} full mornings — the week is holding.`
+              : `${fullHabitDays7} full morning${fullHabitDays7 === 1 ? "" : "s"}. Finish the open habit after wake.`
+          }
         />
         <Stat
-          label="Tasks 7d"
-          value={`${avg(last7.filter((d) => d.hasTasks).map((d) => d.taskPct || 0)) || 0}%`}
-          hint={`${last7.filter((d) => d.allTasks).length} days all done`}
+          label="Tasks this week"
+          value={`${taskPct7}%`}
+          hint={
+            allTaskDays7
+              ? `${allTaskDays7} day${allTaskDays7 === 1 ? "" : "s"} you cleared the list.`
+              : "Set a short list tonight so tomorrow has a finish line."
+          }
         />
         <Stat
-          label="All-task days"
-          value={`${allTaskDays}`}
-          hint="last 30 days"
-        />
-        <Stat
-          label="Full-habit days"
+          label="Closed loops · 30d"
           value={`${allHabitDays}`}
-          hint="last 30 days"
+          hint={
+            allHabitDays >= 10
+              ? "Days you finished every habit. That’s the real score."
+              : "Days you finished every habit. Aim for more complete mornings, not more habits."
+          }
+        />
+        <Stat
+          label="Study this week"
+          value={study?.weekLabel || "0m"}
+          hint={
+            study?.today.live
+              ? "In a study room right now."
+              : study?.weekMinutes
+                ? `${study.weekDaysWithStudy || 0} day${(study.weekDaysWithStudy || 0) === 1 ? "" : "s"} with time on the clock.`
+                : "Sit in a marked study VC. Dawn counts it here."
+          }
         />
       </div>
 
       <div>
         <h2 className="font-display text-2xl text-white">
-          Completion · habits vs tasks
+          Did you close the morning?
         </h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Gold bars = habits. Green line = tasks (only on days you set a list).
+          Gold = habit % that day. Green = task % (only if you set a list).
+          Gaps are days you didn’t check in — not “zero effort,” just unlogged.
         </p>
         <div className="mt-5 h-[300px] w-full">
           <EvilComposedChart
@@ -277,9 +399,9 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
 
       <div className="grid gap-10 lg:grid-cols-2">
         <div>
-          <h2 className="font-display text-2xl text-white">By weekday</h2>
+          <h2 className="font-display text-2xl text-white">Which weekday breaks?</h2>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Which days you show up more vs less — 30-day average.
+            {weekdayInsight}
           </p>
           <div className="mt-5 h-[260px] w-full">
             <EvilBarChart
@@ -303,9 +425,10 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
         </div>
 
         <div>
-          <h2 className="font-display text-2xl text-white">Day mix · 30d</h2>
+          <h2 className="font-display text-2xl text-white">How days actually end</h2>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Full loop vs habits-only vs tasks-only vs light days.
+            Full loop = habits + tasks done. Light days = you showed up but
+            didn’t finish. Last 30 days.
           </p>
           {mix.length === 0 ? (
             <p className="mt-8 text-sm text-[var(--color-mist)]">No logged days yet.</p>
@@ -334,9 +457,9 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
 
       {sleepData.length > 1 ? (
         <div>
-          <h2 className="font-display text-2xl text-white">Sleep length</h2>
+          <h2 className="font-display text-2xl text-white">Sleep is the lever</h2>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Hours from last night’s bedtime to this morning’s wake.
+            {sleepInsight}
           </p>
           <div className="mt-5 h-[260px] w-full">
             <EvilAreaChart
@@ -361,10 +484,11 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-dawn)]">
-            More days
+            Days that worked
           </p>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Above your 30-day average ({meanEffort}% effort)
+            Above your usual ({meanEffort}% combined habits + tasks). Repeat
+            whatever you did these nights.
           </p>
           <ul className="mt-3 space-y-1.5 text-sm">
             {moreDays.slice(-5).reverse().map((d) => (
@@ -380,10 +504,11 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-ember)]">
-            Less days
+            Days that leaked
           </p>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Below average — protect these nights
+            Below your usual. These are the nights to lock bedtime — not add
+            more goals.
           </p>
           <ul className="mt-3 space-y-1.5 text-sm">
             {lessDays.slice(-5).reverse().map((d) => (
@@ -409,9 +534,11 @@ export function ProgressDetail({ logs, habits, todoStats }: Props) {
       )}
 
       <div>
-        <h2 className="font-display text-2xl text-white">Each habit · logged days</h2>
+        <h2 className="font-display text-2xl text-white">Which habit is leaking?</h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Hit rate on days you actually checked in — last 30 days.
+          {weakestHabit
+            ? `${weakestHabit.label} is at ${weakestHabit.pct}% on days you checked in. Fix that one before adding anything new.`
+            : "Hit rate on days you actually checked in — last 30 days."}
         </p>
         <div
           className="mt-5 w-full"

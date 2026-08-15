@@ -19,6 +19,7 @@ import { UiMessage, UiEmpty } from "@/components/UiMessage";
 import { MorningPulseCard } from "@/components/MorningPulseCard";
 import { DailyLoop } from "@/components/DailyLoop";
 import { TodayTasks, type TodayTodo } from "@/components/TodayTasks";
+import { StudyHoursCard } from "@/components/StudyHoursCard";
 import {
   buildMorningPulse,
   type MorningPulse,
@@ -554,6 +555,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       </header>
 
       {pulse ? <MorningPulseCard pulse={pulse} /> : null}
+
+      <StudyHoursCard />
 
       <TodayOverview
         earlyStreak={profile?.earlyStreak || 0}

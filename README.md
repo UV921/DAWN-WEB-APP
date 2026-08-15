@@ -19,7 +19,8 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 - Wake-time chart, completion bars, 6-week heatmap  
 - Friend circle with invite code  
 - Check-ins posted to your Discord channel  
-- Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`
+- Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`, `/study-room`, `/studied`
+- Study hours from marked Discord voice channels (Dawn’s own timer)
 
 ## Setup
 
@@ -41,7 +42,7 @@ You need **one Discord Application** (login + bot). Use the server where you alr
 3. Copy **Client ID** → `DISCORD_CLIENT_ID`  
    Copy **Client Secret** → `DISCORD_CLIENT_SECRET`
 4. **Bot** → Add Bot → **Reset Token** → `DISCORD_BOT_TOKEN`  
-   Turn **on**: Server Members Intent (optional). Slash commands work without Message Content Intent.
+   Turn **on**: **Server Voice States** (required for study hours) and Server Members Intent (optional). Slash commands work without Message Content Intent.
 5. **OAuth2 → URL Generator**  
    Scopes: `bot` + `applications.commands`  
    Bot permissions: **Send Messages**, **Embed Links**, **Use Application Commands**  
@@ -61,6 +62,7 @@ DISCORD_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
 DISCORD_GUILD_ID=...          # your study server
 DISCORD_CHANNEL_ID=...        # #study / progress channel
+DISCORD_STUDY_VOICE_IDS=...   # optional; or /study-room add
 ```
 
 Generate `NEXTAUTH_SECRET`:
@@ -108,6 +110,7 @@ Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Continue with Discord*
    - `/leaderboard` — who woke + habit ranks (also auto-posts at board_time)
    - `/week` · `/grid` — personal bars + contribution grid
    - `/habit add` · `/woke` · `/checkin` · `/today` · `/setup`
+   - `/study-room add` — mark a voice channel · `/studied` — your hours
 
 
 

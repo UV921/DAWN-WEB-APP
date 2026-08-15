@@ -56,6 +56,10 @@ export function DiscordSetup() {
   const { data: session } = useSession();
   const [data, setData] = useState<SetupData | null>(null);
   const [channelId, setChannelId] = useState("");
+  const [studyIds, setStudyIds] = useState("");
+  const [studyRooms, setStudyRooms] = useState<
+    { channelId: string; name: string }[]
+  >([]);
   const [mode, setMode] = useState("dm");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -68,6 +72,17 @@ export function DiscordSetup() {
     setData(json);
     setChannelId(json.user.discordChannelId || "");
     setMode(json.user.discordNotifyDefault || "dm");
+    try {
+      const studyRes = await fetch("/api/study");
+      if (studyRes.ok) {
+        const study = (await studyRes.json()) as {
+          rooms?: { channelId: string; name: string }[];
+        };
+        setStudyRooms(study.rooms || []);
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -90,6 +105,45 @@ export function DiscordSetup() {
     }
     setMsg("Saved.");
     await load();
+  }
+
+  async function saveStudyRooms() {
+    setBusy(true);
+    setMsg("");
+    setErr("");
+    const res = await fetch("/api/study", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add-room", channelIds: studyIds }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setErr(json.error || "Could not save study rooms.");
+      return;
+    }
+    setStudyRooms(json.rooms || []);
+    setStudyIds("");
+    setMsg("Study rooms saved. Sit in one — Dawn picks it up within a minute.");
+  }
+
+  async function removeStudyRoom(channelId: string) {
+    setBusy(true);
+    setMsg("");
+    setErr("");
+    const res = await fetch("/api/study", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove-room", channelId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setErr(json.error || "Could not remove room.");
+      return;
+    }
+    setStudyRooms(json.rooms || []);
+    setMsg("Removed.");
   }
 
   async function test(action: "test-dm" | "test-channel") {
@@ -315,10 +369,72 @@ export function DiscordSetup() {
         </div>
       </div>
 
+      {/* Study voice rooms */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
+          Step E · Study voice rooms
+        </p>
+        <p className="mt-2 text-sm text-[var(--color-mist)]">
+          Dawn counts time you spend in these voice channels (its own timer —
+          not LionBot). In Discord Developer Portal → Bot, turn on{" "}
+          <strong className="text-white">Server Voice States</strong>. Then
+          either run{" "}
+          <code className="text-[var(--color-dawn)]">/study-room add</code> or
+          paste voice channel IDs here.
+        </p>
+        {studyRooms.length ? (
+          <ul className="mt-3 space-y-1.5">
+            {studyRooms.map((r) => (
+              <li
+                key={r.channelId}
+                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 truncate text-white">
+                  {r.name}
+                  <span className="ml-2 font-mono text-xs text-[var(--color-mist)]">
+                    {r.channelId}
+                  </span>
+                </span>
+                {r.name !== "From .env" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void removeStudyRoom(r.channelId)}
+                    className="shrink-0 text-xs text-[var(--color-mist)] hover:text-white"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-[var(--color-mist)]">
+            None yet. Right-click a voice channel → Copy Channel ID.
+          </p>
+        )}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={studyIds}
+            onChange={(e) => setStudyIds(e.target.value)}
+            placeholder="Voice channel IDs, comma-separated"
+            className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void saveStudyRooms()}
+            className="rounded-full border border-white/20 px-5 py-3 text-sm text-white disabled:opacity-50"
+          >
+            Save rooms
+          </button>
+        </div>
+      </div>
+
       {/* Test */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
-          Step E · Test it
+          Step F · Test it
         </p>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           Send a test now. If DM fails: open Discord Privacy → allow DMs from

@@ -1,4 +1,4 @@
-# Railway service for the Discord bot (always-on).
+# Optional paid Railway fallback. Prefer free always-on Northflank — see DEPLOY.md.
 # Web app stays on Vercel; this only runs: npm run bot
 
 [build]

@@ -1,13 +1,16 @@
-# Dawn — deploy (Vercel web + Railway bot)
+# Dawn — deploy (Vercel web + Northflank bot)
 
-There is **no way** to run the Discord bot on Vercel. Vercel is serverless.
-Use this split (both auto-redeploy when you `git push`):
+Railway’s free credit ends and the bot process dies. Discord bots cannot run on Vercel (serverless). Use this split:
 
-| Piece | Where | Auto on push? |
-|-------|--------|----------------|
-| Website + APIs | **Vercel** | Yes |
-| Discord bot | **Railway** | Yes |
-| Database | **Neon** (Postgres) | Shared by both |
+| Piece | Where | Cost | Auto on push? |
+|-------|--------|------|----------------|
+| Website + APIs | **Vercel** | Free | Yes |
+| Discord bot | **Northflank** | Free sandbox, always-on | Yes |
+| Database | **Neon** (Postgres) | Free | Shared by both |
+
+Northflank’s free plan is **always-on** (no sleep). That is why study-hour tracking and morning DMs keep working.
+
+Until the new host is live, run the bot on your computer: `npm run bot`.
 
 ---
 
@@ -31,7 +34,7 @@ Commit that change for production. (Or switch early and use Neon for local + pro
 1. Go to https://neon.tech → sign up  
 2. Create project **dawn**  
 3. Copy the connection string (`postgresql://...`)  
-4. Put it in local `.env` (and later in Vercel + Railway):
+4. Put it in local `.env` (and later in Vercel + Northflank):
 
 ```bash
 DATABASE_URL="postgresql://USER:PASS@HOST/neondb?sslmode=require"
@@ -50,7 +53,7 @@ npx prisma db push
 ```bash
 git init
 git add .
-git commit -m "Prepare Dawn for Vercel + Railway"
+git commit -m "Prepare Dawn for Vercel + Northflank"
 # create empty repo on GitHub, then:
 git remote add origin https://github.com/YOUR_USER/dawn.git
 git branch -M main
@@ -76,6 +79,7 @@ DISCORD_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
 DISCORD_GUILD_ID=...
 DISCORD_CHANNEL_ID=...
+DISCORD_STUDY_VOICE_IDS=...
 GEMINI_API_KEY=...
 GEMINI_MODEL=gemini-2.5-flash
 AI_PROVIDER=gemini
@@ -93,17 +97,41 @@ Also set `NEXTAUTH_URL` to that exact URL (no trailing slash).
 
 ---
 
-## 4. Deploy bot on Railway (always-on)
+## 4. Deploy bot on Northflank (free, always-on)
 
-1. https://railway.app → New Project → **Deploy from GitHub** (same repo)  
-2. Add the same env vars (`DATABASE_URL`, Discord, `NEXTAUTH_URL` = your Vercel URL)  
-3. Start command (if not picked from `railway.toml`):
+Do **not** use Render / Koyeb free web services — they sleep, Discord disconnects, study hours stop.
 
-```bash
-npx tsx bot/index.ts
+1. Open https://northflank.com → sign up with GitHub (Developer / Sandbox plan).  
+2. **Create project** → name it `dawn`.  
+3. **Create service** → **Deployment** from the same GitHub repo.  
+4. Build & start:
+
+```
+Build command:  npm install && npx prisma generate
+Start command:  npx tsx bot/index.ts
 ```
 
-4. After each `git push`, Railway rebuilds the bot and Vercel rebuilds the site.
+   Dockerfile settings (if you pick **Dockerfile** instead of Buildpack):
+
+   - Build type: **Dockerfile**
+   - BuildKit: **on**
+   - Build context: `/`
+   - Dockerfile location: `/Dockerfile`
+
+5. Add the **same env vars** as Vercel (`DATABASE_URL`, Discord keys, `NEXTAUTH_URL` = your Vercel URL).  
+   Northflank will set `PORT` — the bot already serves a health check on that port.
+
+6. Deploy. Logs should show:
+
+```
+Dawn bot online as YourBot#1234
+Health server on :8080
+Study voice tracking ready
+```
+
+7. After each `git push` to `main`, Northflank rebuilds the bot and Vercel rebuilds the site.
+
+8. You can delete the Railway service. Leave Neon + Vercel as they are.
 
 ---
 
@@ -116,18 +144,21 @@ git push
 ```
 
 - Vercel redeploys the website  
-- Railway redeploys the bot  
+- Northflank redeploys the bot  
 
-That is the practical approach: **one push updates both**. The bot cannot live on Vercel itself.
+The bot cannot live on Vercel itself.
 
 ---
 
-## Optional: everything on Railway
+## Temporary: bot on your laptop
 
-Skip Vercel: two Railway services  
-- web: `npx next start -H 0.0.0.0 -p $PORT`  
-- bot: `npx tsx bot/index.ts`  
-+ Neon Postgres  
+If Northflank is not set up yet:
+
+```bash
+npm run bot
+```
+
+Keep that terminal open. Study hours and slash commands work only while it runs.
 
 ---
 
@@ -137,6 +168,7 @@ Skip Vercel: two Railway services
 - [ ] Neon `DATABASE_URL` + `npx prisma db push`  
 - [ ] GitHub repo pushed  
 - [ ] Vercel live + Discord OAuth redirect updated  
-- [ ] Railway bot online (logs show logged in)  
+- [ ] Northflank bot online (logs show logged in)  
 - [ ] Discord login works on the Vercel URL  
 - [ ] Bot slash command works in your server  
+- [ ] Railway service deleted (optional)  
