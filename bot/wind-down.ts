@@ -15,6 +15,11 @@ import {
 } from "discord.js";
 import type { PrismaClient } from "@prisma/client";
 import { resolveDisplayName } from "./names";
+import {
+  isMessageEnabled,
+  messageText,
+  parseBotMessages,
+} from "../src/lib/bot-messages";
 
 function todayStr() {
   const d = new Date();
@@ -136,6 +141,9 @@ export async function sendWindDownDms(
     // Fire at user's sleep goal minute
     if (!opts?.force && u.sleepGoal !== now) continue;
 
+    const settings = parseBotMessages(u.botMessagesJson);
+    if (!opts?.force && !isMessageEnabled(settings, "windDown")) continue;
+
     const name = await resolveDisplayName(client, prisma, u);
     try {
       const du = await client.users.fetch(u.discordId);
@@ -145,11 +153,11 @@ export async function sendWindDownDms(
             .setColor(0x3d5a80)
             .setTitle("Before you sleep")
             .setDescription(
-              [
-                `Hey **${name}**.`,
-                `Sleep goal is **${u.sleepGoal}**.`,
-                "Plan tomorrow in 30 seconds — wake time, one goal, todos, reminder.",
-              ].join("\n")
+              messageText(settings, "windDown", {
+                name: `**${name}**`,
+                wake: `**${u.wakeGoal}**`,
+                sleep: `**${u.sleepGoal}**`,
+              })
             ),
         ],
         components: windDownStartRows(),

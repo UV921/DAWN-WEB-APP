@@ -30,6 +30,8 @@ model User {
   whyLine              String   @default("")
   /// JSON: deep personal interview answers + generated brief
   lifeJson             String   @default("{}")
+  /// JSON: which bot DMs/pings are on and the text they send. See lib/bot-messages.ts
+  botMessagesJson      String   @default("{}")
   xp                   Int      @default(0)
   level                Int      @default(1)
   totalEarlyWakes      Int      @default(0)

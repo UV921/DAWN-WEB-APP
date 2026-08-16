@@ -15,6 +15,11 @@ import {
 } from "discord.js";
 import type { PrismaClient, TrackedChannel, User, HabitLog, Habit } from "@prisma/client";
 import { resolveDisplayName, resolveManyNames } from "./names";
+import {
+  isMessageEnabled,
+  messageText,
+  parseBotMessages,
+} from "../src/lib/bot-messages";
 
 type LogLike = HabitLog & { checks?: string | null };
 
@@ -97,6 +102,11 @@ export async function sendMorningDms(
         skipped += 1;
         continue;
       }
+      const settings = parseBotMessages(u.botMessagesJson);
+      if (!opts?.force && !isMessageEnabled(settings, "morningPing")) {
+        skipped += 1;
+        continue;
+      }
 
       try {
         const discordUser = await client.users.fetch(u.discordId);
@@ -150,7 +160,13 @@ export async function sendMorningDms(
               .setTitle(`Good morning · #${ch.name}`)
               .setDescription(
                 [
-                  `Hey **${name}** — time to check in.`,
+                  messageText(settings, "morningPing", {
+                    name: `**${name}**`,
+                    wake: `**${u.wakeGoal}**`,
+                    sleep: `**${u.sleepGoal}**`,
+                    goal: plan?.goalText,
+                    streak: cons.streak,
+                  }),
                   "",
                   u.whyLine ? `_${u.whyLine}_` : null,
                   `🎯 Wake goal **${u.wakeGoal}**`,

@@ -2,6 +2,11 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  parseBotMessages,
+  serializeBotMessages,
+  type BotMessages,
+} from "@/lib/bot-messages";
 
 const DISCORD_MODES = new Set(["channel", "dm", "both", "off"]);
 
@@ -29,11 +34,13 @@ export async function GET() {
       focusHabitKey: true,
       onboardingDone: true,
       challengeStartDate: true,
+      botMessagesJson: true,
     },
   });
 
   return NextResponse.json({
     user,
+    botMessages: parseBotMessages(user?.botMessagesJson),
     hasDiscord: Boolean(user?.discordId),
   });
 }
@@ -57,6 +64,7 @@ export async function PATCH(req: Request) {
     whyLine?: string;
     pledgeText?: string;
     focusHabitKey?: string;
+    botMessagesJson?: string;
   } = {};
 
   if (body.wakeGoal && /^\d{2}:\d{2}$/.test(body.wakeGoal)) {
@@ -94,6 +102,11 @@ export async function PATCH(req: Request) {
   if (typeof body.focusHabitKey === "string") {
     data.focusHabitKey = body.focusHabitKey.trim().slice(0, 40);
   }
+  if (body.botMessages && typeof body.botMessages === "object") {
+    data.botMessagesJson = serializeBotMessages(
+      body.botMessages as BotMessages
+    );
+  }
 
   const user = await prisma.user.update({
     where: { id: session.user.id },
@@ -128,5 +141,6 @@ export async function PATCH(req: Request) {
       focusHabitKey: user.focusHabitKey,
       discordId: user.discordId,
     },
+    botMessages: parseBotMessages(user.botMessagesJson),
   });
 }

@@ -50,6 +50,7 @@ import {
   buildConsistencyReport,
   postConsistencyReports,
 } from "./report";
+import { postChannelPings } from "./channel-pings";
 import { resolveDisplayName, resolveManyNames } from "./names";
 import {
   afterWakeChoiceRows,
@@ -854,12 +855,14 @@ client.once("ready", () => {
   runJob("wind-down", () => sendWindDownDms(client, prisma));
   runJob("night-review", () => sendNightReviewDms(client, prisma));
   runJob("consistency", () => postConsistencyReports(client, prisma));
+  runJob("channel-pings", () => postChannelPings(client, prisma));
   setInterval(() => runJob("reminders", () => fireDueReminders()), 30_000);
   setInterval(() => {
     runJob("morning", () => runMorningScheduler(client, prisma));
     runJob("wind-down", () => sendWindDownDms(client, prisma));
     runJob("night-review", () => sendNightReviewDms(client, prisma));
     runJob("consistency", () => postConsistencyReports(client, prisma));
+    runJob("channel-pings", () => postChannelPings(client, prisma));
   }, 20_000);
 });
 

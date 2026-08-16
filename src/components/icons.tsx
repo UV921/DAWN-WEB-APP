@@ -136,6 +136,23 @@ export function IconShare(props: IconProps) {
   );
 }
 
+/** Discord glyph — filled, so it ignores the shared stroke setup */
+export function IconDiscord({ size = 16, className, ...rest }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+      {...rest}
+    >
+      <path d="M19.54 5.34A16.1 16.1 0 0 0 15.5 4.1l-.2.37c1.32.32 2.44.85 3.47 1.62a12.6 12.6 0 0 0-4.2-1.02 13.8 13.8 0 0 0-5.15 0A12.6 12.6 0 0 0 5.23 6.1c1.03-.77 2.15-1.3 3.47-1.62L8.5 4.1a16.1 16.1 0 0 0-4.04 1.24C1.9 9.2 1.2 12.96 1.55 16.67a16.3 16.3 0 0 0 4.94 2.5c.4-.54.75-1.12 1.05-1.73-.58-.22-1.13-.49-1.65-.8.14-.1.28-.21.41-.32a11.6 11.6 0 0 0 9.9 0c.13.11.27.22.41.32-.52.31-1.07.58-1.65.8.3.61.65 1.19 1.05 1.73a16.3 16.3 0 0 0 4.94-2.5c.42-4.3-.7-8.03-2.41-11.33ZM8.52 14.46c-.97 0-1.77-.89-1.77-1.98s.78-1.98 1.77-1.98 1.79.89 1.77 1.98c0 1.09-.78 1.98-1.77 1.98Zm6.96 0c-.97 0-1.77-.89-1.77-1.98s.78-1.98 1.77-1.98 1.79.89 1.77 1.98c0 1.09-.78 1.98-1.77 1.98Z" />
+    </svg>
+  );
+}
+
 /** Lucide flag — priority */
 export function IconFlag(props: IconProps) {
   return (

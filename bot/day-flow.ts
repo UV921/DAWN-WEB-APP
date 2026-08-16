@@ -14,6 +14,11 @@ import {
 } from "discord.js";
 import type { PrismaClient, Todo, User } from "@prisma/client";
 import { resolveDisplayName } from "./names";
+import {
+  isMessageEnabled,
+  messageText,
+  parseBotMessages,
+} from "../src/lib/bot-messages";
 import { todayStr, tomorrowStr } from "./wind-down";
 import {
   addTodosForDate,
@@ -340,6 +345,9 @@ export async function sendNightReviewDms(
     if (!opts?.force && m.lastReviewDate === today) continue;
     if (!opts?.force && m.channel.reviewTime !== now) continue;
 
+    const settings = parseBotMessages(u.botMessagesJson);
+    if (!opts?.force && !isMessageEnabled(settings, "nightReview")) continue;
+
     const todos = await listTodosForDate(prisma, u.id, today);
     const name = await resolveDisplayName(client, prisma, u);
     const cons = await consistencySummary(prisma, u.id);
@@ -353,7 +361,12 @@ export async function sendNightReviewDms(
             .setTitle("Night check-in")
             .setDescription(
               [
-                `Hey **${name}** — did you complete today's tasks?`,
+                messageText(settings, "nightReview", {
+                  name: `**${name}**`,
+                  wake: u.wakeGoal,
+                  sleep: u.sleepGoal,
+                  streak: cons?.streak,
+                }),
                 cons
                   ? `Consistency streak **${cons.streak}** day(s)` +
                     (cons.yesterday ? ` · yesterday ${cons.yesterday}` : "")

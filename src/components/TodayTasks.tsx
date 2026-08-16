@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconClock,
+  IconDiscord,
   IconFlag,
   IconPlus,
   IconShare,
@@ -120,6 +121,8 @@ export function TodayTasks({
     name: string;
     text: string;
   } | null>(null);
+  const [sendingDiscord, setSendingDiscord] = useState(false);
+  const [discordNote, setDiscordNote] = useState<string | null>(null);
   const [listMenu, setListMenu] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [timeEditId, setTimeEditId] = useState<string | null>(null);
@@ -321,6 +324,29 @@ export function TodayTasks({
     } finally {
       setBusy(false);
       subRef.current?.focus();
+    }
+  }
+
+  async function sendToDiscord() {
+    if (sendingDiscord || !todos.length) return;
+    setSendingDiscord(true);
+    setDiscordNote(null);
+    try {
+      const res = await fetch("/api/discord/send-todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        onError?.(data.error || "Couldn’t post to Discord.");
+        return;
+      }
+      setDiscordNote("Posted in your Discord channel.");
+    } catch {
+      onError?.("Couldn’t reach Discord. Try again.");
+    } finally {
+      setSendingDiscord(false);
     }
   }
 
@@ -585,6 +611,18 @@ export function TodayTasks({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {todos.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => void sendToDiscord()}
+              disabled={sendingDiscord}
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium text-[var(--color-mist)] hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
+              title="Post this list in your Discord channel"
+            >
+              <IconDiscord size={13} />
+              {sendingDiscord ? "Sending…" : "Send"}
+            </button>
+          ) : null}
           {!allowAdd && addHref && todos.length > 0 ? (
             <Link
               href={addHref}
@@ -609,6 +647,10 @@ export function TodayTasks({
           )}
         </div>
       </header>
+
+      {discordNote ? (
+        <p className="text-xs text-[var(--color-leaf)]">{discordNote}</p>
+      ) : null}
 
       {allowAdd ? (
         <form

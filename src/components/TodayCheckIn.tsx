@@ -14,6 +14,7 @@ import {
 } from "@/lib/habit-windows";
 import { WakeHit } from "@/components/WakeHit";
 import { MorningRitual } from "@/components/MorningRitual";
+import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { CloseDayPanel } from "@/components/CloseDayPanel";
 import { TodayOverview } from "@/components/TodayOverview";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
@@ -150,6 +151,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     goalText?: string;
     wakeGoal?: string | null;
   } | null>(null);
+  const [morningFlow, setMorningFlow] = useState("done");
   const [todayTodos, setTodayTodos] = useState<Todo[]>([]);
   const [reminders, setReminders] = useState<
     { id: string; title: string; time: string; enabled: boolean }[]
@@ -208,6 +210,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       setDayMode(data.dayMode || "day");
       setChallenge(data.challenge || null);
       setTodayPlan(data.todayPlan || null);
+      setMorningFlow(data.morningFlow || "none");
       setTodayTodos(data.todayTodos || []);
       if (data.profile) setProfile(data.profile as Profile);
       const todos = (data.todayTodos || []) as Todo[];
@@ -639,6 +642,16 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           windowEnd={wakeHabit?.windowEnd}
           opensInMin={wakeHabit?.opensInMin}
           onRise={() => void wokeUp()}
+        />
+      ) : morningFlow !== "done" ? (
+        <MorningAfterWake
+          open
+          date={today}
+          initialStep={morningFlow === "todos" ? "todos" : "reminders"}
+          onDone={() => {
+            setMorningFlow("done");
+            void load();
+          }}
         />
       ) : nextLine ? (
         <p className="text-sm text-[var(--color-mist)]">{nextLine}</p>

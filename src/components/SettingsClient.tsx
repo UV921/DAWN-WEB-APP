@@ -9,6 +9,7 @@ import { GoalsManager } from "@/components/GoalsManager";
 import { RemindersManager } from "@/components/RemindersManager";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { DiscordSetup } from "@/components/DiscordSetup";
+import { BotMessagesSettings } from "@/components/BotMessagesSettings";
 import { MissionSetup } from "@/components/MissionSetup";
 import { MorningClockSettings } from "@/components/MorningClockSettings";
 
@@ -16,6 +17,7 @@ const TABS = [
   { id: "morning", label: "Morning" },
   { id: "you", label: "You" },
   { id: "discord", label: "Discord" },
+  { id: "bot", label: "Bot messages" },
   { id: "mission", label: "Mission" },
   { id: "habits", label: "Habits" },
   { id: "reminders", label: "Reminders" },
@@ -94,6 +96,7 @@ export function SettingsClient() {
               {tab === "you" ? <ProfileSettings /> : null}
 
               {tab === "discord" ? <DiscordSetup /> : null}
+              {tab === "bot" ? <BotMessagesSettings /> : null}
 
               {tab === "mission" ? (
                 <div className="space-y-4">
