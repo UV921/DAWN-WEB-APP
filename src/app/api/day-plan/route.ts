@@ -269,6 +269,8 @@ export async function PATCH(req: Request) {
       text?: string;
       priority?: string;
       remindAt?: string | null;
+      title?: string;
+      date?: string;
     } = {};
     if (typeof body.text === "string") {
       const text = body.text.trim().slice(0, 120);
@@ -276,6 +278,12 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "text required" }, { status: 400 });
       }
       data.text = text;
+    }
+    if (body.title !== undefined) {
+      data.title = normalizeListTitle(body.title);
+    }
+    if (typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+      data.date = body.date;
     }
     if (body.priority !== undefined) {
       data.priority = normalizePriority(body.priority);
@@ -285,6 +293,13 @@ export async function PATCH(req: Request) {
     }
 
     let updated = await prisma.todo.update({ where: { id }, data });
+    // Steps live on the same day as their parent.
+    if (data.date && data.date !== todo.date) {
+      await prisma.todo.updateMany({
+        where: { userId: session.user.id, parentId: id },
+        data: { date: data.date },
+      });
+    }
     if (
       body.remindAt !== undefined ||
       typeof body.text === "string" ||

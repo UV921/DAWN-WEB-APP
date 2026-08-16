@@ -35,17 +35,19 @@ export async function GET(req: Request) {
   const rawDate = searchParams.get("date") || "";
   const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "";
   const q = (searchParams.get("q") || "").trim().slice(0, 80);
+  const category = (searchParams.get("category") || "").trim().slice(0, 40);
 
   const todos = await prisma.todo.findMany({
     where: {
       userId: session.user.id,
       parentId: null,
       ...(date ? { date } : {}),
+      ...(category ? { title: category } : {}),
       ...(q ? { text: { contains: q, mode: "insensitive" as const } } : {}),
     },
     orderBy: [{ date: "desc" }, { createdAt: "asc" }],
     // A day can hold up to 50 tasks, so cap by rows rather than by day here.
-    take: date || q ? 500 : MAX_DAYS * 20,
+    take: date || q || category ? 500 : MAX_DAYS * 20,
     select: {
       id: true,
       text: true,
@@ -80,11 +82,21 @@ export async function GET(req: Request) {
 
   const days = [...byDate.values()].slice(0, MAX_DAYS);
 
+  const known = await prisma.todo.findMany({
+    where: { userId: session.user.id },
+    distinct: ["title"],
+    select: { title: true },
+    orderBy: { title: "asc" },
+    take: 40,
+  });
+
   return NextResponse.json({
     today,
     days,
+    categories: known.map((c) => c.title),
     matches: todos.length,
     query: q,
+    category,
     date,
   });
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   IconCheck,
   IconChevronDown,
+  IconChevronRight,
   IconClock,
   IconDiscord,
   IconFlag,
@@ -563,6 +564,13 @@ export function TodayTasks({
                   {t.remindAt}
                 </span>
               ) : null}
+              <Link
+                href={`/tasks/${t.id}`}
+                className="inline-flex items-center gap-1 text-[var(--color-mist)] hover:text-white"
+              >
+                Open
+                <IconChevronRight size={11} />
+              </Link>
             </div>
             {editingTime ? (
               <div className="mt-2 flex items-center gap-2">

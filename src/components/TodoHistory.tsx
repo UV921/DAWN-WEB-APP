@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconCheck, IconChevronDown, IconClock, IconX } from "@/components/icons";
+import Link from "next/link";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconClock,
+  IconX,
+} from "@/components/icons";
 
 type HistoryTodo = {
   id: string;
@@ -39,17 +46,20 @@ export function TodoHistory() {
   const [query, setQuery] = useState("");
   const [date, setDate] = useState("");
   const [days, setDays] = useState<DayGroup[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
   const [today, setToday] = useState("");
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const reqId = useRef(0);
 
-  const load = useCallback(async (q: string, d: string) => {
+  const load = useCallback(async (q: string, d: string, cat: string) => {
     const mine = ++reqId.current;
     setLoading(true);
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
     if (d) params.set("date", d);
+    if (cat) params.set("category", cat);
     const res = await fetch(`/api/todos/history?${params.toString()}`);
     if (!res.ok) {
       if (mine === reqId.current) setLoading(false);
@@ -60,14 +70,15 @@ export function TodoHistory() {
     if (mine !== reqId.current) return;
     setDays(data.days || []);
     setToday(data.today || "");
+    setCategories(data.categories || []);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (!open) return;
-    const id = window.setTimeout(() => void load(query, date), 220);
+    const id = window.setTimeout(() => void load(query, date, category), 220);
     return () => window.clearTimeout(id);
-  }, [open, query, date, load]);
+  }, [open, query, date, category, load]);
 
   const totals = useMemo(() => {
     const tasks = days.reduce((n, d) => n + d.total, 0);
@@ -159,16 +170,50 @@ export function TodoHistory() {
         </div>
       </div>
 
+      {categories.length > 1 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCategory("")}
+            className={`rounded-full px-3 py-1 text-[12px] font-medium transition ${
+              category === ""
+                ? "bg-[var(--color-dawn)] text-[var(--color-night)]"
+                : "border border-white/12 text-[var(--color-mist)] hover:text-white"
+            }`}
+          >
+            All
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(category === c ? "" : c)}
+              className={`rounded-full px-3 py-1 text-[12px] font-medium transition ${
+                category === c
+                  ? "bg-[var(--color-dawn)] text-[var(--color-night)]"
+                  : "border border-white/12 text-[var(--color-mist)] hover:text-white"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {days.length === 0 && !loading ? (
         <p className="mt-4 text-sm text-[var(--color-mist)]">
-          {query || date
+          {query || date || category
             ? "No tasks match that."
             : "Once you finish some days, they show up here."}
         </p>
       ) : (
         <ul className="mt-3 space-y-1.5">
           {days.map((d) => {
-            const isOpen = expanded === d.date || Boolean(query) || Boolean(date);
+            const isOpen =
+              expanded === d.date ||
+              Boolean(query) ||
+              Boolean(date) ||
+              Boolean(category);
             return (
               <li
                 key={d.date}
@@ -209,30 +254,41 @@ export function TodoHistory() {
                 {isOpen ? (
                   <ul className="border-t border-white/[0.06] px-3 py-2">
                     {d.todos.map((t) => (
-                      <li
-                        key={t.id}
-                        className="flex items-center gap-2 py-1 text-[13px]"
-                      >
-                        <span
-                          className={`ui-check !h-4 !w-4 ${t.done ? "is-on" : ""}`}
+                      <li key={t.id}>
+                        <Link
+                          href={`/tasks/${t.id}`}
+                          className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] hover:bg-white/[0.05]"
                         >
-                          ✓
-                        </span>
-                        <span
-                          className={`min-w-0 flex-1 ${
-                            t.done
-                              ? "text-[var(--color-mist)] line-through"
-                              : "text-[#d6e2ec]"
-                          }`}
-                        >
-                          {t.text}
-                        </span>
-                        {t.remindAt ? (
-                          <span className="inline-flex shrink-0 items-center gap-1 tabular-nums text-[11px] text-[var(--color-mist)]">
-                            <IconClock size={11} />
-                            {t.remindAt}
+                          <span
+                            className={`ui-check !h-4 !w-4 ${t.done ? "is-on" : ""}`}
+                          >
+                            ✓
                           </span>
-                        ) : null}
+                          <span
+                            className={`min-w-0 flex-1 truncate ${
+                              t.done
+                                ? "text-[var(--color-mist)] line-through"
+                                : "text-[#d6e2ec]"
+                            }`}
+                          >
+                            {t.text}
+                          </span>
+                          {t.title && t.title !== "Today" ? (
+                            <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] text-[var(--color-mist)]">
+                              {t.title}
+                            </span>
+                          ) : null}
+                          {t.remindAt ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 tabular-nums text-[11px] text-[var(--color-mist)]">
+                              <IconClock size={11} />
+                              {t.remindAt}
+                            </span>
+                          ) : null}
+                          <IconChevronRight
+                            size={13}
+                            className="shrink-0 text-[var(--color-mist)]/50"
+                          />
+                        </Link>
                       </li>
                     ))}
                   </ul>
