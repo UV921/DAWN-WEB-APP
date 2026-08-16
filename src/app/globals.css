@@ -70,8 +70,12 @@ body {
   .app-shell {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
-    padding-top: 2rem;
+    padding-top: 5rem;
     padding-bottom: 2rem;
+  }
+
+  html {
+    scroll-padding-top: 4.5rem;
   }
 }
 
@@ -588,19 +592,18 @@ body {
   }
 }
 
+.contrib-grid {
+  --tile: 12px;
+  --tile-gap: 3px;
+}
+
 .tile {
-  width: 11px;
-  height: 11px;
+  width: var(--tile, 12px);
+  height: var(--tile, 12px);
+  flex-shrink: 0;
   border-radius: 2px;
   outline: 1px solid rgba(255, 255, 255, 0.04);
   outline-offset: -1px;
-}
-
-@media (max-width: 640px) {
-  .tile {
-    width: 9px;
-    height: 9px;
-  }
 }
 
 .contrib-0 {

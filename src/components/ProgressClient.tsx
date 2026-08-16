@@ -23,7 +23,7 @@ export function ProgressClient() {
   useEffect(() => {
     void Promise.all([
       fetch("/api/habits?days=365").then((r) => r.json()),
-      fetch("/api/study?days=30").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/study?days=365").then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([d, s]: [
         {
@@ -49,21 +49,23 @@ export function ProgressClient() {
         <AppNav active="progress" />
         <div className="mt-8">
           <p className="ui-kicker">Progress</p>
-          <h1 className="ui-title mt-2">Your report</h1>
-          <p className="ui-sub mt-3">
-            Today, week, month, year — what happened, where it leaked, what to
-            do next. Study numbers cover the last 30 days.
+          <h1 className="ui-title mt-2">How you’re doing</h1>
+          <p className="ui-sub mt-3 max-w-xl">
+            Pick a window. You’ll see what you finished, what you missed, and
+            one next step. Study time is from Discord rooms (last 30 days).
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
           ) : logs.length === 0 && todoStats.length === 0 ? (
             <div className="mt-8 space-y-6">
               <p className="max-w-md text-[var(--color-mist)]">
-                No morning check-ins yet. Wake and close a habit on{" "}
+                Nothing to score yet. Go to{" "}
                 <a href="/dashboard" className="ui-btn-text">
                   Today
-                </a>{" "}
-                — then this page can tell you which weekday leaks.
+                </a>
+                , log your wake, and close one habit. After a few days this page
+                will show what you finish, what you miss, and which weekday is
+                weakest.
               </p>
             </div>
           ) : (

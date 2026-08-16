@@ -61,7 +61,8 @@ export function TasksClient() {
             <p className="ui-kicker">Tasks</p>
             <h1 className="ui-title mt-2">Named lists</h1>
             <p className="ui-sub mt-3">
-              Buy, Share on X, Errands, Today. Dump items. Share a gold PNG.
+              Pick a list, add a task. Flag is priority, clock is a reminder.
+              Tap a task to open its steps.
             </p>
           </header>
 
@@ -93,7 +94,7 @@ export function TasksClient() {
                 onChange={setTodayTodos}
                 onError={setError}
                 title="Today"
-                hint="Pick Buy or Share on X, add items, then tap Share for a card."
+                hint="Pick a list, type the task, set a flag or clock if you need them. Tap the task to add steps."
               />
               {inSleepWindow ? (
                 <TodayTasks

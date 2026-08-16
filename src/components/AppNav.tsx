@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { DawnSquare } from "@/components/DawnMark";
+import { IconChevronDown } from "@/components/icons";
 import { SunIcon } from "@/components/animated-icons/sun";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import { ChartColumnIcon } from "@/components/animated-icons/chart-column";
@@ -35,9 +37,11 @@ export type NavKey = (typeof DESKTOP)[number]["key"];
 function NavGlyph({
   Icon,
   active,
+  size = 22,
 }: {
-  Icon: (typeof MOBILE)[number]["Icon"];
+  Icon: (typeof DESKTOP)[number]["Icon"];
   active: boolean;
+  size?: number;
 }) {
   const ref = useRef<AnimatedIconHandle>(null);
 
@@ -48,9 +52,73 @@ function NavGlyph({
   return (
     <Icon
       ref={ref}
-      size={22}
+      size={size}
       className="floating-nav-icon pointer-events-none"
     />
+  );
+}
+
+function AccountMenu() {
+  const { data } = useSession();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const name =
+    data?.user?.name?.split(" ")[0] ||
+    data?.user?.email?.split("@")[0] ||
+    "Account";
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div ref={box} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-full py-1 pl-0.5 pr-1.5 text-[13px] text-[#c5ced6] transition hover:text-white"
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        {data?.user?.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.user.image}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[11px] font-medium text-white">
+            {name.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+        <span className="hidden max-w-[9rem] truncate lg:inline">{name}</span>
+        <IconChevronDown
+          size={14}
+          className={`shrink-0 transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-2 min-w-[10rem] rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="flex w-full px-3 py-2 text-left text-[13px] text-[#c5ced6] hover:bg-white/5 hover:text-white"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -65,47 +133,39 @@ export function AppNav({ active }: { active: NavKey }) {
 
   return (
     <>
-      <header className="relative left-1/2 hidden w-screen max-w-[100vw] -translate-x-1/2 pb-5 md:block">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-40 hidden border-b border-white/[0.07] bg-[#0a1016]/88 backdrop-blur-xl md:block">
+        <div className="pointer-events-auto mx-auto flex h-14 max-w-6xl items-center gap-4 px-5">
           <Link
             href="/dashboard"
-            className="font-display shrink-0 text-xl tracking-tight text-[var(--color-dawn)]"
+            className="shrink-0"
+            aria-label="Dawn"
           >
-            Dawn
+            <DawnSquare size={28} />
           </Link>
-          <nav className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap [scrollbar-width:none] lg:gap-5 [&::-webkit-scrollbar]:hidden">
-            {DESKTOP.map((l) => (
-              <Link
-                key={l.key}
-                href={l.href}
-                prefetch
-                className={`shrink-0 text-[13px] transition lg:text-sm ${
-                  active === l.key
-                    ? "text-[var(--color-dawn)]"
-                    : "text-[var(--color-mist)] hover:text-white"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
+          <nav
+            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:gap-1"
+            aria-label="Primary"
+          >
+            {DESKTOP.map((l) => {
+              const isActive = active === l.key;
+              return (
+                <Link
+                  key={l.key}
+                  href={l.href}
+                  prefetch
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] transition lg:px-3 ${
+                    isActive
+                      ? "bg-white/10 text-white"
+                      : "text-[#9aa8b5] hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  <NavGlyph Icon={l.Icon} active={isActive} size={16} />
+                  <span className="hidden sm:inline">{l.label}</span>
+                </Link>
+              );
+            })}
           </nav>
-          <div className="flex shrink-0 items-center gap-3">
-            {data?.user?.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={data.user.image}
-                alt=""
-                className="h-8 w-8 rounded-full border border-white/20"
-              />
-            ) : null}
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-[13px] text-[var(--color-mist)] hover:text-white lg:text-sm"
-            >
-              Sign out
-            </button>
-          </div>
+          <AccountMenu />
         </div>
       </header>
 

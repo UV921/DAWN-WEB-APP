@@ -128,16 +128,16 @@ export type ProgressReport = {
 
 function rangeLabel(range: ReportRange) {
   if (range === "today") return "today";
-  if (range === "week") return "this week";
-  if (range === "month") return "this month";
-  return "this year";
+  if (range === "week") return "the last 7 days";
+  if (range === "month") return "the last 30 days";
+  return "the last year";
 }
 
 function prevLabel(range: ReportRange) {
   if (range === "today") return "yesterday";
-  if (range === "week") return "last week";
-  if (range === "month") return "last month";
-  return "last year";
+  if (range === "week") return "the 7 days before that";
+  if (range === "month") return "the 30 days before that";
+  return "the year before";
 }
 
 function enoughDays(range: ReportRange, loggedDays: number) {
@@ -198,72 +198,81 @@ export function buildProgressReport(opts: {
     happened.push(
       range === "today"
         ? wakeOnTimeDays
-          ? "Woke on time."
-          : "Woke, but after the goal."
-        : `Woke on time ${wakeOnTimeDays} of ${wakeLoggedDays} logged mornings.`
+          ? "Wake: on time, inside your goal."
+          : "Wake: logged, but after your goal time."
+        : `Wake: on time ${wakeOnTimeDays} of ${wakeLoggedDays} mornings you logged.`
     );
   }
   if (loggedDays > 0) {
     happened.push(
       range === "today"
-        ? `Habits ${habitPct}%.`
-        : `Habits ${habitPct}% across ${loggedDays} logged day${loggedDays === 1 ? "" : "s"}. ${fullHabitDays} full morning${fullHabitDays === 1 ? "" : "s"}.`
+        ? `Habits: ${habitPct}% done today.`
+        : `Habits: ${habitPct}% done. Full mornings (every habit closed): ${fullHabitDays} of ${windowDays} days.`
     );
   }
   if (allTaskDays > 0 || taskPct > 0) {
     happened.push(
       range === "today"
-        ? `Tasks ${taskPct}%.`
-        : `Tasks ${taskPct}%. Cleared the list on ${allTaskDays} day${allTaskDays === 1 ? "" : "s"}.`
+        ? `Tasks: ${taskPct}% of today’s list is done.`
+        : `Tasks: ${taskPct}% done. You cleared the whole list on ${allTaskDays} day${allTaskDays === 1 ? "" : "s"}.`
     );
-  } else if (studyMinutes != null && studyMinutes > 0 && studyLabel) {
-    happened.push(`Study ${studyLabel}${range === "month" || range === "year" ? " (last 30 days)" : ""}.`);
+  }
+  if (studyMinutes != null && studyMinutes > 0 && studyLabel) {
+    happened.push(
+      range === "month" || range === "year"
+        ? `Study: ${studyLabel} in the last 30 days (Discord study rooms).`
+        : `Study: ${studyLabel} ${window}.`
+    );
+  }
+  if (sleepAvg != null) {
+    happened.push(
+      sleepAvg < 6.5
+        ? `Sleep: ${sleepAvg}h a night — under 7h, mornings get harder.`
+        : `Sleep: ${sleepAvg}h a night on average.`
+    );
   } else if (nightDays > 0) {
-    happened.push(`Closed ${nightDays} night${nightDays === 1 ? "" : "s"}.`);
+    happened.push(
+      `Night: you closed ${nightDays} night${nightDays === 1 ? "" : "s"} ${window}.`
+    );
   }
-
-  if (happened.length < 2 && sleepAvg != null) {
-    happened.push(`Sleep averaging ${sleepAvg}h.`);
-  }
-  if (happened.length > 3) happened.length = 3;
   if (happened.length === 0) {
-    happened.push(`No check-in ${window} yet.`);
-    happened.push("Charts stay empty until a wake or a task lands.");
+    happened.push(`Nothing logged ${window} yet.`);
+    happened.push("Log a wake or finish a task on Today — then this page can score you.");
   }
 
-  for (const text of leftoverHigh.slice(0, 2)) {
+  for (const text of leftoverHigh.slice(0, 1)) {
     leaked.push({
-      where: "High task still open",
-      why: text,
-      fix: "Do this one before adding anything else.",
+      where: text,
+      why: "This high-priority task is still open.",
+      fix: "Finish it before you add anything else.",
     });
   }
   if (weakestWeekday && range !== "today") {
     leaked.push({
       where: prettyWeekday(weakestWeekday),
-      why: "That’s the weekday that usually drops.",
-      fix: `Protect ${prettyWeekday(weakestWeekday).toLowerCase()} — same wake, one habit, short list.`,
+      why: "That’s the weekday your habits drop the most.",
+      fix: `Same wake time, one habit, a short list — treat ${prettyWeekday(weakestWeekday).toLowerCase()} like a work day.`,
     });
   }
   if (weakestHabit) {
     leaked.push({
       where: weakestHabit,
-      why: "Lowest hit rate on days you actually checked in.",
-      fix: "Fix this habit before adding a new one.",
+      why: "This is the habit you skip most on days you check in.",
+      fix: "Close this one after wake before you add a new habit.",
     });
   }
   if (sleepAvg != null && sleepAvg < 6.5) {
     leaked.push({
       where: "Sleep",
-      why: `Averaging ${sleepAvg}h. Under 7h, mornings and study get cheaper.`,
-      fix: "Bed on time tonight. Don’t add habits.",
+      why: `You’re averaging ${sleepAvg}h. Under 7 hours, wake and study both slip.`,
+      fix: "Go to bed on time tonight. Don’t add more habits.",
     });
   }
   if (taskPct < 40 && loggedDays > 0 && leftoverHigh.length === 0) {
     leaked.push({
       where: "Tasks",
-      why: `${taskPct}% ${window}. Lists are being set and left.`,
-      fix: "Three items. Finish them. Don’t write a manifesto.",
+      why: `Only ${taskPct}% of listed work got done ${window}.`,
+      fix: "Write three items. Finish those three. Stop adding.",
     });
   }
   if (leaked.length > 3) leaked.length = 3;
@@ -274,17 +283,17 @@ export function buildProgressReport(opts: {
     if (Math.abs(delta) >= 4) {
       improved =
         delta > 0
-          ? `Habits ${delta} pts better than ${prevLabel(range)}.`
-          : `Habits ${Math.abs(delta)} pts worse than ${prevLabel(range)}.`;
+          ? `Habits are up ${delta} points vs ${prevLabel(range)} (${habitPct}% vs ${prevHabitPct}%).`
+          : `Habits are down ${Math.abs(delta)} points vs ${prevLabel(range)} (${habitPct}% vs ${prevHabitPct}%).`;
     } else if (prevTaskPct != null) {
       const td = taskPct - prevTaskPct;
       if (Math.abs(td) >= 4) {
         improved =
           td > 0
-            ? `Tasks ${td} pts better than ${prevLabel(range)}.`
-            : `Tasks ${Math.abs(td)} pts worse than ${prevLabel(range)}.`;
+            ? `Tasks are up ${td} points vs ${prevLabel(range)} (${taskPct}% vs ${prevTaskPct}%).`
+            : `Tasks are down ${Math.abs(td)} points vs ${prevLabel(range)} (${taskPct}% vs ${prevTaskPct}%).`;
       } else {
-        improved = `About even with ${prevLabel(range)} — habits ${habitPct}% vs ${prevHabitPct}%.`;
+        improved = `About the same as ${prevLabel(range)} — habits ${prevHabitPct}% then, ${habitPct}% now.`;
       }
     }
   }
@@ -292,15 +301,15 @@ export function buildProgressReport(opts: {
   if (!enoughDays(range, loggedDays) && (studyMinutes == null || studyMinutes <= 0)) {
     return {
       tone: "start",
-      kicker: range === "today" ? "Today" : "Thin sample",
+      kicker: "Not enough data",
       headline:
         range === "today"
-          ? "Today isn’t closed yet — not enough to score."
-          : `Not enough days ${window} to call a pattern.`,
+          ? "Today isn’t finished yet — nothing here to score."
+          : `Only ${loggedDays} day${loggedDays === 1 ? "" : "s"} logged ${window}. That’s too little to call a pattern.`,
       happened,
       leaked,
       improved,
-      next: "Open Today, wake in your window, and close the night.",
+      next: "Go to Today, log your wake, finish one habit, and close the night.",
     };
   }
 
@@ -313,49 +322,49 @@ export function buildProgressReport(opts: {
   if (holding && wakeShare >= 0.5) {
     return {
       tone: "good",
-      kicker: "Holding",
+      kicker: "On track",
       headline:
         range === "today"
-          ? "Morning closed. Don’t spend the afternoon inventing a new system."
-          : `You finished the morning on ${fullHabitDays} of ${windowDays} days ${window}.`,
+          ? "Morning is closed. Keep the rest of the day simple."
+          : `You finished every habit on ${fullHabitDays} of ${windowDays} days.`,
       happened,
       leaked,
       improved,
       next:
         strongestWeekday && weakestWeekday && strongestWeekday !== weakestWeekday
-          ? `${prettyWeekday(strongestWeekday)} already work. Copy that on ${prettyWeekday(weakestWeekday).toLowerCase()}.`
+          ? `${prettyWeekday(strongestWeekday)} already work. Copy that same wake + first habit on ${prettyWeekday(weakestWeekday).toLowerCase()}.`
           : leftoverHigh[0]
-            ? `Clear “${leftoverHigh[0]}” before the day ends.`
-            : "Keep the same wake window. Don’t add more habits.",
+            ? `Finish “${leftoverHigh[0]}” before the day ends.`
+            : "Keep the same wake time. Don’t add more habits.",
     };
   }
 
   if (habitPct < 40 || (range !== "today" && fullHabitDays <= 1)) {
     return {
       tone: "slip",
-      kicker: "Thin",
+      kicker: "Falling behind",
       headline:
         range === "today"
-          ? `Habits at ${habitPct}%. The morning is still open.`
-          : `Only ${fullHabitDays} full morning${fullHabitDays === 1 ? "" : "s"} ${window}.`,
+          ? `Only ${habitPct}% of habits are done. The morning is still open.`
+          : `You only finished a full morning ${fullHabitDays} time${fullHabitDays === 1 ? "" : "s"} ${window}.`,
       happened,
       leaked,
       improved,
       next: leftoverHigh[0]
-        ? `Do “${leftoverHigh[0]}”. Then bed on time.`
+        ? `Do “${leftoverHigh[0]}”, then go to bed on time.`
         : weakestWeekday
-          ? `${prettyWeekday(weakestWeekday)} are the leak. Tonight: bed. Tomorrow: wake + one habit.`
+          ? `${prettyWeekday(weakestWeekday)} are the weak day. Tonight: bed on time. Tomorrow: wake + one habit.`
           : "Tonight: bed on time. Tomorrow: wake + one habit. That’s the repair.",
     };
   }
 
   return {
     tone: "slip",
-    kicker: "Uneven",
+    kicker: "Inconsistent",
     headline:
       range === "today"
-        ? `Partial day — habits ${habitPct}%, tasks ${taskPct}%.`
-        : `Mornings are partial — ${habitPct}% habits, ${fullHabitDays} complete days.`,
+        ? `Partial day — habits ${habitPct}% done, tasks ${taskPct}% done.`
+        : `You showed up, but didn’t finish — habits ${habitPct}%, only ${fullHabitDays} complete morning${fullHabitDays === 1 ? "" : "s"}.`,
     happened,
     leaked,
     improved,
@@ -363,7 +372,7 @@ export function buildProgressReport(opts: {
       leftoverHigh[0]
         ? `Finish “${leftoverHigh[0]}” before you add another task.`
         : weakestWeekday && strongestWeekday
-          ? `${prettyWeekday(strongestWeekday)} work. Copy that on ${prettyWeekday(weakestWeekday).toLowerCase()}.`
-          : "Pick one open habit after wake. Don’t wait for a perfect morning.",
+          ? `${prettyWeekday(strongestWeekday)} work. Use that same wake time on ${prettyWeekday(weakestWeekday).toLowerCase()}.`
+          : "After you wake, close one open habit. Don’t wait for a perfect morning.",
   };
 }

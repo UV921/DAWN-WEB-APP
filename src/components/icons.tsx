@@ -128,6 +128,34 @@ export function IconShare(props: IconProps) {
   );
 }
 
+/** Lucide flag — priority */
+export function IconFlag(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <path d="M4 22V15" />
+    </svg>
+  );
+}
+
+/** Lucide clock — reminder time */
+export function IconClock(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+
+export function IconChevronDown(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 /** Small inline flow: A · B · C with chevrons between */
 export function FlowSteps({ steps }: { steps: string[] }) {
   return (

@@ -41,15 +41,17 @@ type Props = {
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const RANGES: { key: ReportRange; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
+const RANGES: { key: ReportRange; label: string; hint: string }[] = [
+  { key: "today", label: "Today", hint: "Just today" },
+  { key: "week", label: "7 days", hint: "Last 7 days" },
+  { key: "month", label: "30 days", hint: "Last 30 days" },
+  { key: "year", label: "Year", hint: "Last 365 days" },
 ];
 
 const DAWN = ["#f0b45a"];
 const LEAF = ["#6fbf8a"];
+const STUDY = ["#6ea8d8"];
+const STUDY_GOAL_MIN = 120;
 
 function prettyWeekdayLong(name: string) {
   const map: Record<string, string> = {
@@ -144,6 +146,7 @@ type DayRow = {
   wakeOnTime: boolean;
   night: boolean;
   logged: boolean;
+  studyMins: number;
 };
 
 export function ProgressDetail({
@@ -166,6 +169,12 @@ export function ProgressDetail({
     () => new Map(logs.map((l) => [l.date, l])),
     [logs]
   );
+  const studyMap = useMemo(() => {
+    const m = new Map<string, number>();
+    const rows = study?.days || study?.month || study?.week || [];
+    for (const row of rows) m.set(row.date, row.minutes);
+    return m;
+  }, [study]);
 
   const days = useMemo(() => {
     return lastNDates(365).map((date) => {
@@ -196,9 +205,10 @@ export function ProgressDetail({
         wakeOnTime: l ? isHabitDone(l, "wakeEarly") : false,
         night: Boolean(l?.bedtime),
         logged: Boolean(l),
+        studyMins: studyMap.get(date) || 0,
       } satisfies DayRow;
     });
-  }, [logMap, todoMap, habitKeys, habitCount]);
+  }, [logMap, todoMap, studyMap, habitKeys, habitCount]);
 
   const size = windowSize(range);
   const windowDays = days.slice(-size);
@@ -216,6 +226,8 @@ export function ProgressDetail({
     return {
       key: h.key,
       label: h.label,
+      hits,
+      sample: sample.length,
       pct: sample.length ? Math.round((hits / sample.length) * 100) : 0,
     };
   });
@@ -225,7 +237,13 @@ export function ProgressDetail({
     const habit = avg(slice.map((d) => d.habitPct));
     const taskDays = slice.filter((d) => d.hasTasks);
     const task = avg(taskDays.map((d) => d.taskPct || 0));
-    return { name, Habits: habit, Tasks: taskDays.length ? task : 0 };
+    const studyMins = avg(slice.map((d) => d.studyMins));
+    return {
+      name,
+      Habits: habit,
+      Tasks: taskDays.length ? task : 0,
+      Study: Math.min(100, Math.round((studyMins / STUDY_GOAL_MIN) * 100)),
+    };
   });
 
   const sleepRows = useMemo(() => {
@@ -329,14 +347,15 @@ export function ProgressDetail({
   const weekdayConfig = {
     Habits: series("Habits", DAWN),
     Tasks: series("Tasks", LEAF),
+    Study: series("Study", STUDY),
   } satisfies ChartConfig;
 
   const weekdayInsight =
     strongestWeekday &&
     weakestWeekday &&
     strongestWeekday !== weakestWeekday
-      ? `${prettyWeekdayLong(strongestWeekday)} are your strongest mornings. ${prettyWeekdayLong(weakestWeekday)} leak the most — that’s the day to protect.`
-      : "Need a few more logged days before weekday patterns are honest.";
+      ? `${prettyWeekdayLong(strongestWeekday)} are your strongest. ${prettyWeekdayLong(weakestWeekday)} are the weakest — that’s the day to lock in.`
+      : "Log a few more mornings and this chart will show which weekday usually breaks.";
 
   const todayRow = windowDays[windowDays.length - 1];
   const wakePct =
@@ -346,46 +365,105 @@ export function ProgressDetail({
   const nightPct =
     size > 0 ? Math.round((cur.nightDays / size) * 100) : 0;
 
+  const rangeHint = RANGES.find((r) => r.key === range)?.hint || "";
+  const compareHint =
+    range === "today"
+      ? "Compared with yesterday when there’s enough to compare."
+      : range === "year"
+        ? "Year view uses the last 365 days."
+        : `Compared with ${range === "week" ? "the 7 days before" : "the 30 days before"}.`;
+
   const fourth =
     range === "today" || range === "week"
       ? {
-          label: range === "today" ? "Study today" : "Study this week",
+          label: range === "today" ? "Study today" : "Study (7 days)",
           value: studyLabel || "0m",
           hint:
             range === "today"
               ? study?.today.live
-                ? "In a study room right now."
-                : "Sit in a marked study VC. Dawn counts it here."
+                ? "You’re in a Discord study room right now."
+                : "Time in a marked Discord study room today."
               : study?.weekMinutes
-                ? `${study.weekDaysWithStudy || 0} day${(study.weekDaysWithStudy || 0) === 1 ? "" : "s"} with time on the clock.`
-                : "Study shown for the last 30 days.",
+                ? `Studied on ${study.weekDaysWithStudy || 0} day${(study.weekDaysWithStudy || 0) === 1 ? "" : "s"} this week.`
+                : "Join a marked Discord study room — Dawn counts the minutes.",
         }
       : {
           label: "Nights closed",
-          value: `${cur.nightDays}`,
+          value: `${cur.nightDays} / ${size}`,
           hint:
             range === "month" || range === "year"
-              ? `Study numbers cover the last 30 days${study?.monthLabel ? ` · ${study.monthLabel}` : ""}.`
-              : `${nightPct}% of days in view.`,
+              ? `You logged bedtime on ${cur.nightDays} of ${size} days.${study?.monthLabel ? ` Study (30 days): ${study.monthLabel}.` : ""}`
+              : `Bedtime logged on ${nightPct}% of days in this window.`,
         };
 
   return (
     <section className="space-y-10">
-      <div className="flex flex-wrap gap-1.5">
-        {RANGES.map((r) => (
-          <button
-            key={r.key}
-            type="button"
-            onClick={() => onRange(r.key)}
-            className={`rounded-full px-3.5 py-1.5 text-sm ${
-              range === r.key
-                ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                : "border border-white/12 text-[var(--color-mist)] hover:text-white"
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => onRange(r.key)}
+                className={`rounded-full px-3.5 py-1.5 text-sm ${
+                  range === r.key
+                    ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
+                    : "border border-white/12 text-[var(--color-mist)] hover:text-white"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <ShareCardButton
+            label="Share report"
+            make={() =>
+              shareProgressCard({
+                name: session?.user?.name || undefined,
+                date:
+                  windowDays[windowDays.length - 1]?.date ||
+                  formatLocalDate(new Date()),
+                range,
+                kicker: report.kicker,
+                headline: report.headline,
+                next: report.next,
+                wakeValue:
+                  range === "today"
+                    ? todayRow?.wake || "—"
+                    : `${cur.wakeOnTimeDays}/${cur.wakeLoggedDays || 0}`,
+                habitValue:
+                  range === "today"
+                    ? `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`
+                    : `${cur.habitPct}%`,
+                taskValue:
+                  range === "today"
+                    ? `${todayRow?.tasksDone || 0}/${todayRow?.tasksTotal || 0}`
+                    : `${cur.taskPct}%`,
+                studyValue:
+                  studyLabel ||
+                  study?.monthLabel ||
+                  study?.weekLabel ||
+                  "0m",
+                habits: perHabit.map((h) => ({
+                  label: h.label,
+                  pct: range === "today" ? (h.hits ? 100 : 0) : h.pct,
+                  hits: h.hits,
+                  sample: h.sample,
+                })),
+                days: windowDays.slice(-14).map((d) => ({
+                  label: d.weekday.slice(0, 1),
+                  habitPct: d.habitPct,
+                  logged: d.logged || d.studyMins > 0 || d.hasTasks,
+                })),
+              })
+            }
+          />
+        </div>
+        <p className="mt-2 text-sm text-[var(--color-mist)]">
+          Showing {rangeHint.toLowerCase()}. {compareHint} Share the full
+          report as a PNG.
+        </p>
       </div>
 
       <div className={`rounded-2xl border px-5 py-5 ${briefTone.border} ${briefTone.bg}`}>
@@ -395,117 +473,167 @@ export function ProgressDetail({
           >
             {report.kicker}
           </p>
-          {range === "week" ? (
-            <ShareCardButton
-              label="Share week"
-              make={() =>
-                shareProgressCard({
-                  name: session?.user?.name || undefined,
-                  date:
-                    windowDays[windowDays.length - 1]?.date ||
-                    formatLocalDate(new Date()),
-                  headline: report.headline,
-                  habitPct7: cur.habitPct,
-                  taskPct7: cur.taskPct,
-                  fullHabitDays7: cur.fullHabitDays,
-                  studyWeekLabel: study?.weekLabel,
-                  habits: perHabit.map((h) => ({ label: h.label, pct: h.pct })),
-                  last7: windowDays.slice(-7).map((d) => ({
-                    label: d.weekday.slice(0, 1),
-                    habitPct: d.habitPct,
-                    logged: d.logged,
-                  })),
-                })
-              }
-            />
-          ) : null}
         </div>
         <h2 className="font-display mt-2 text-[1.7rem] leading-[1.2] text-white">
           {report.headline}
         </h2>
-        <ul className="mt-3 space-y-1.5 text-sm text-[var(--color-cloud)]">
-          {report.happened.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-        {report.leaked.length ? (
-          <div className="mt-4 space-y-2">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-ember)]">
-              Where it leaked
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
+              What you did
             </p>
-            {report.leaked.map((leak) => (
-              <p key={leak.where} className="text-sm text-[var(--color-cloud)]">
-                <span className="font-medium text-white">{leak.where}.</span>{" "}
-                {leak.why} {leak.fix}
-              </p>
-            ))}
+            <ul className="mt-2 space-y-2 text-sm text-[var(--color-cloud)]">
+              {report.happened.map((line) => (
+                <li key={line} className="leading-snug">
+                  {line}
+                </li>
+              ))}
+            </ul>
           </div>
-        ) : null}
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-ember)]">
+              What slipped
+            </p>
+            {report.leaked.length ? (
+              <ul className="mt-2 space-y-3">
+                {report.leaked.map((leak) => (
+                  <li key={leak.where} className="text-sm leading-snug text-[var(--color-cloud)]">
+                    <span className="font-medium text-white">{leak.where}.</span>{" "}
+                    {leak.why}{" "}
+                    <span className="text-[var(--color-mist)]">{leak.fix}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-[var(--color-mist)]">
+                Nothing obvious in this window. Keep the same routine.
+              </p>
+            )}
+          </div>
+        </div>
+
         {report.improved ? (
-          <p className="mt-3 text-sm text-[var(--color-mist)]">{report.improved}</p>
+          <p className="mt-4 text-sm text-[var(--color-mist)]">{report.improved}</p>
         ) : null}
         <div className="mt-4 border-l-2 border-[var(--color-dawn)] bg-black/20 px-3 py-2.5">
           <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
-            Do this
+            Do this next
           </p>
           <p className="mt-1 text-sm font-medium text-white">{report.next}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat
-          label={range === "today" ? "Wake" : "Wake on time"}
-          value={
-            range === "today"
-              ? todayRow?.wake || "—"
-              : `${wakePct}%`
-          }
-          hint={
-            range === "today"
-              ? todayRow?.wakeOnTime
-                ? "Inside the window."
-                : todayRow?.wake
-                  ? "Logged, after the goal."
-                  : "No wake yet."
-              : `${cur.wakeOnTimeDays} of ${cur.wakeLoggedDays || 0} logged mornings.`
-          }
-        />
-        <Stat
-          label="Habits"
-          value={
-            range === "today"
-              ? `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`
-              : `${cur.habitPct}%`
-          }
-          hint={
-            cur.fullHabitDays
-              ? `${cur.fullHabitDays} full morning${cur.fullHabitDays === 1 ? "" : "s"}.`
-              : "Finish the open habit after wake."
-          }
-        />
-        <Stat
-          label="Tasks"
-          value={
-            range === "today"
-              ? `${todayRow?.tasksDone || 0}/${todayRow?.tasksTotal || 0}`
-              : `${cur.taskPct}%`
-          }
-          hint={
-            cur.allTaskDays
-              ? `${cur.allTaskDays} day${cur.allTaskDays === 1 ? "" : "s"} you cleared the list.`
-              : leftoverHigh[0]
-                ? `High still open: ${leftoverHigh[0]}`
-                : "Set a short list so the day has a finish line."
-          }
-        />
-        <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
+      <div>
+        <h2 className="font-display text-2xl text-white">The numbers</h2>
+        <p className="mt-1 text-sm text-[var(--color-mist)]">
+          Four scores for {rangeHint.toLowerCase()}. Percentages are how much you
+          finished, not a grade.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Stat
+            label={range === "today" ? "Wake today" : "Wake on time"}
+            value={
+              range === "today"
+                ? todayRow?.wake || "—"
+                : `${cur.wakeOnTimeDays}/${cur.wakeLoggedDays || 0}`
+            }
+            hint={
+              range === "today"
+                ? todayRow?.wakeOnTime
+                  ? "Inside your wake window."
+                  : todayRow?.wake
+                    ? "Logged, but after the goal."
+                    : "No wake logged yet."
+                : wakePct
+                  ? `${wakePct}% of logged mornings were on time.`
+                  : "No wake times logged in this window."
+            }
+          />
+          <Stat
+            label="Habits done"
+            value={
+              range === "today"
+                ? `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`
+                : `${cur.habitPct}%`
+            }
+            hint={
+              range === "today"
+                ? todayRow?.allHabits
+                  ? "Every habit is closed."
+                  : "Finish the open ones after you wake."
+                : cur.fullHabitDays
+                  ? `${cur.fullHabitDays} of ${size} days you closed every habit.`
+                  : "No full morning yet — close every habit on one day."
+            }
+          />
+          <Stat
+            label="Tasks done"
+            value={
+              range === "today"
+                ? `${todayRow?.tasksDone || 0}/${todayRow?.tasksTotal || 0}`
+                : `${cur.taskPct}%`
+            }
+            hint={
+              range === "today"
+                ? leftoverHigh[0]
+                  ? `Still open: ${leftoverHigh[0]}`
+                  : todayRow?.allTasks
+                    ? "Today’s list is clear."
+                    : todayRow?.tasksTotal
+                      ? "Finish the list or cut it down."
+                      : "No tasks on today’s list."
+                : cur.allTaskDays
+                  ? `Cleared the whole list on ${cur.allTaskDays} day${cur.allTaskDays === 1 ? "" : "s"}.`
+                  : leftoverHigh[0]
+                    ? `High still open: ${leftoverHigh[0]}`
+                    : "Keep the list short enough to finish."
+            }
+          />
+          <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
+        </div>
       </div>
+
+      {perHabit.length ? (
+        <div>
+          <h2 className="font-display text-2xl text-white">Each habit</h2>
+          <p className="mt-1 text-sm text-[var(--color-mist)]">
+            {range === "today"
+              ? "Done or not done today."
+              : `How often you closed each habit on days you checked in (${rangeHint.toLowerCase()}).`}
+          </p>
+          <ul className="mt-4 space-y-3">
+            {perHabit.map((h) => (
+              <li key={h.key}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-medium text-white">{h.label}</span>
+                  <span className="shrink-0 tabular-nums text-[var(--color-mist)]">
+                    {range === "today"
+                      ? h.hits
+                        ? "Done"
+                        : "Not yet"
+                      : `${h.hits} of ${h.sample} days · ${h.pct}%`}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[var(--color-dawn)]"
+                    style={{
+                      width: `${range === "today" ? (h.hits ? 100 : 0) : h.pct}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {range === "today" && todayRow ? (
         <div>
-          <h2 className="font-display text-2xl text-white">Today’s loop</h2>
+          <h2 className="font-display text-2xl text-white">Today’s checklist</h2>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            One pass. No extra graphs.
+            Green means done. Dash or “open” means it still needs you.
           </p>
           <ul className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
             <LoopRow
@@ -543,9 +671,12 @@ export function ProgressDetail({
 
       {range === "week" ? (
         <div>
-          <h2 className="font-display text-2xl text-white">Which weekday breaks?</h2>
-          <p className="mt-1 text-sm text-[var(--color-mist)]">{weekdayInsight}</p>
-          <div className="mt-5 h-[260px] w-full">
+          <h2 className="font-display text-2xl text-white">Which weekday is weakest?</h2>
+          <p className="mt-1 text-sm text-[var(--color-mist)]">
+            Gold is habits. Green is tasks. Blue is study (100% = 2 hours that
+            weekday). Short bars are the day that usually slips. {weekdayInsight}
+          </p>
+          <div className="mt-5 h-[280px] w-full">
             <EvilBarChart
               data={weekday}
               config={weekdayConfig}
@@ -562,59 +693,68 @@ export function ProgressDetail({
               <EvilBarChart.Tooltip />
               <EvilBarChart.Bar dataKey="Habits" variant="gradient" />
               <EvilBarChart.Bar dataKey="Tasks" variant="gradient" />
+              <EvilBarChart.Bar dataKey="Study" variant="gradient" />
             </EvilBarChart>
           </div>
         </div>
       ) : null}
 
-      {range === "month" || range === "year" ? (
+      {range !== "today" ? (
         <HabitCharts
           logs={logs}
           habits={habits}
+          todos={todoStats}
+          studyDays={study?.days || study?.month || study?.week || []}
           showWakeTrend={false}
-          forcedRange={range}
+          defaultRange={range === "year" ? "year" : range === "month" ? "month" : "week"}
         />
       ) : null}
 
       {range !== "today" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-dawn)]">
-              Days that worked
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-mist)]">
-              Above your usual ({meanEffort}% combined). Repeat those nights.
-            </p>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {moreDays.slice(-5).reverse().map((d) => (
-                <li key={d.date} className="flex justify-between text-white">
-                  <span>{d.full}</span>
-                  <span className="text-[var(--color-leaf)]">{d.effort}%</span>
-                </li>
-              ))}
-              {moreDays.length === 0 ? (
-                <li className="text-[var(--color-mist)]">Not enough contrast yet.</li>
-              ) : null}
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-ember)]">
-              Days that leaked
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-mist)]">
-              Below your usual. Lock bedtime — don’t add goals.
-            </p>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {lessDays.slice(-5).reverse().map((d) => (
-                <li key={d.date} className="flex justify-between text-white">
-                  <span>{d.full}</span>
-                  <span className="text-[var(--color-ember)]">{d.effort}%</span>
-                </li>
-              ))}
-              {lessDays.length === 0 ? (
-                <li className="text-[var(--color-mist)]">No weak days in view.</li>
-              ) : null}
-            </ul>
+        <div>
+          <h2 className="font-display text-2xl text-white">Strong vs weak days</h2>
+          <p className="mt-1 text-sm text-[var(--color-mist)]">
+            Combined habit + task score vs your average of {meanEffort}% in this
+            window. Repeat the strong nights. Don’t add goals on the weak ones —
+            just go to bed on time.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-dawn)]">
+                Stronger than average
+              </p>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {moreDays.slice(-5).reverse().map((d) => (
+                  <li key={d.date} className="flex justify-between text-white">
+                    <span>{d.full}</span>
+                    <span className="text-[var(--color-leaf)]">{d.effort}%</span>
+                  </li>
+                ))}
+                {moreDays.length === 0 ? (
+                  <li className="text-[var(--color-mist)]">
+                    No day clearly above your average yet.
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-ember)]">
+                Weaker than average
+              </p>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {lessDays.slice(-5).reverse().map((d) => (
+                  <li key={d.date} className="flex justify-between text-white">
+                    <span>{d.full}</span>
+                    <span className="text-[var(--color-ember)]">{d.effort}%</span>
+                  </li>
+                ))}
+                {lessDays.length === 0 ? (
+                  <li className="text-[var(--color-mist)]">
+                    No day clearly below your average.
+                  </li>
+                ) : null}
+              </ul>
+            </div>
           </div>
         </div>
       ) : null}

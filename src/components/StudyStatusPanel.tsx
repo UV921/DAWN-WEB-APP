@@ -17,6 +17,7 @@ export type StudyStats = {
     label: string;
     live: boolean;
   };
+  days?: { date: string; minutes: number }[];
   week: { date: string; minutes: number }[];
   weekMinutes: number;
   weekLabel: string;

@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const range = Math.min(
-    30,
+    365,
     Math.max(7, Number(searchParams.get("days") || 7) || 7)
   );
 
@@ -126,7 +126,9 @@ export async function GET(req: Request) {
 
   const series = rangeDates.map((date) => ({
     date,
-    minutes: Math.round(byDate.get(date) || 0),
+    minutes: Math.round(
+      closedByDate.get(date) || byDate.get(date) || 0
+    ),
   }));
   const week = series.slice(-7);
   const todayMinutes = Math.round(closedByDate.get(today) || byDate.get(today) || 0);
@@ -170,6 +172,7 @@ export async function GET(req: Request) {
       live: Boolean(live),
       liveStartedAt: live?.startedAt?.toISOString() || null,
     },
+    days: series,
     week,
     weekMinutes: periods.week.minutes,
     weekLabel: periods.week.label,
