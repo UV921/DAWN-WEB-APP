@@ -219,38 +219,51 @@ export function TodoHistory() {
                 key={d.date}
                 className="overflow-hidden rounded-xl border border-white/[0.08]"
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpanded(expanded === d.date ? null : d.date)
-                  }
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm text-white">
-                    {friendlyDay(d.date, today)}
-                    <span className="ml-2 font-mono text-[11px] text-[var(--color-mist)]">
-                      {d.date}
+                <div className="flex items-center gap-1 px-1">
+                  <Link
+                    href={`/tasks/day/${d.date}`}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2.5 hover:bg-white/[0.04]"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm text-white">
+                      {friendlyDay(d.date, today)}
+                      <span className="ml-2 font-mono text-[11px] text-[var(--color-mist)]">
+                        {d.date}
+                      </span>
                     </span>
-                  </span>
-                  {d.done === d.total ? (
-                    <span
-                      className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-dawn)] text-[var(--color-night)]"
-                      title="All done"
-                    >
-                      <IconCheck size={11} strokeWidth={2.6} />
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-[12px] tabular-nums text-[var(--color-mist)]">
-                      {d.done}/{d.total}
-                    </span>
-                  )}
-                  <IconChevronDown
-                    size={14}
-                    className={`shrink-0 text-[var(--color-mist)]/60 transition ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
+                    {d.done === d.total ? (
+                      <span
+                        className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-dawn)] text-[var(--color-night)]"
+                        title="All done"
+                      >
+                        <IconCheck size={11} strokeWidth={2.6} />
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[12px] tabular-nums text-[var(--color-mist)]">
+                        {d.done}/{d.total}
+                      </span>
+                    )}
+                    <IconChevronRight
+                      size={13}
+                      className="shrink-0 text-[var(--color-mist)]/50"
+                    />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpanded(expanded === d.date ? null : d.date)
+                    }
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--color-mist)] hover:bg-white/[0.04] hover:text-white"
+                    aria-label={
+                      isOpen ? `Hide ${d.date} tasks` : `Show ${d.date} tasks`
+                    }
+                    aria-expanded={isOpen}
+                  >
+                    <IconChevronDown
+                      size={14}
+                      className={`transition ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
                 {isOpen ? (
                   <ul className="border-t border-white/[0.06] px-3 py-2">
                     {d.todos.map((t) => (
