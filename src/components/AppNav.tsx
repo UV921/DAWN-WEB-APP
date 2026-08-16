@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { DawnSquare } from "@/components/DawnMark";
-import { IconChevronDown } from "@/components/icons";
+import { IconMoreVertical, IconPanelClose, IconPanelOpen } from "@/components/icons";
 import { SunIcon } from "@/components/animated-icons/sun";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import { ChartColumnIcon } from "@/components/animated-icons/chart-column";
@@ -14,13 +14,17 @@ import { SettingsIcon } from "@/components/animated-icons/settings";
 import { ListTodoIcon } from "@/components/animated-icons/list-todo";
 import type { AnimatedIconHandle } from "@/components/animated-icons/use-icon-animation";
 
-const DESKTOP = [
+const PRIMARY = [
   { href: "/dashboard", key: "dashboard", label: "Today", Icon: SunIcon },
   { href: "/tasks", key: "tasks", label: "Tasks", Icon: ListTodoIcon },
   { href: "/sleep", key: "sleep", label: "Sleep", Icon: MoonIcon },
   { href: "/progress", key: "progress", label: "Progress", Icon: ChartColumnIcon },
   { href: "/leaderboard", key: "leaderboard", label: "Board", Icon: FlameIcon },
   { href: "/circle", key: "circle", label: "Friends", Icon: UsersIcon },
+] as const;
+
+const DESKTOP = [
+  ...PRIMARY,
   { href: "/settings", key: "settings", label: "Settings", Icon: SettingsIcon },
 ] as const;
 
@@ -58,14 +62,14 @@ function NavGlyph({
   );
 }
 
-function AccountMenu() {
+function SidebarAccount() {
   const { data } = useSession();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const name =
-    data?.user?.name?.split(" ")[0] ||
+  const name = data?.user?.name || data?.user?.email?.split("@")[0] || "Account";
+  const handle =
     data?.user?.email?.split("@")[0] ||
-    "Account";
+    name.toLowerCase().replace(/\s+/g, "-");
 
   useEffect(() => {
     if (!open) return;
@@ -77,11 +81,11 @@ function AccountMenu() {
   }, [open]);
 
   return (
-    <div ref={box} className="relative shrink-0">
+    <div ref={box} className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full py-1 pl-0.5 pr-1.5 text-[13px] text-[#c5ced6] transition hover:text-white"
+        className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition hover:bg-white/[0.05]"
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -90,24 +94,36 @@ function AccountMenu() {
           <img
             src={data.user.image}
             alt=""
-            className="h-7 w-7 rounded-full object-cover"
+            className="h-9 w-9 rounded-full object-cover"
           />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[11px] font-medium text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-white">
             {name.slice(0, 1).toUpperCase()}
           </span>
         )}
-        <span className="hidden max-w-[9rem] truncate lg:inline">{name}</span>
-        <IconChevronDown
-          size={14}
-          className={`shrink-0 transition ${open ? "rotate-180" : ""}`}
-        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-medium text-white">
+            {name}
+          </span>
+          <span className="block truncate text-[11px] text-[#8ba3b8]">
+            #{handle}
+          </span>
+        </span>
+        <IconMoreVertical size={16} className="shrink-0 text-[#8ba3b8]" />
       </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 min-w-[10rem] rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
+          className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
         >
+          <Link
+            href="/settings"
+            role="menuitem"
+            className="flex w-full px-3 py-2 text-left text-[13px] text-[#c5ced6] hover:bg-white/5 hover:text-white"
+            onClick={() => setOpen(false)}
+          >
+            Settings
+          </Link>
           <button
             type="button"
             role="menuitem"
@@ -122,8 +138,11 @@ function AccountMenu() {
   );
 }
 
+const SIDEBAR_KEY = "dawn-sidebar-open";
+
 export function AppNav({ active }: { active: NavKey }) {
   const { data } = useSession();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const mapped: NavKey =
     active === "leaderboard" || active === "circle" ? "settings" : active;
   const mobileIndex = Math.max(
@@ -131,67 +150,146 @@ export function AppNav({ active }: { active: NavKey }) {
     MOBILE.findIndex((l) => l.key === mapped)
   );
 
+  useEffect(() => {
+    const stored = localStorage.getItem(SIDEBAR_KEY);
+    if (stored === "0") setSidebarOpen(false);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("sidebar-collapsed", !sidebarOpen);
+    return () => document.documentElement.classList.remove("sidebar-collapsed");
+  }, [sidebarOpen]);
+
+  function toggleSidebar() {
+    setSidebarOpen((open) => {
+      const next = !open;
+      localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-40 hidden border-b border-white/[0.07] bg-[#0a1016]/88 backdrop-blur-xl md:block">
-        <div className="pointer-events-auto mx-auto flex h-14 max-w-6xl items-center gap-4 px-5">
-          <Link
-            href="/dashboard"
-            className="shrink-0"
-            aria-label="Dawn"
-          >
-            <DawnSquare size={28} />
-          </Link>
-          <nav
-            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:gap-1"
-            aria-label="Primary"
-          >
-            {DESKTOP.map((l) => {
-              const isActive = active === l.key;
-              return (
-                <Link
-                  key={l.key}
-                  href={l.href}
-                  prefetch
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] transition lg:px-3 ${
-                    isActive
-                      ? "bg-white/10 text-white"
-                      : "text-[#9aa8b5] hover:bg-white/[0.05] hover:text-white"
-                  }`}
-                >
-                  <NavGlyph Icon={l.Icon} active={isActive} size={16} />
-                  <span className="hidden sm:inline">{l.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          <AccountMenu />
-        </div>
-      </header>
-
-      <header className="flex items-center justify-between pb-3 md:hidden">
-        <Link
-          href="/dashboard"
-          className="font-display text-xl tracking-tight text-[var(--color-dawn)]"
+      {!sidebarOpen ? (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="sidebar-toggle is-dock"
+          aria-label="Open sidebar"
+          title="Open sidebar"
         >
-          Dawn
-        </Link>
-        {data?.user?.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.user.image}
-            alt=""
-            className="h-7 w-7 rounded-full border border-white/20"
-          />
-        ) : (
+          <IconPanelOpen size={16} />
+        </button>
+      ) : null}
+
+      <aside
+        className={`dawn-sidebar pointer-events-auto fixed inset-y-3 left-3 z-40 hidden w-[228px] flex-col rounded-[1.35rem] border border-white/[0.07] px-3 py-4 md:flex ${
+          sidebarOpen ? "" : "is-closed"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-1 px-1">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 py-1" aria-label="Dawn">
+            <DawnSquare size={28} />
+            <span className="font-display text-lg tracking-tight text-white">
+              Dawn
+            </span>
+          </Link>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-xs text-[var(--color-mist)]"
+            onClick={toggleSidebar}
+            className="sidebar-toggle"
+            aria-label="Hide sidebar"
+            title="Hide sidebar"
           >
-            Sign out
+            <IconPanelClose size={16} />
           </button>
-        )}
+        </div>
+        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#8ba3b8]">
+            Workspace
+          </p>
+          <p className="mt-1 truncate text-[13px] font-medium text-white">
+            Morning loop
+          </p>
+        </div>
+
+        <p className="mt-6 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#6d8090]">
+          Navigation
+        </p>
+        <nav className="mt-2 flex min-h-0 flex-1 flex-col gap-0.5" aria-label="Primary">
+          {PRIMARY.map((l) => {
+            const isActive = active === l.key;
+            return (
+              <Link
+                key={l.key}
+                href={l.href}
+                prefetch
+                className={`inline-flex items-center gap-2.5 rounded-full px-3 py-2 text-[13px] transition ${
+                  isActive
+                    ? "bg-white/[0.09] font-medium text-white"
+                    : "text-[#9aa8b5] hover:bg-white/[0.04] hover:text-white"
+                }`}
+              >
+                <NavGlyph Icon={l.Icon} active={isActive} size={16} />
+                {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto space-y-3 pt-3">
+          <Link
+            href="/settings"
+            prefetch
+            className={`inline-flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-[13px] transition ${
+              active === "settings"
+                ? "bg-white/[0.09] font-medium text-white"
+                : "text-[#9aa8b5] hover:bg-white/[0.04] hover:text-white"
+            }`}
+          >
+            <NavGlyph Icon={SettingsIcon} active={active === "settings"} size={16} />
+            Settings
+          </Link>
+          <div className="border-t border-white/[0.07] pt-3">
+            <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#6d8090]">
+              User account
+            </p>
+            <SidebarAccount />
+          </div>
+        </div>
+      </aside>
+
+      <header className="mobile-topbar">
+        <Link
+          href="/dashboard"
+          className="flex min-w-0 items-center gap-2"
+          aria-label="Dawn"
+        >
+          <DawnSquare size={26} />
+          <span className="truncate text-[15px] font-semibold tracking-tight text-white">
+            {MOBILE.find((l) => l.key === active)?.label ||
+              DESKTOP.find((l) => l.key === active)?.label ||
+              "Dawn"}
+          </span>
+        </Link>
+        <Link
+          href="/settings"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          aria-label="Your account"
+        >
+          {data?.user?.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.user.image}
+              alt=""
+              className="h-8 w-8 rounded-full border border-white/20 object-cover"
+            />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[13px] font-medium text-white">
+              {(data?.user?.name || "?").slice(0, 1).toUpperCase()}
+            </span>
+          )}
+        </Link>
       </header>
 
       <nav

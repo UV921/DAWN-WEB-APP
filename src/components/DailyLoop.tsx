@@ -15,9 +15,9 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
   return (
     <section>
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-[15px] font-medium text-white">Daily loop</h2>
+        <h2 className="text-[15px] font-medium text-white">The day</h2>
         <span className="text-xs tabular-nums text-[var(--color-mist)]">
-          {done}/{steps.length} · XP for finishing
+          {done}/{steps.length} done
         </span>
       </div>
       <ol

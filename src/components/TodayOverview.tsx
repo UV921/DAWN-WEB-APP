@@ -43,16 +43,16 @@ export function TodayOverview({
 
   return (
     <section className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="ui-card ui-card-compact !text-left">
-          <p className="ui-card-label">Streak</p>
+          <p className="ui-card-label">Early streak</p>
           <p className="font-display mt-1 text-3xl text-[var(--color-leaf)]">
             {earlyStreak}
           </p>
-          <p className="mt-1 text-xs text-[var(--color-mist)]">early wakes</p>
+          <p className="mt-1 text-xs text-[var(--color-mist)]">days in a row</p>
         </div>
         <div className="ui-card ui-card-compact !text-left">
-          <p className="ui-card-label">Morning</p>
+          <p className="ui-card-label">Habits</p>
           <p className="font-display mt-1 text-3xl text-white">
             {habitsDone}/{habitsTotal || 1}
           </p>
@@ -64,14 +64,14 @@ export function TodayOverview({
           </div>
         </div>
         <div className="ui-card ui-card-compact !text-left">
-          <p className="ui-card-label">Run</p>
+          <p className="ui-card-label">Challenge</p>
           {active ? (
             <>
               <p className="font-display mt-1 text-3xl text-white">
                 {challenge?.day}/{challenge?.total}
               </p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
-                {challenge?.daysLeft} left
+                {challenge?.daysLeft} days left
               </p>
             </>
           ) : (
@@ -80,12 +80,12 @@ export function TodayOverview({
               onClick={() => onStartChallenge(7)}
               className="mt-2 text-sm text-[var(--color-dawn)]"
             >
-              Start 7-day run
+              Start 7 days
             </button>
           )}
         </div>
         <div className="ui-card ui-card-compact !text-left">
-          <p className="ui-card-label">Reward</p>
+          <p className="ui-card-label">Level</p>
           <p className="font-display mt-1 text-3xl text-[var(--color-dawn)]">
             Lv {level}
           </p>

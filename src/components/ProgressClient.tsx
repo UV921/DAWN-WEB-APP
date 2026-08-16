@@ -45,7 +45,7 @@ export function ProgressClient() {
 
   return (
     <main className="dawn-bg relative min-h-screen">
-      <div className="app-shell relative z-10 mx-auto max-w-5xl">
+      <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="progress" />
         <div className="mt-8">
           <p className="ui-kicker">Progress</p>

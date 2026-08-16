@@ -49,6 +49,50 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Touch: kill the 300ms delay and the long-press menu on controls */
+button,
+a,
+label,
+summary,
+[role="button"],
+[role="tab"] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+/* Chrome (nav, buttons, chips) shouldn't be text-selectable — content still is */
+button,
+[role="button"],
+[role="tab"],
+.floating-nav,
+.mobile-topbar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Press feedback on touch devices, where there is no hover to rely on */
+@media (hover: none) {
+  button:active,
+  a:active,
+  [role="button"]:active {
+    opacity: 0.7;
+  }
+
+  .ui-row:active,
+  .ui-card:active,
+  .ui-btn:active {
+    transform: scale(0.985);
+    opacity: 1;
+  }
+}
+
+/* Momentum scrolling inside any scroll region */
+.scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 ::selection {
   background: color-mix(in oklab, var(--color-dawn) 45%, transparent);
   color: var(--color-night);
@@ -60,22 +104,130 @@ body {
 
 /* App shell: safe areas + room for mobile bottom nav */
 .app-shell {
-  padding-left: max(1rem, env(safe-area-inset-left));
+  --shell-x: max(1rem, env(safe-area-inset-left));
+  --shell-top: max(0.5rem, env(safe-area-inset-top));
+  padding-left: var(--shell-x);
   padding-right: max(1rem, env(safe-area-inset-right));
-  padding-top: max(0.75rem, env(safe-area-inset-top));
-  padding-bottom: calc(7.25rem + env(safe-area-inset-bottom, 0px));
+  padding-top: var(--shell-top);
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Sticky app bar on phones — bleeds past the shell padding like a native nav bar */
+.mobile-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: calc(-1 * var(--shell-top)) calc(-1 * var(--shell-x)) 0.5rem;
+  padding: calc(var(--shell-top) + 0.35rem) var(--shell-x) 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: color-mix(in oklab, var(--color-night) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (min-width: 768px) {
+  .mobile-topbar {
+    display: none;
+  }
 }
 
 @media (min-width: 768px) {
   .app-shell {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    padding-top: 5rem;
+    width: auto;
+    max-width: none;
+    margin-left: 252px;
+    margin-right: 12px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 1.75rem;
     padding-bottom: 2rem;
+    min-height: calc(100dvh - 24px);
+    border-radius: 1.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(12, 19, 27, 0.72);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+    transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html.sidebar-collapsed .app-shell {
+    margin-left: 52px;
   }
 
   html {
-    scroll-padding-top: 4.5rem;
+    scroll-padding-top: 1.5rem;
+  }
+}
+
+.dawn-sidebar {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 115%, rgba(240, 180, 90, 0.16), transparent 55%),
+    linear-gradient(180deg, #10161c 0%, #0b1016 55%, #0a0e12 100%);
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.32s ease;
+}
+
+.dawn-sidebar.is-closed {
+  transform: translateX(calc(-100% - 18px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.65rem;
+    color: #8ba3b8;
+    background: transparent;
+    border: 0;
+    transition:
+      color 0.2s ease,
+      background-color 0.2s ease,
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sidebar-toggle:hover {
+    color: #f0b45a;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .sidebar-toggle:active {
+    transform: scale(0.94);
+  }
+
+  .sidebar-toggle.is-dock {
+    position: fixed;
+    left: 10px;
+    top: 22px;
+    z-index: 50;
+    width: 2.15rem;
+    height: 2.15rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #10161c;
+    color: #f0b45a;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell,
+  .dawn-sidebar,
+  .sidebar-toggle {
+    transition: none;
   }
 }
 
@@ -126,7 +278,8 @@ body {
 }
 
 .floating-nav-link:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
+  opacity: 1;
 }
 
 @keyframes float-nav-in {

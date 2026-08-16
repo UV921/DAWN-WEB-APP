@@ -27,6 +27,14 @@ export function IconChevronRight(props: IconProps) {
   );
 }
 
+export function IconCheck(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export function IconPlus(props: IconProps) {
   return (
     <svg {...base(props)}>
@@ -98,12 +106,12 @@ export function IconUsers(props: IconProps) {
   );
 }
 
-export function IconMore(props: IconProps) {
+export function IconMoreVertical(props: IconProps) {
   return (
     <svg {...base(props)}>
-      <circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" />
       <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -152,6 +160,28 @@ export function IconChevronDown(props: IconProps) {
   return (
     <svg {...base(props)}>
       <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+/** Lucide panel-left-close */
+export function IconPanelClose(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+      <path d="m16 15-3-3 3-3" />
+    </svg>
+  );
+}
+
+/** Lucide panel-left-open */
+export function IconPanelOpen(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+      <path d="m14 9 3 3-3 3" />
     </svg>
   );
 }

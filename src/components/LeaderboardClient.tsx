@@ -112,7 +112,7 @@ export function LeaderboardClient() {
   if (!session?.user) {
     return (
       <main className="dawn-bg min-h-screen">
-        <div className="app-shell mx-auto max-w-3xl">
+        <div className="app-shell mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="leaderboard" />
           <p className="mt-10 text-sm text-[var(--color-mist)]">Loading board…</p>
         </div>
@@ -125,7 +125,7 @@ export function LeaderboardClient() {
 
   return (
     <main className="dawn-bg noise relative min-h-screen">
-      <div className="app-shell relative z-10 mx-auto max-w-3xl">
+      <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="leaderboard" />
         <div className="mt-6 animate-rise sm:mt-10">
           <p className="ui-kicker">Compete</p>

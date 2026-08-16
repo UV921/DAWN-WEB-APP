@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import type { HabitDef, HabitLogLike } from "@/lib/habits";
 import type { DayMode } from "@/lib/daily-loop";
 import {
@@ -111,7 +112,22 @@ function friendlyDate(iso: string) {
   }
 }
 
+function firstName(name?: string | null) {
+  const part = String(name || "")
+    .trim()
+    .split(/\s+/)[0];
+  return part || "";
+}
+
+function timeWish(d = new Date()) {
+  const h = d.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -518,6 +534,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   );
 
   const tasksDone = todayTodos.filter((t) => t.done).length;
+  const hello = firstName(session?.user?.name);
   const nextLine = wakeTime
     ? openNow[0]
       ? `Next: ${openNow[0].label}${openNow[0].closesInMin ? ` · ${formatDuration(openNow[0].closesInMin)} left` : ""}`
@@ -544,14 +561,20 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       <header>
         <p className="text-sm text-[var(--color-mist)]">
           {friendlyDate(today) || "Today"}
-          {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
+          {wakeTime ? ` · up at ${wakeTime}` : ` · wake by ${wakeGoal}`}
         </p>
-        <h1 className="font-display mt-1 text-3xl text-white">Morning</h1>
+        <h1 className="font-display mt-1 text-3xl text-white">
+          {hello ? `${timeWish()}, ${hello}` : timeWish()}
+        </h1>
         {todayPlan?.goalText ? (
           <p className="mt-2 text-sm text-[var(--color-cloud)]">
             {todayPlan.goalText}
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-2 text-sm text-[var(--color-mist)]">
+            Wake up, do your habits, finish your tasks.
+          </p>
+        )}
       </header>
 
       {pulse ? <MorningPulseCard pulse={pulse} /> : null}
@@ -574,29 +597,29 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         steps={[
           {
             key: "wake",
-            label: "Wake",
-            detail: wakeTime || wakeGoal,
+            label: "Wake up",
+            detail: wakeTime || `by ${wakeGoal}`,
             done: Boolean(wakeTime),
           },
           {
             key: "habits",
             label: "Habits",
-            detail: `${done}/${liveHabits.length || 1}`,
+            detail: `${done}/${liveHabits.length || 1} done`,
             done: liveHabits.length > 0 && done >= liveHabits.length,
           },
           {
             key: "tasks",
             label: "Tasks",
             detail: todayTodos.length
-              ? `${tasksDone}/${todayTodos.length}`
-              : "set list",
+              ? `${tasksDone}/${todayTodos.length} done`
+              : "none yet",
             done: todayTodos.length > 0 && tasksDone === todayTodos.length,
             href: "/tasks",
           },
           {
             key: "night",
-            label: "Night",
-            detail: bedtime || sleepGoal,
+            label: "Sleep",
+            detail: bedtime || `by ${sleepGoal}`,
             done: Boolean(bedtime),
             href: "/sleep",
           },
@@ -623,7 +646,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
       <section>
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-[15px] font-medium text-white">Morning habits</h2>
+          <div>
+            <h2 className="text-[15px] font-medium text-white">Habits</h2>
+            <p className="mt-0.5 text-xs text-[var(--color-mist)]">
+              Tap each one when you finish it.
+            </p>
+          </div>
           <Link href="/settings?tab=habits" className="text-xs text-[var(--color-mist)]">
             Edit
           </Link>
@@ -667,7 +695,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       {reminders.length ? (
         <section>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[15px] font-medium text-white">Reminders</h2>
+            <div>
+              <h2 className="text-[15px] font-medium text-white">Reminders</h2>
+              <p className="mt-0.5 text-xs text-[var(--color-mist)]">
+                Alerts you set for today.
+              </p>
+            </div>
             <Link href="/settings?tab=reminders" className="text-xs text-[var(--color-mist)]">
               Edit
             </Link>
@@ -691,16 +724,15 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         todos={todayTodos}
         onChange={setTodayTodos}
         onError={(text) => setBanner({ tone: "error", text })}
-        title="Check off"
-        hint="None yet. Add them in Tasks — they show up here to check off."
+        title="Today's tasks"
+        hint="Add what you need to finish on the Tasks page. Come back here to check them off."
         allowAdd={false}
         addHref="/tasks"
-        addLabel="Add in Tasks"
+        addLabel="Add a task"
       />
 
       <p className="text-xs text-[var(--color-mist)]">
-        Loop rewards: wake + habits in-window, +18 XP for clearing Tasks, +22
-        XP closing night, +40 XP if you finish the whole day.
+        Finish wake, habits, tasks, and sleep for extra XP.
       </p>
 
       {inSleepWindow ? (

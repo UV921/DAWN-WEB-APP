@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import {
+  IconCheck,
   IconChevronDown,
   IconClock,
   IconFlag,
@@ -119,6 +120,7 @@ export function TodayTasks({
     name: string;
     text: string;
   } | null>(null);
+  const [listMenu, setListMenu] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [timeEditId, setTimeEditId] = useState<string | null>(null);
   const [subDraft, setSubDraft] = useState("");
@@ -349,15 +351,17 @@ export function TodayTasks({
 
   function renderSub(t: TodayTodo) {
     return (
-      <li key={t.id} className="flex items-center">
+      <li key={t.id} className="group/sub flex items-center gap-1">
         <button
           type="button"
           onClick={() => void toggle(t)}
-          className={`flex min-h-10 min-w-0 flex-1 items-center gap-2.5 py-1.5 text-left ${
-            t.done ? "opacity-50" : ""
+          className={`flex min-h-9 min-w-0 flex-1 items-center gap-2.5 py-1 text-left ${
+            t.done ? "opacity-45" : ""
           }`}
         >
-          <span className={`ui-check ${t.done ? "is-on" : ""}`}>✓</span>
+          <span className={`ui-check !h-4 !w-4 ${t.done ? "is-on" : ""}`}>
+            ✓
+          </span>
           <span
             className={`min-w-0 flex-1 text-[13px] leading-snug ${
               t.done ? "text-[var(--color-mist)] line-through" : "text-[#d6e2ec]"
@@ -370,10 +374,10 @@ export function TodayTasks({
           <button
             type="button"
             onClick={() => void remove(t)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-[var(--color-mist)] opacity-70 hover:text-white md:opacity-0 md:group-hover/sub:opacity-100"
             aria-label={`Remove ${t.text}`}
           >
-            <IconX size={13} />
+            <IconX size={12} />
           </button>
         ) : null}
       </li>
@@ -384,53 +388,55 @@ export function TodayTasks({
     const childDone = kids.filter((k) => k.done).length;
     const expanded = expandedId === t.id;
     const editingTime = timeEditId === t.id;
+    const pri = normalizePriority(t.priority);
     return (
-      <li key={t.id} className="border-b border-white/[0.06] last:border-0">
-        <div className="flex items-center gap-0.5 px-1.5">
+      <li
+        key={t.id}
+        className={`group border-b border-white/[0.06] last:border-0 ${
+          expanded ? "bg-white/[0.025]" : ""
+        }`}
+      >
+        <div className="flex items-center gap-1 px-3">
+          <span
+            className={`h-8 w-0.5 shrink-0 rounded-full ${
+              pri === "high"
+                ? "bg-[var(--color-ember)]"
+                : pri === "low"
+                  ? "bg-transparent"
+                  : "bg-[var(--color-dawn)]/55"
+            }`}
+            aria-hidden
+          />
           <button
             type="button"
             onClick={() => void toggle(t)}
-            className={`flex h-12 w-10 shrink-0 items-center justify-center ${
-              t.done ? "opacity-50" : ""
+            className={`flex h-12 w-11 shrink-0 items-center justify-center ${
+              t.done ? "opacity-45" : ""
             }`}
             aria-label={t.done ? `Undo ${t.text}` : `Complete ${t.text}`}
           >
             <span className={`ui-check ${t.done ? "is-on" : ""}`}>✓</span>
           </button>
-          {allowAdd ? (
-            <button
-              type="button"
-              onClick={() => void patchTodo(t, { priority: nextPriority(t.priority) })}
-              className={`flex h-10 w-8 shrink-0 items-center justify-center ${flagClass(t.priority)}`}
-              aria-label={`Priority ${normalizePriority(t.priority)}. Tap to change.`}
-              title={`Priority: ${normalizePriority(t.priority)}`}
-            >
-              <IconFlag size={15} />
-            </button>
-          ) : (
-            <span
-              className={`flex h-10 w-8 shrink-0 items-center justify-center ${flagClass(t.priority)}`}
-              aria-hidden
-            >
-              <IconFlag size={15} />
-            </span>
-          )}
           <button
             type="button"
             onClick={() => openTask(t.id)}
             className={`flex min-h-12 min-w-0 flex-1 items-center gap-2 py-2 text-left ${
-              t.done ? "opacity-50" : ""
+              t.done ? "opacity-45" : ""
             }`}
           >
             <span
-              className={`min-w-0 flex-1 text-sm leading-snug ${
-                t.done
-                  ? "text-[var(--color-mist)] line-through"
-                  : "text-white"
+              className={`min-w-0 flex-1 text-[15px] leading-snug ${
+                t.done ? "text-[var(--color-mist)] line-through" : "text-white"
               }`}
             >
               {t.text}
             </span>
+            {t.remindAt ? (
+              <span className="hidden shrink-0 items-center gap-1 text-[11px] tabular-nums text-[var(--color-mist)] sm:inline-flex">
+                <IconClock size={12} />
+                {t.remindAt}
+              </span>
+            ) : null}
             {kids.length > 0 ? (
               <span className="shrink-0 text-[11px] tabular-nums text-[var(--color-mist)]">
                 {childDone}/{kids.length}
@@ -438,93 +444,36 @@ export function TodayTasks({
             ) : null}
             <IconChevronDown
               size={14}
-              className={`shrink-0 text-[var(--color-mist)] transition ${
-                expanded ? "rotate-180 text-white" : ""
+              className={`shrink-0 text-[var(--color-mist)]/50 transition ${
+                expanded ? "rotate-180 text-white/80" : ""
               }`}
             />
           </button>
           {allowAdd ? (
             <button
               type="button"
-              onClick={() =>
-                setTimeEditId(editingTime ? null : t.id)
-              }
-              className={`mr-0.5 flex h-10 min-w-10 shrink-0 items-center justify-center gap-1 px-1 ${
-                t.remindAt
-                  ? "text-[var(--color-dawn)]"
-                  : "text-[var(--color-mist)] hover:text-white"
-              }`}
-              aria-label={
-                t.remindAt
-                  ? `Reminder ${t.remindAt}. Tap to change.`
-                  : "Set a reminder time"
-              }
-            >
-              <IconClock size={15} />
-              {t.remindAt ? (
-                <span className="text-[11px] tabular-nums">{t.remindAt}</span>
-              ) : null}
-            </button>
-          ) : t.remindAt ? (
-            <span className="mr-1 flex items-center gap-1 text-[11px] tabular-nums text-[var(--color-mist)]">
-              <IconClock size={13} />
-              {t.remindAt}
-            </span>
-          ) : null}
-          {allowAdd ? (
-            <button
-              type="button"
               onClick={() => void remove(t)}
-              className="mr-1 flex h-10 w-9 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
+              className="flex h-11 w-10 shrink-0 items-center justify-center text-[var(--color-mist)] opacity-0 hover:text-white group-hover:opacity-100 max-md:opacity-70"
               aria-label={`Remove ${t.text}`}
             >
-              <IconX size={14} />
+              <IconX size={13} />
             </button>
           ) : null}
         </div>
 
-        {editingTime ? (
-          <div className="flex items-center gap-2 px-4 pb-2 pl-20">
-            <IconClock size={14} className="text-[var(--color-dawn)]" />
-            <input
-              type="time"
-              value={t.remindAt || ""}
-              onChange={(e) =>
-                void patchTodo(t, { remindAt: parseRemindAt(e.target.value) })
-              }
-              className="ui-field !inline-flex !w-auto !py-1.5"
-            />
-            {t.remindAt ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void patchTodo(t, { remindAt: null });
-                  setTimeEditId(null);
-                }}
-                className="text-[11px] text-[var(--color-mist)] hover:text-white"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
         {expanded ? (
-          <div className="mb-2 ml-[2.85rem] mr-3 border-l border-[var(--color-dawn)]/35 pl-3">
-            <p className="pt-1 text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
-              Steps
-            </p>
+            <div className="border-t border-white/[0.05] pb-3 pl-[3.3rem] pr-3 pt-2">
             {kids.length > 0 ? (
-              <ul className="mt-0.5">{kids.map((k) => renderSub(k))}</ul>
+              <ul>{kids.map((k) => renderSub(k))}</ul>
             ) : (
-              <p className="py-1.5 text-[13px] text-[var(--color-mist)]">
-                No steps yet. Break this task down.
+              <p className="py-1 text-[13px] text-[var(--color-mist)]">
+                Break this into steps.
               </p>
             )}
             {allowAdd ? (
               kids.length < 8 ? (
                 <form
-                  className="flex gap-2 pb-2 pt-1"
+                  className="mt-1 flex items-center gap-2"
                   onSubmit={(e) => {
                     e.preventDefault();
                     void addSubtask(t);
@@ -535,24 +484,83 @@ export function TodayTasks({
                     value={subDraft}
                     onChange={(e) => setSubDraft(e.target.value)}
                     placeholder="Add a step"
-                    className="ui-field flex-1 !py-2"
+                    className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-[13px] text-white outline-none placeholder:text-[var(--color-mist)]"
                     autoComplete="off"
                     maxLength={120}
                   />
                   <button
                     type="submit"
                     disabled={busy || !subDraft.trim()}
-                    className="ui-btn ui-btn-primary !min-h-10 !px-3"
-                    aria-label="Add step"
+                    className="text-[12px] font-medium text-[var(--color-dawn)] disabled:opacity-40"
                   >
-                    <IconPlus size={16} />
+                    Add
                   </button>
                 </form>
               ) : (
-                <p className="pb-2 text-[11px] text-[var(--color-mist)]">
-                  Max 8 steps.
-                </p>
+                <p className="text-[11px] text-[var(--color-mist)]">Max 8 steps.</p>
               )
+            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px]">
+              {allowAdd ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void patchTodo(t, { priority: nextPriority(t.priority) })
+                  }
+                  className={`inline-flex items-center gap-1.5 ${flagClass(t.priority)}`}
+                >
+                  <IconFlag size={12} />
+                  {pri}
+                </button>
+              ) : (
+                <span className={`inline-flex items-center gap-1.5 ${flagClass(t.priority)}`}>
+                  <IconFlag size={12} />
+                  {pri}
+                </span>
+              )}
+              {allowAdd ? (
+                <button
+                  type="button"
+                  onClick={() => setTimeEditId(editingTime ? null : t.id)}
+                  className={`inline-flex items-center gap-1.5 ${
+                    t.remindAt
+                      ? "text-[var(--color-dawn)]"
+                      : "text-[var(--color-mist)] hover:text-white"
+                  }`}
+                >
+                  <IconClock size={12} />
+                  {t.remindAt || "Time"}
+                </button>
+              ) : t.remindAt ? (
+                <span className="inline-flex items-center gap-1.5 tabular-nums text-[var(--color-mist)]">
+                  <IconClock size={12} />
+                  {t.remindAt}
+                </span>
+              ) : null}
+            </div>
+            {editingTime ? (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="time"
+                  value={t.remindAt || ""}
+                  onChange={(e) =>
+                    void patchTodo(t, { remindAt: parseRemindAt(e.target.value) })
+                  }
+                  className="ui-field !inline-flex !w-auto !py-1.5"
+                />
+                {t.remindAt ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void patchTodo(t, { remindAt: null });
+                      setTimeEditId(null);
+                    }}
+                    className="text-[11px] text-[var(--color-mist)] hover:text-white"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -560,42 +568,127 @@ export function TodayTasks({
     );
   }
 
+  const progress = todos.length ? Math.round((done / todos.length) * 100) : 0;
+  const remaining = Math.max(0, todos.length - done);
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a121a]">
-      <header className="flex items-end justify-between gap-3 border-b border-white/[0.08] bg-[linear-gradient(160deg,rgba(240,180,90,0.12),transparent_70%)] px-4 py-4">
+    <section className="space-y-4">
+      <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
-            Named lists
+          <h2 className="truncate text-[15px] font-medium text-white">{title}</h2>
+          <p className="mt-0.5 text-xs text-[var(--color-mist)]">
+            {todos.length
+              ? remaining
+                ? `${remaining} left to do`
+                : "All done"
+              : "Nothing listed yet"}
           </p>
-          <h2 className="font-display mt-1 truncate text-2xl text-white">
-            {title}
-          </h2>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          {!allowAdd && addHref ? (
+        <div className="flex shrink-0 items-center gap-2">
+          {!allowAdd && addHref && todos.length > 0 ? (
             <Link
               href={addHref}
-              className="text-[11px] font-medium text-[var(--color-dawn)]"
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/10"
             >
-              {addLabel}
+              <IconPlus size={13} />
+              Add
             </Link>
           ) : null}
-          <span className="font-display text-lg tabular-nums text-[var(--color-dawn)]">
-            {todos.length ? `${done}/${todos.length}` : "0"}
-          </span>
+          {todos.length === 0 ? null : progress >= 100 ? (
+            <span
+              className="grid h-8 w-8 place-items-center rounded-full bg-[var(--color-dawn)] text-[var(--color-night)]"
+              aria-label="All tasks done"
+              title="All done"
+            >
+              <IconCheck size={14} strokeWidth={2.4} />
+            </span>
+          ) : (
+            <span className="text-[12px] tabular-nums text-[var(--color-mist)]">
+              {done}/{todos.length}
+            </span>
+          )}
         </div>
       </header>
 
-      <div className="space-y-4 p-4">
-        {allowAdd ? (
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void addTask();
-            }}
-          >
-            <div className="flex flex-wrap gap-1.5">
+      {allowAdd ? (
+        <form
+          className="space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void addTask();
+          }}
+        >
+          <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] py-1 pl-2 pr-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setListMenu((v) => !v);
+                setFlagOpen(false);
+                setRemindOpen(false);
+              }}
+              className="inline-flex h-10 max-w-[7.5rem] shrink-0 items-center gap-1 rounded-xl px-2 text-[12px] text-[var(--color-mist)] hover:bg-white/6 hover:text-white"
+              aria-label="Choose list"
+            >
+              <span className="truncate">{normalizeListTitle(listTitle)}</span>
+              <IconChevronDown
+                size={12}
+                className={`shrink-0 transition ${listMenu ? "rotate-180" : ""}`}
+              />
+            </button>
+            <span className="h-4 w-px shrink-0 bg-white/10" aria-hidden />
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Add a task"
+              className="min-w-0 flex-1 bg-transparent py-2 text-sm text-white outline-none placeholder:text-[var(--color-mist)]"
+              autoComplete="off"
+              enterKeyHint="done"
+              maxLength={120}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setFlagOpen((v) => !v);
+                setRemindOpen(false);
+                setListMenu(false);
+              }}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${flagClass(priority)} ${
+                flagOpen ? "bg-white/8" : "hover:bg-white/6"
+              }`}
+              aria-label={`Priority ${priority}`}
+              title={`Priority: ${priority}`}
+            >
+              <IconFlag size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRemindOpen((v) => !v);
+                setFlagOpen(false);
+                setListMenu(false);
+              }}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                remindOpen || remindAt
+                  ? "bg-white/8 text-[var(--color-dawn)]"
+                  : "text-[var(--color-mist)] hover:bg-white/6 hover:text-white"
+              }`}
+              aria-label={remindAt ? `Remind at ${remindAt}` : "Reminder"}
+            >
+              <IconClock size={15} />
+            </button>
+            <button
+              type="submit"
+              disabled={busy || !draft.trim()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-dawn)] text-[var(--color-night)] disabled:opacity-35"
+              aria-label="Add item"
+            >
+              <IconPlus size={16} />
+            </button>
+          </div>
+
+          {listMenu ? (
+            <div className="flex flex-wrap gap-1 px-0.5">
               {LIST_PRESETS.map((preset) => {
                 const on = !customOpen && listTitle === preset;
                 return (
@@ -605,6 +698,8 @@ export function TodayTasks({
                     onClick={() => {
                       setCustomOpen(false);
                       setListTitle(preset);
+                      setListMenu(false);
+                      inputRef.current?.focus();
                     }}
                     className={chipClass(on)}
                   >
@@ -629,202 +724,149 @@ export function TodayTasks({
                 Custom
               </button>
             </div>
-            {customOpen ? (
-              <input
-                value={listTitle}
-                onChange={(e) => setListTitle(e.target.value)}
-                placeholder="List title — Want to buy, Post on X…"
-                className="ui-field w-full !py-2.5"
-                autoComplete="off"
-                maxLength={40}
-              />
-            ) : null}
-
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={`Add to ${normalizeListTitle(listTitle)}`}
-                className="ui-field flex-1 !py-3"
-                autoComplete="off"
-                enterKeyHint="done"
-                maxLength={120}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setFlagOpen((v) => !v);
-                  setRemindOpen(false);
-                }}
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${
-                  flagOpen
-                    ? "border-[var(--color-dawn)]/50 bg-white/5"
-                    : "border-white/12"
-                } ${flagClass(priority)}`}
-                aria-label={`Priority ${priority}. Tap to choose.`}
-                title={`Priority: ${priority}`}
-              >
-                <IconFlag size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRemindOpen((v) => !v);
-                  setFlagOpen(false);
-                }}
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${
-                  remindOpen || remindAt
-                    ? "border-[var(--color-dawn)]/50 bg-white/5 text-[var(--color-dawn)]"
-                    : "border-white/12 text-[var(--color-mist)]"
-                }`}
-                aria-label={
-                  remindAt
-                    ? `Remind at ${remindAt}`
-                    : "Set a reminder time"
-                }
-                title={remindAt ? `Remind at ${remindAt}` : "Reminder time"}
-              >
-                <IconClock size={18} />
-              </button>
-              <button
-                type="submit"
-                disabled={busy || !draft.trim()}
-                className="ui-btn ui-btn-primary !min-h-12 !px-3.5"
-                aria-label="Add item"
-              >
-                <IconPlus size={18} />
-              </button>
-            </div>
-
-            {flagOpen ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[11px] text-[var(--color-mist)]">
-                  Priority
-                </span>
-                {PRIORITY_CHIPS.map((chip) => (
-                  <button
-                    key={chip.key}
-                    type="button"
-                    onClick={() => {
-                      setPriority(chip.key);
-                      setFlagOpen(false);
-                    }}
-                    className={`${chipClass(priority === chip.key)} inline-flex items-center gap-1.5`}
-                  >
-                    <IconFlag size={13} className={flagClass(chip.key)} />
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {remindOpen ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-[var(--color-mist)]">
-                  Remind at
-                </span>
-                <input
-                  type="time"
-                  value={remindAt}
-                  onChange={(e) => setRemindAt(e.target.value)}
-                  className="ui-field !inline-flex !w-auto !py-2"
-                />
-                {remindAt ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRemindAt("");
-                      setRemindOpen(false);
-                    }}
-                    className="text-[11px] text-[var(--color-mist)] hover:text-white"
-                  >
-                    Clear
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-            <p className="text-[11px] text-[var(--color-mist)]">
-              Flag is priority. Clock is a reminder. Tap a task to add steps.
-            </p>
-          </form>
-        ) : null}
-
-        {todos.length === 0 ? (
-          <div className="border border-dashed border-white/12 px-4 py-8 text-center">
-            <p className="font-display text-lg text-[var(--color-dawn)]">
-              {allowAdd ? "Start a list" : "Nothing here yet"}
-            </p>
-            <p className="mx-auto mt-2 max-w-[28ch] text-sm text-[var(--color-mist)]">
-              {hint ||
-                (allowAdd
-                  ? "Pick a list, type the task, flag it if it matters, then tap it to add steps."
-                  : "Add lists in Tasks — they show up here to check off.")}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groups.map(({ name, items, roots, kids }) => {
-              const listDone = items.filter((t) => t.done).length;
-              return (
-                <article
-                  key={name}
-                  className="overflow-hidden border border-white/10 bg-black/25"
+          ) : null}
+          {customOpen ? (
+            <input
+              value={listTitle}
+              onChange={(e) => setListTitle(e.target.value)}
+              placeholder="List name"
+              className="ui-field w-full !py-2.5"
+              autoComplete="off"
+              maxLength={40}
+            />
+          ) : null}
+          {flagOpen ? (
+            <div className="flex flex-wrap items-center gap-1.5 px-0.5">
+              {PRIORITY_CHIPS.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => {
+                    setPriority(chip.key);
+                    setFlagOpen(false);
+                  }}
+                  className={`${chipClass(priority === chip.key)} inline-flex items-center gap-1.5`}
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
-                    <div className="min-w-0">
-                      {allowAdd ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomOpen(
-                              !LIST_PRESETS.includes(
-                                name as (typeof LIST_PRESETS)[number]
-                              )
-                            );
-                            setListTitle(name);
-                            inputRef.current?.focus();
-                          }}
-                          className="truncate text-left font-display text-xl text-[var(--color-dawn)]"
-                        >
-                          {name}
-                        </button>
-                      ) : (
-                        <p className="truncate font-display text-xl text-[var(--color-dawn)]">
-                          {name}
-                        </p>
-                      )}
-                      <p className="text-[11px] tabular-nums text-[var(--color-mist)]">
-                        {listDone} of {items.length}
-                      </p>
-                    </div>
+                  <IconFlag size={12} className={flagClass(chip.key)} />
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {remindOpen ? (
+            <div className="flex flex-wrap items-center gap-2 px-0.5">
+              <input
+                type="time"
+                value={remindAt}
+                onChange={(e) => setRemindAt(e.target.value)}
+                className="ui-field !inline-flex !w-auto !py-1.5"
+              />
+              {remindAt ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRemindAt("");
+                    setRemindOpen(false);
+                  }}
+                  className="text-[11px] text-[var(--color-mist)] hover:text-white"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </form>
+      ) : null}
+
+      {todos.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/12 px-5 py-9 text-center">
+          <p className="text-[15px] font-medium text-white">
+            {allowAdd ? "Nothing here yet" : "No tasks for today"}
+          </p>
+          <p className="mx-auto mt-1.5 max-w-[28ch] text-sm text-[var(--color-mist)]">
+            {hint ||
+              (allowAdd
+                ? "Type a task, tap +."
+                : "Add them in Tasks — they show up here.")}
+          </p>
+          {!allowAdd && addHref ? (
+            <Link
+              href={addHref}
+              className="ui-btn ui-btn-primary mx-auto mt-5 !min-h-9 !px-4 text-[13px]"
+            >
+              <IconPlus size={14} />
+              {addLabel}
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <div
+          className={
+            groups.length > 1
+              ? "grid gap-6 md:grid-cols-2 md:gap-8"
+              : "space-y-6"
+          }
+        >
+          {groups.map(({ name, items, roots, kids }) => {
+            const listDone = items.filter((x) => x.done).length;
+            return (
+              <article key={name} className="min-w-0">
+                <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+                  {allowAdd ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isPreset = LIST_PRESETS.includes(
+                          name as (typeof LIST_PRESETS)[number]
+                        );
+                        setCustomOpen(!isPreset);
+                        setListTitle(name);
+                        setListMenu(false);
+                        inputRef.current?.focus();
+                      }}
+                      className="truncate text-left text-[12px] font-medium uppercase tracking-[0.14em] text-[var(--color-mist)] hover:text-white"
+                    >
+                      {name}
+                    </button>
+                  ) : (
+                    <p className="truncate text-[12px] font-medium uppercase tracking-[0.14em] text-[var(--color-mist)]">
+                      {name}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] tabular-nums text-[var(--color-mist)]">
+                      {listDone}/{items.length}
+                    </span>
                     <button
                       type="button"
                       onClick={() => void shareList(name, items)}
                       disabled={Boolean(sharing)}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/12 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-[var(--color-dawn)] disabled:opacity-50"
+                      className="flex h-7 w-7 items-center justify-center text-[var(--color-mist)] hover:text-white disabled:opacity-50"
+                      aria-label={`Share ${name}`}
                     >
                       <IconShare size={13} />
-                      {sharing === name ? "Making…" : "Share PNG"}
                     </button>
                   </div>
-                  {shareNote?.name === name ? (
-                    <p className="border-b border-white/[0.06] px-3 py-2 text-[11px] text-[var(--color-mist)]">
-                      {shareNote.text}
-                    </p>
-                  ) : null}
-                  <ul>{roots.map((t) => renderRow(t, kids.get(t.id) || []))}</ul>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                </div>
+                {shareNote?.name === name ? (
+                  <p className="mb-1.5 px-0.5 text-[11px] text-[var(--color-mist)]">
+                    {shareNote.text}
+                  </p>
+                ) : null}
+                <ul className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                  {roots.map((t) => renderRow(t, kids.get(t.id) || []))}
+                </ul>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
 function chipClass(on: boolean) {
-  return `rounded-full px-3 py-1.5 text-[11px] font-medium tracking-wide transition ${
+  return `rounded-full px-3.5 py-2 text-[12px] font-medium tracking-wide transition ${
     on
       ? "bg-[var(--color-dawn)] text-[var(--color-night)]"
       : "border border-white/12 text-[var(--color-mist)] hover:border-[var(--color-dawn)]/55 hover:text-[var(--color-dawn)]"

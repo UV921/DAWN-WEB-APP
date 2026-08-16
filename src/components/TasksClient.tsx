@@ -54,15 +54,14 @@ export function TasksClient() {
 
   return (
     <main className="dawn-bg relative min-h-screen">
-      <div className="app-shell relative z-10 mx-auto max-w-xl">
+      <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="tasks" />
         <div className="mt-4 space-y-6 sm:mt-8">
           <header>
             <p className="ui-kicker">Tasks</p>
-            <h1 className="ui-title mt-2">Named lists</h1>
+            <h1 className="ui-title mt-2">What to finish</h1>
             <p className="ui-sub mt-3">
-              Pick a list, add a task. Flag is priority, clock is a reminder.
-              Tap a task to open its steps.
+              Add to a list. Tap a row for steps.
             </p>
           </header>
 
@@ -94,7 +93,7 @@ export function TasksClient() {
                 onChange={setTodayTodos}
                 onError={setError}
                 title="Today"
-                hint="Pick a list, type the task, set a flag or clock if you need them. Tap the task to add steps."
+                hint="Type a task. Open the list name to put it in Buy, Errands, or a custom list."
               />
               {inSleepWindow ? (
                 <TodayTasks

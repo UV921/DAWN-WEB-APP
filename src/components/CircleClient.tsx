@@ -170,7 +170,7 @@ export function CircleClient() {
   if (!session?.user) {
     return (
       <main className="dawn-bg min-h-screen">
-        <div className="app-shell mx-auto max-w-5xl">
+        <div className="app-shell mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="circle" />
           <p className="mt-10 text-sm text-[var(--color-mist)]">Loading friends…</p>
         </div>
@@ -184,7 +184,7 @@ export function CircleClient() {
 
   return (
     <main className="dawn-bg noise relative min-h-screen">
-      <div className="app-shell relative z-10 mx-auto max-w-5xl">
+      <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="circle" />
         <div className="mt-6 animate-rise sm:mt-10">
           <p className="ui-kicker">Accountability</p>
