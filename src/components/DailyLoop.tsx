@@ -20,7 +20,12 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
           {done}/{steps.length} · XP for finishing
         </span>
       </div>
-      <ol className="grid grid-cols-4 gap-1 sm:gap-1.5">
+      <ol
+        className="grid gap-1 sm:gap-1.5"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(steps.length, 1)}, minmax(0, 1fr))`,
+        }}
+      >
         {steps.map((s, i) => {
           const inner = (
             <>

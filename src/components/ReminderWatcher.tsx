@@ -10,6 +10,8 @@ type ReminderRow = {
   time: string;
   enabled: boolean;
   notifyBrowser: boolean;
+  todoId?: string | null;
+  todo?: { done: boolean; date: string } | null;
 };
 
 /**
@@ -44,6 +46,7 @@ export function ReminderWatcher() {
         const mm = String(now.getMinutes()).padStart(2, "0");
         const clock = `${hh}:${mm}`;
         const dayKey = now.toDateString();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
         if (
           typeof window !== "undefined" &&
@@ -52,6 +55,7 @@ export function ReminderWatcher() {
         ) {
           for (const r of remindersRef.current) {
             if (!r.enabled || !r.notifyBrowser || r.time !== clock) continue;
+            if (r.todo && (r.todo.done || r.todo.date !== today)) continue;
             const key = `dawn-br-${r.id}-${dayKey}-${clock}`;
             if (sessionStorage.getItem(key)) continue;
             sessionStorage.setItem(key, "1");

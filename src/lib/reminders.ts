@@ -123,9 +123,19 @@ export async function processDueReminders(
         time,
         OR: [{ lastFiredKey: null }, { lastFiredKey: { not: key } }],
       },
+      include: { todo: { select: { done: true, date: true } } },
     });
 
+    const today = dateKeyNow(user.timezone);
+
     for (const reminder of due) {
+      if (
+        reminder.todo &&
+        (reminder.todo.done || reminder.todo.date !== today)
+      ) {
+        continue;
+      }
+
       const claimed = await prisma.reminder.updateMany({
         where: {
           id: reminder.id,

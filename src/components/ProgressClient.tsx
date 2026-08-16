@@ -2,32 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
-import { HabitCharts } from "@/components/HabitCharts";
-import { ProgressDetail } from "@/components/ProgressDetail";
+import {
+  ProgressDetail,
+  type ReportTodo,
+  type TodoStat,
+} from "@/components/ProgressDetail";
 import type { HabitDef, HabitLogLike } from "@/lib/habits";
-import type { TodoStat } from "@/components/ProgressDetail";
 import type { StudyStats } from "@/components/StudyStatusPanel";
-import { StudyStatusPanel } from "@/components/StudyStatusPanel";
+import type { ReportRange } from "@/lib/progress-brief";
 
 export function ProgressClient() {
   const [logs, setLogs] = useState<HabitLogLike[]>([]);
   const [habits, setHabits] = useState<HabitDef[]>([]);
   const [todoStats, setTodoStats] = useState<TodoStat[]>([]);
+  const [todayTodos, setTodayTodos] = useState<ReportTodo[]>([]);
   const [study, setStudy] = useState<StudyStats | null>(null);
+  const [range, setRange] = useState<ReportRange>("week");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void Promise.all([
-      fetch("/api/habits?days=90").then((r) => r.json()),
+      fetch("/api/habits?days=365").then((r) => r.json()),
       fetch("/api/study?days=30").then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([d, s]: [
-        { logs?: HabitLogLike[]; habits?: HabitDef[]; todoStats?: TodoStat[] },
+        {
+          logs?: HabitLogLike[];
+          habits?: HabitDef[];
+          todoStats?: TodoStat[];
+          todayTodos?: ReportTodo[];
+        },
         StudyStats | null,
       ]) => {
         setLogs(d.logs || []);
         setHabits(d.habits || []);
         setTodoStats(d.todoStats || []);
+        setTodayTodos(d.todayTodos || []);
         if (s?.status) setStudy(s);
       })
       .finally(() => setLoading(false));
@@ -39,16 +49,15 @@ export function ProgressClient() {
         <AppNav active="progress" />
         <div className="mt-8">
           <p className="ui-kicker">Progress</p>
-          <h1 className="ui-title mt-2">What the week is saying</h1>
+          <h1 className="ui-title mt-2">Your report</h1>
           <p className="ui-sub mt-3">
-            Not a gallery of charts — a read on mornings, tasks, sleep, and
-            study hours. Share a gold card of the week when you want to post it.
+            Today, week, month, year — what happened, where it leaked, what to
+            do next. Study numbers cover the last 30 days.
           </p>
           {loading ? (
-            <p className="mt-12 text-[var(--color-mist)]">Reading your week…</p>
+            <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
           ) : logs.length === 0 && todoStats.length === 0 ? (
             <div className="mt-8 space-y-6">
-              {study?.status ? <StudyStatusPanel data={study} /> : null}
               <p className="max-w-md text-[var(--color-mist)]">
                 No morning check-ins yet. Wake and close a habit on{" "}
                 <a href="/dashboard" className="ui-btn-text">
@@ -58,16 +67,16 @@ export function ProgressClient() {
               </p>
             </div>
           ) : (
-            <div className="mt-8 space-y-12">
+            <div className="mt-8">
               <ProgressDetail
                 logs={logs}
                 habits={habits}
                 todoStats={todoStats}
                 study={study}
+                todayTodos={todayTodos}
+                range={range}
+                onRange={setRange}
               />
-              {logs.length > 0 ? (
-                <HabitCharts logs={logs} habits={habits} />
-              ) : null}
             </div>
           )}
         </div>

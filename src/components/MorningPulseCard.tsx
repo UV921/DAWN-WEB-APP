@@ -29,7 +29,7 @@ const TONE: Record<
 };
 
 export function MorningPulseCard({ pulse }: { pulse: MorningPulse }) {
-  const t = TONE[pulse.tone];
+  const t = TONE[pulse.tone] ?? TONE.start;
   return (
     <section className={`relative overflow-hidden rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
       <p className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-[var(--color-dawn)]">

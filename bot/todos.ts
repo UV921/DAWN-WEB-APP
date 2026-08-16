@@ -13,12 +13,32 @@ import {
 } from "discord.js";
 import type { PrismaClient, Todo } from "@prisma/client";
 import { todayStr } from "./wind-down";
+import { syncTodoReminder } from "../src/lib/todo-reminders";
 
 export function formatTodoLines(todos: Todo[]) {
   if (!todos.length) return "_No todos yet — `/todo add` or set them with `/sleep`._";
-  return todos
-    .map((t, i) => `${t.done ? "✅" : "⬜"} **${i + 1}.** ${t.text}`)
-    .join("\n");
+  const kids = new Map<string, Todo[]>();
+  const roots: Todo[] = [];
+  const ids = new Set(todos.map((t) => t.id));
+  for (const t of todos) {
+    if (t.parentId && ids.has(t.parentId)) {
+      const arr = kids.get(t.parentId) || [];
+      arr.push(t);
+      kids.set(t.parentId, arr);
+    } else {
+      roots.push(t);
+    }
+  }
+  const lines: string[] = [];
+  roots.forEach((t, i) => {
+    const bang = t.priority === "high" ? " (!)" : "";
+    lines.push(`${t.done ? "✅" : "⬜"} **${i + 1}.**${bang} ${t.text}`);
+    for (const c of kids.get(t.id) || []) {
+      const cbang = c.priority === "high" ? " (!)" : "";
+      lines.push(`${c.done ? "✅" : "⬜"} ↳${cbang} ${c.text}`);
+    }
+  });
+  return lines.join("\n");
 }
 
 export function todoToggleRows(todos: Todo[]) {
@@ -131,6 +151,11 @@ export async function toggleTodo(
     where: { id: todo.id },
     data: { done: !todo.done },
   });
+  await syncTodoReminder(prisma, {
+    userId: user.id,
+    todo: updated,
+    done: updated.done,
+  });
 
   const todos = await listTodosForDate(prisma, user.id, updated.date);
   return { user, todo: updated, todos, date: updated.date };
@@ -147,6 +172,11 @@ export async function markTodoByIndex(
   const updated = await prisma.todo.update({
     where: { id: target.id },
     data: { done: opts.done ?? !target.done },
+  });
+  await syncTodoReminder(prisma, {
+    userId: opts.userId,
+    todo: updated,
+    done: updated.done,
   });
   const next = await listTodosForDate(prisma, opts.userId, date);
   return { todo: updated, todos: next, date };

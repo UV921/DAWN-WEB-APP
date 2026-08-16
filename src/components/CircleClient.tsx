@@ -336,7 +336,7 @@ export function CircleClient() {
             <div className="mt-12 space-y-10">
               {circles.map((circle) => {
                 const board = boards.find((b) => b.circleId === circle.id);
-                const isOwner = session.user.id === circle.ownerId;
+                const isOwner = session?.user?.id === circle.ownerId;
                 return (
                   <section
                     key={circle.id}
@@ -502,7 +502,7 @@ export function CircleClient() {
                               habitKeys
                             )
                           : 0;
-                        const isMe = row.user.id === session.user.id;
+                        const isMe = row.user.id === session?.user?.id;
                         return (
                           <li
                             key={row.user.id}

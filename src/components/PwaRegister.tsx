@@ -7,73 +7,114 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+const DISMISS_KEY = "dawn-pwa-dismiss-until";
+const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+
+let cachedPrompt: BeforeInstallPromptEvent | null = null;
+const promptSubs = new Set<(event: BeforeInstallPromptEvent | null) => void>();
+
+function isStandaloneWindow() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true)
+  );
+}
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isDismissed() {
+  const until = Number(localStorage.getItem(DISMISS_KEY) || 0);
+  return until > Date.now();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    cachedPrompt = event as BeforeInstallPromptEvent;
+    promptSubs.forEach((fn) => fn(cachedPrompt));
+  });
+  window.addEventListener("appinstalled", () => {
+    cachedPrompt = null;
+    promptSubs.forEach((fn) => fn(null));
+  });
+}
+
 export function PwaRegister() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
-    null
+    cachedPrompt
   );
   const [installed, setInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [ios, setIos] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {
         /* ignore */
       });
     }
 
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS
-      ("standalone" in navigator &&
-        (navigator as Navigator & { standalone?: boolean }).standalone === true);
-    if (standalone) setInstalled(true);
-
-    const onBip = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onBip);
-    window.addEventListener("appinstalled", () => {
+    if (isStandaloneWindow()) {
       setInstalled(true);
-      setDeferred(null);
-    });
+      return;
+    }
 
-    const wasDismissed = localStorage.getItem("dawn-pwa-dismiss") === "1";
-    if (wasDismissed) setDismissed(true);
+    setIos(isIosDevice());
+    setDismissed(isDismissed());
+    setDeferred(cachedPrompt);
 
-    return () => window.removeEventListener("beforeinstallprompt", onBip);
+    const onPrompt = (event: BeforeInstallPromptEvent | null) => {
+      setDeferred(event);
+      if (!event) setInstalled(true);
+    };
+    promptSubs.add(onPrompt);
+
+    const show = window.setTimeout(() => setReady(true), 900);
+
+    return () => {
+      promptSubs.delete(onPrompt);
+      window.clearTimeout(show);
+    };
   }, []);
 
   async function install() {
     if (!deferred) return;
     await deferred.prompt();
-    await deferred.userChoice;
+    const choice = await deferred.userChoice;
     setDeferred(null);
+    cachedPrompt = null;
+    if (choice.outcome === "accepted") setInstalled(true);
   }
 
   function dismiss() {
     setDismissed(true);
-    localStorage.setItem("dawn-pwa-dismiss", "1");
+    localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_MS));
   }
 
-  if (installed || dismissed || !deferred) return null;
+  if (!ready || installed || dismissed) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d1b2a]/95 p-4 shadow-2xl backdrop-blur md:left-auto">
       <p className="font-display text-lg text-white">Install Dawn</p>
       <p className="mt-1 text-sm text-[var(--color-mist)]">
-        Add to your home screen — opens like an app, faster morning check-in.
+        {ios
+          ? "Add it to your Home Screen — tap Share, then Add to Home Screen."
+          : "Open Dawn like an app. Faster morning check-in, works offline."}
       </p>
       <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={() => void install()}
-          className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-sm font-semibold text-[var(--color-night)]"
-        >
-          Install
-        </button>
+        {deferred ? (
+          <button
+            type="button"
+            onClick={() => void install()}
+            className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-sm font-semibold text-[var(--color-night)]"
+          >
+            Install
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={dismiss}

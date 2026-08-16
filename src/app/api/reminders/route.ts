@@ -15,7 +15,10 @@ export async function GET() {
     prisma.reminder.findMany({
       where: { userId: session.user.id },
       orderBy: [{ enabled: "desc" }, { time: "asc" }],
-      include: { goal: { select: { id: true, title: true } } },
+      include: {
+        goal: { select: { id: true, title: true } },
+        todo: { select: { id: true, done: true, date: true } },
+      },
     }),
     prisma.user.findUnique({
       where: { id: session.user.id },

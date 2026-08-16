@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DawnMark } from "@/components/DawnMark";
 import { IconX } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
@@ -11,9 +11,30 @@ type Props = {
   onClose?: () => void;
 };
 
+function oauthErrorMessage(code: string) {
+  if (code === "OAuthCallback" || code === "Callback") {
+    return "Discord sign-in didn’t finish. Tap Continue with Discord once more.";
+  }
+  if (code === "OAuthAccountNotLinked") {
+    return "That email is already on another Dawn account. Use the same Discord you used before.";
+  }
+  if (code === "AccessDenied") {
+    return "Discord sign-in was denied.";
+  }
+  if (code === "Configuration") {
+    return "Discord login isn’t configured on this server.";
+  }
+  return "Sign-in didn’t work. Try Continue with Discord again.";
+}
+
 export function AuthPanel({ onClose }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (code) setError(oauthErrorMessage(code));
+  }, []);
 
   async function demoLogin(who: "you" | "friend") {
     setBusy(who);

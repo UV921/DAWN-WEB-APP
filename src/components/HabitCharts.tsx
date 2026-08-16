@@ -13,6 +13,9 @@ import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-char
 type Props = {
   logs: HabitLogLike[];
   habits?: HabitDef[];
+  showWakeTrend?: boolean;
+  /** When set, heatmap uses this range and hides the local toggle. */
+  forcedRange?: Range;
 };
 
 type Range = "month" | "year";
@@ -122,8 +125,14 @@ function buildGrid(logs: HabitLogLike[], range: Range, habitKeys: string[]) {
   return { cells, monthLabels, weekCount };
 }
 
-export function HabitCharts({ logs, habits = [] }: Props) {
-  const [range, setRange] = useState<Range>("year");
+export function HabitCharts({
+  logs,
+  habits = [],
+  showWakeTrend = true,
+  forcedRange,
+}: Props) {
+  const [localRange, setRange] = useState<Range>(forcedRange || "year");
+  const range = forcedRange || localRange;
   const [hover, setHover] = useState<Cell | null>(null);
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
   const habitKeysSig = habitKeys.join(",");
@@ -181,22 +190,24 @@ export function HabitCharts({ logs, habits = [] }: Props) {
               forever.
             </p>
           </div>
-          <div className="flex rounded-full border border-white/15 p-1">
-            {(["month", "year"] as Range[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={`rounded-full px-4 py-1.5 text-sm capitalize ${
-                  range === r
-                    ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                    : "text-[var(--color-mist)] hover:text-white"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          {forcedRange ? null : (
+            <div className="flex rounded-full border border-white/15 p-1">
+              {(["month", "year"] as Range[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRange(r)}
+                  className={`rounded-full px-4 py-1.5 text-sm capitalize ${
+                    range === r
+                      ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
+                      : "text-[var(--color-mist)] hover:text-white"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="relative mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -302,6 +313,7 @@ export function HabitCharts({ logs, habits = [] }: Props) {
         </div>
       </div>
 
+      {showWakeTrend ? (
       <div>
         <h2 className="font-display text-2xl text-white">Wake-up trend</h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
@@ -338,6 +350,7 @@ export function HabitCharts({ logs, habits = [] }: Props) {
           )}
         </div>
       </div>
+      ) : null}
     </section>
   );
 }

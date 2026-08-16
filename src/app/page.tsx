@@ -6,7 +6,7 @@ import { LandingPage } from "@/components/LandingPage";
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
-  if (session) redirect("/dashboard");
+  if (session?.user?.id) redirect("/dashboard");
 
   const snap = await getLandingSnapshot();
   return <LandingPage snap={snap} />;

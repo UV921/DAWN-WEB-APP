@@ -18,9 +18,10 @@ export const ContainerScroll = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-  });
+  // Pixel scroll — targeting the ref in useScroll crashes during Next/React 19
+  // hydration. Map the first stretch of the page (the hero) so the card
+  // starts tilted and flattens as you scroll, instead of 0–1 of the whole page.
+  const { scrollY } = useScroll();
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -34,20 +35,21 @@ export const ContainerScroll = ({
     };
   }, []);
 
+  const heroRange = isMobile ? 520 : 860;
   const scaleDimensions = () => (isMobile ? [0.7, 0.9] : [1.05, 1]);
   const rotate = useTransform(
-    scrollYProgress,
-    [0, 1],
+    scrollY,
+    [0, heroRange],
     reduce ? [0, 0] : [20, 0]
   );
   const scale = useTransform(
-    scrollYProgress,
-    [0, 1],
+    scrollY,
+    [0, heroRange],
     reduce ? [1, 1] : scaleDimensions()
   );
   const translate = useTransform(
-    scrollYProgress,
-    [0, 1],
+    scrollY,
+    [0, heroRange],
     reduce ? [0, 0] : [0, -100]
   );
 
@@ -58,7 +60,7 @@ export const ContainerScroll = ({
     >
       <div
         className="relative w-full py-10 md:py-40"
-        style={{ perspective: "1000px" }}
+        style={{ perspective: "1000px", transformStyle: "preserve-3d" }}
       >
         <Header translate={translate} titleComponent={titleComponent} />
         <Card rotate={rotate} scale={scale}>

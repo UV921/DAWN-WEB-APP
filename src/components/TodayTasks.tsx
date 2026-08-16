@@ -5,12 +5,22 @@ import Link from "next/link";
 import { IconPlus, IconShare, IconX } from "@/components/icons";
 import { shareTodoListCard } from "@/lib/share-todo-card";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
+import {
+  normalizePriority,
+  parseRemindAt,
+  priorityRank,
+  type TodoPriority,
+} from "@/lib/todo-weight";
 
 export type TodayTodo = {
   id: string;
   text: string;
   done: boolean;
   title?: string;
+  priority?: string;
+  parentId?: string | null;
+  remindAt?: string | null;
+  reminderId?: string | null;
 };
 
 type Props = {
@@ -26,8 +36,49 @@ type Props = {
   addLabel?: string;
 };
 
+const PRIORITY_CHIPS: { key: TodoPriority; label: string }[] = [
+  { key: "high", label: "High" },
+  { key: "medium", label: "Medium" },
+  { key: "low", label: "Low" },
+];
+
 function listName(t: TodayTodo) {
   return normalizeListTitle(t.title);
+}
+
+function pipClass(priority?: string) {
+  const p = normalizePriority(priority);
+  if (p === "high") return "bg-[var(--color-ember)]";
+  if (p === "low") return "bg-[var(--color-mist)]";
+  return "bg-[var(--color-dawn)]";
+}
+
+function sortGroup(items: TodayTodo[]) {
+  return [...items].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const pr = priorityRank(a.priority) - priorityRank(b.priority);
+    if (pr !== 0) return pr;
+    return 0;
+  });
+}
+
+function nestList(items: TodayTodo[]) {
+  const ids = new Set(items.map((t) => t.id));
+  const kids = new Map<string, TodayTodo[]>();
+  const roots: TodayTodo[] = [];
+  for (const t of items) {
+    if (t.parentId && ids.has(t.parentId)) {
+      const arr = kids.get(t.parentId) || [];
+      arr.push(t);
+      kids.set(t.parentId, arr);
+    } else {
+      roots.push(t);
+    }
+  }
+  for (const [id, arr] of kids) {
+    kids.set(id, sortGroup(arr));
+  }
+  return { roots: sortGroup(roots), kids };
 }
 
 export function TodayTasks({
@@ -44,12 +95,17 @@ export function TodayTasks({
   const [draft, setDraft] = useState("");
   const [listTitle, setListTitle] = useState("Today");
   const [customOpen, setCustomOpen] = useState(false);
+  const [priority, setPriority] = useState<TodoPriority>("medium");
+  const [remindOpen, setRemindOpen] = useState(false);
+  const [remindAt, setRemindAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState<{
     name: string;
     text: string;
   } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [subDraft, setSubDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const done = todos.filter((t) => t.done).length;
 
@@ -61,19 +117,27 @@ export function TodayTasks({
       arr.push(t);
       map.set(key, arr);
     }
-    return [...map.entries()];
+    return [...map.entries()].map(([name, items]) => {
+      const nested = nestList(items);
+      return { name, items, ...nested };
+    });
   }, [todos]);
 
   async function addTask() {
     const text = draft.trim();
     if (!text || busy) return;
     const titleForItem = normalizeListTitle(listTitle);
+    const time = remindOpen ? parseRemindAt(remindAt) : null;
     const tempId = `tmp-${Date.now()}`;
     const optimistic: TodayTodo = {
       id: tempId,
       text,
       done: false,
       title: titleForItem,
+      priority,
+      parentId: null,
+      remindAt: time,
+      reminderId: null,
     };
     onChange((prev) => [...prev, optimistic]);
     setDraft("");
@@ -87,6 +151,8 @@ export function TodayTasks({
           text,
           date,
           title: titleForItem,
+          priority,
+          remindAt: time,
         }),
       });
       if (!res.ok) {
@@ -129,14 +195,101 @@ export function TodayTasks({
   }
 
   async function remove(t: TodayTodo) {
-    onChange((prev) => prev.filter((x) => x.id !== t.id));
+    onChange((prev) =>
+      prev.filter((x) => x.id !== t.id && x.parentId !== t.id)
+    );
+    if (expandedId === t.id) setExpandedId(null);
     if (t.id.startsWith("tmp-")) return;
     const res = await fetch("/api/day-plan", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete-todo", id: t.id }),
     });
-    if (!res.ok) onChange((prev) => [...prev, t]);
+    if (!res.ok) {
+      onChange((prev) => {
+        const kids = todos.filter((x) => x.parentId === t.id);
+        return [...prev, t, ...kids.filter((k) => !prev.some((p) => p.id === k.id))];
+      });
+      onError?.("Couldn’t delete that task.");
+    }
+  }
+
+  async function patchTodo(
+    t: TodayTodo,
+    patch: { priority?: string; remindAt?: string | null; text?: string }
+  ) {
+    const next = { ...t, ...patch };
+    onChange((prev) => prev.map((x) => (x.id === t.id ? next : x)));
+    if (t.id.startsWith("tmp-")) return;
+    const res = await fetch("/api/day-plan", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update-todo", id: t.id, ...patch }),
+    });
+    if (!res.ok) {
+      onChange((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+      onError?.("Couldn’t update that task.");
+      return;
+    }
+    const data = await res.json();
+    if (data.todo) {
+      onChange((prev) =>
+        prev.map((x) => (x.id === t.id ? (data.todo as TodayTodo) : x))
+      );
+    }
+  }
+
+  async function addSubtask(parent: TodayTodo) {
+    const text = subDraft.trim();
+    if (!text || busy) return;
+    const siblings = todos.filter((x) => x.parentId === parent.id);
+    if (siblings.length >= 8) {
+      onError?.("Max 8 subtasks.");
+      return;
+    }
+    const tempId = `tmp-${Date.now()}`;
+    const optimistic: TodayTodo = {
+      id: tempId,
+      text,
+      done: false,
+      title: parent.title,
+      priority: "medium",
+      parentId: parent.id,
+      remindAt: null,
+      reminderId: null,
+    };
+    onChange((prev) => [...prev, optimistic]);
+    setSubDraft("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/day-plan", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add-subtask",
+          parentId: parent.id,
+          text,
+        }),
+      });
+      if (!res.ok) {
+        onChange((prev) => prev.filter((x) => x.id !== tempId));
+        setSubDraft(text);
+        onError?.("Couldn’t add that subtask.");
+        return;
+      }
+      const data = await res.json();
+      if (data.todo) {
+        onChange((prev) =>
+          prev.map((x) => (x.id === tempId ? (data.todo as TodayTodo) : x))
+        );
+      }
+    } catch {
+      onChange((prev) => prev.filter((x) => x.id !== tempId));
+      setSubDraft(text);
+      onError?.("Couldn’t add that subtask.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function shareList(name: string, items: TodayTodo[]) {
@@ -162,6 +315,147 @@ export function TodayTasks({
     } finally {
       setSharing(null);
     }
+  }
+
+  function renderRow(t: TodayTodo, kids: TodayTodo[], nested: boolean) {
+    const childDone = kids.filter((k) => k.done).length;
+    const expanded = allowAdd && expandedId === t.id && !t.parentId;
+    return (
+      <li key={t.id} className="border-b border-white/[0.06] last:border-0">
+        <div className={`flex items-center ${nested ? "pl-6" : ""}`}>
+          <button
+            type="button"
+            onClick={() => void toggle(t)}
+            className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left ${
+              t.done ? "opacity-50" : ""
+            }`}
+          >
+            <span className={`ui-check ${t.done ? "is-on" : ""}`}>✓</span>
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${pipClass(t.priority)}`}
+              aria-hidden
+            />
+            <span
+              className={`min-w-0 flex-1 text-sm leading-snug ${
+                t.done
+                  ? "text-[var(--color-mist)] line-through"
+                  : "text-white"
+              }`}
+            >
+              {t.text}
+            </span>
+            {t.remindAt ? (
+              <span className="shrink-0 text-[11px] tabular-nums text-[var(--color-mist)]">
+                {t.remindAt}
+              </span>
+            ) : null}
+            {kids.length > 0 ? (
+              <span className="shrink-0 text-[11px] tabular-nums text-[var(--color-mist)]">
+                {childDone}/{kids.length}
+              </span>
+            ) : null}
+          </button>
+          {allowAdd && !t.parentId ? (
+            <button
+              type="button"
+              onClick={() => {
+                setExpandedId(expanded ? null : t.id);
+                setSubDraft("");
+              }}
+              className="mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
+              aria-label={expanded ? "Collapse task" : "Edit task"}
+            >
+              {expanded ? "–" : "···"}
+            </button>
+          ) : null}
+          {allowAdd ? (
+            <button
+              type="button"
+              onClick={() => void remove(t)}
+              className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
+              aria-label={`Remove ${t.text}`}
+            >
+              <IconX size={14} />
+            </button>
+          ) : null}
+        </div>
+        {expanded ? (
+          <div className="space-y-3 border-t border-white/[0.06] bg-black/20 px-3 py-3">
+            <div className="flex flex-wrap gap-1.5">
+              {PRIORITY_CHIPS.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => void patchTodo(t, { priority: chip.key })}
+                  className={chipClass(normalizePriority(t.priority) === chip.key)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-[11px] text-[var(--color-mist)]">
+                Time
+                <input
+                  type="time"
+                  value={t.remindAt || ""}
+                  onChange={(e) =>
+                    void patchTodo(t, {
+                      remindAt: parseRemindAt(e.target.value),
+                    })
+                  }
+                  className="ui-field ml-2 !inline-flex !w-auto !py-1.5"
+                />
+              </label>
+              {t.remindAt ? (
+                <button
+                  type="button"
+                  onClick={() => void patchTodo(t, { remindAt: null })}
+                  className="text-[11px] text-[var(--color-mist)] hover:text-white"
+                >
+                  Clear time
+                </button>
+              ) : null}
+            </div>
+            {kids.length < 8 ? (
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void addSubtask(t);
+                }}
+              >
+                <input
+                  value={expandedId === t.id ? subDraft : ""}
+                  onChange={(e) => setSubDraft(e.target.value)}
+                  placeholder="Add a subtask"
+                  className="ui-field flex-1 !py-2"
+                  autoComplete="off"
+                  maxLength={120}
+                />
+                <button
+                  type="submit"
+                  disabled={busy || !subDraft.trim()}
+                  className="ui-btn ui-btn-primary !min-h-10 !px-3"
+                  aria-label="Add subtask"
+                >
+                  <IconPlus size={16} />
+                </button>
+              </form>
+            ) : (
+              <p className="text-[11px] text-[var(--color-mist)]">
+                Max 8 subtasks.
+              </p>
+            )}
+          </div>
+        ) : null}
+        {kids.length > 0 ? (
+          <ul>
+            {kids.map((k) => renderRow(k, [], true))}
+          </ul>
+        ) : null}
+      </li>
+    );
   }
 
   return (
@@ -243,6 +537,33 @@ export function TodayTasks({
                 maxLength={40}
               />
             ) : null}
+            <div className="flex flex-wrap gap-1.5">
+              {PRIORITY_CHIPS.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => setPriority(chip.key)}
+                  className={chipClass(priority === chip.key)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRemindOpen((v) => !v)}
+                className={chipClass(remindOpen)}
+              >
+                Remind me
+              </button>
+            </div>
+            {remindOpen ? (
+              <input
+                type="time"
+                value={remindAt}
+                onChange={(e) => setRemindAt(e.target.value)}
+                className="ui-field w-full !py-2.5"
+              />
+            ) : null}
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -280,7 +601,7 @@ export function TodayTasks({
           </div>
         ) : (
           <div className="space-y-3">
-            {groups.map(([name, items]) => {
+            {groups.map(({ name, items, roots, kids }) => {
               const listDone = items.filter((t) => t.done).length;
               return (
                 <article
@@ -329,45 +650,7 @@ export function TodayTasks({
                       {shareNote.text}
                     </p>
                   ) : null}
-                  <ul>
-                    {items.map((t) => (
-                      <li
-                        key={t.id}
-                        className="flex items-center border-b border-white/[0.06] last:border-0"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => void toggle(t)}
-                          className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left ${
-                            t.done ? "opacity-50" : ""
-                          }`}
-                        >
-                          <span className={`ui-check ${t.done ? "is-on" : ""}`}>
-                            ✓
-                          </span>
-                          <span
-                            className={`min-w-0 flex-1 text-sm leading-snug ${
-                              t.done
-                                ? "text-[var(--color-mist)] line-through"
-                                : "text-white"
-                            }`}
-                          >
-                            {t.text}
-                          </span>
-                        </button>
-                        {allowAdd ? (
-                          <button
-                            type="button"
-                            onClick={() => void remove(t)}
-                            className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center text-[var(--color-mist)] hover:text-white"
-                            aria-label={`Remove ${t.text}`}
-                          >
-                            <IconX size={14} />
-                          </button>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                  <ul>{roots.map((t) => renderRow(t, kids.get(t.id) || [], false))}</ul>
                 </article>
               );
             })}

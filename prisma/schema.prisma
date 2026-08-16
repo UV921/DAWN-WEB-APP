@@ -106,11 +106,14 @@ model Reminder {
   discordChannelId String?
   /// Prevents double-fire: "YYYY-MM-DD-HH:MM"
   lastFiredKey     String?
+  /// Optional link to a dated todo — one-shot ping for that day
+  todoId           String?  @unique
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   goal Goal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  todo Todo? @relation("TodoReminder", fields: [todoId], references: [id], onDelete: Cascade)
 
   @@index([userId, enabled])
   @@index([enabled, time])
@@ -329,11 +332,23 @@ model Todo {
   title     String   @default("Today")
   text      String
   done      Boolean  @default(false)
+  /// high | medium | low
+  priority  String   @default("medium")
+  /// One-level subtask parent
+  parentId  String?
+  /// HH:MM local reminder
+  remindAt  String?
+  /// Denormalized Reminder.id — Reminder.todoId owns the 1:1
+  reminderId String?
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Todo?     @relation("TodoSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children Todo[]    @relation("TodoSubtasks")
+  reminder Reminder? @relation("TodoReminder")
 
   @@index([userId, date])
+  @@index([parentId])
 }
 
 /// Each time the user opens / foregrounds Dawn (visibility, PWA, motion)
