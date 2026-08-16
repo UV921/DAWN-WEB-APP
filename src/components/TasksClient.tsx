@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
 import { TodayTasks, type TodayTodo } from "@/components/TodayTasks";
+import { TodoHistory } from "@/components/TodoHistory";
 import { UiEmpty } from "@/components/UiMessage";
 import { formatLocalDate } from "@/lib/habits";
 import { nextCalendarDate } from "@/lib/daily-loop";
@@ -118,6 +119,7 @@ export function TasksClient() {
                   .
                 </p>
               )}
+              <TodoHistory />
               <p className="text-xs text-[var(--color-mist)]">
                 Clear today’s list: +18 XP. Set tomorrow for the first time:
                 +12 XP. Close the night on Today to keep the streak.

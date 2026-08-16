@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatLocalDate } from "@/lib/habits";
+import { formatDateInZone } from "@/lib/clock";
 import { nextCalendarDate } from "@/lib/daily-loop";
 import { grantXp } from "@/lib/grant-xp";
 import { resolveHabitWindow } from "@/lib/habit-windows";
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const date = searchParams.get("date") || today;
   const tomorrow = nextCalendarDate(today);
 
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const date =
     typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
       ? body.date
@@ -150,7 +150,7 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
 
   if (body.action === "add-todo") {
     const text = String(body.text || "").trim().slice(0, 120);

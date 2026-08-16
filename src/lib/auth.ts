@@ -12,7 +12,8 @@ async function ensureDemoUser(email: string, name: string) {
   return prisma.user.upsert({
     where: { email },
     create: { email, name },
-    update: { name },
+    // Don't reset a name the user has since changed in their profile.
+    update: {},
   });
 }
 
@@ -130,7 +131,8 @@ async function ensureDiscordUser(bits: DiscordProfileBits) {
     return prisma.user.update({
       where: { id: existing.id },
       data: {
-        name: name ?? existing.name,
+        // Keep whatever they set in their profile — Discord only fills a blank.
+        name: existing.name ?? name,
         image: image ?? existing.image,
         discordId,
         ...(nextEmail && nextEmail !== existing.email
@@ -154,7 +156,7 @@ async function ensureDiscordUser(bits: DiscordProfileBits) {
     return prisma.user.update({
       where: { id: byEmail.id },
       data: {
-        name: name ?? byEmail.name,
+        name: byEmail.name ?? name,
         image: image ?? byEmail.image,
         discordId,
       },
@@ -196,7 +198,7 @@ async function createDiscordUser(bits: {
         where: { id: byEmail.id },
         data: {
           discordId: bits.discordId,
-          name: bits.name ?? byEmail.name,
+          name: byEmail.name ?? bits.name,
           image: bits.image ?? byEmail.image,
         },
         select: sessionUserSelect,

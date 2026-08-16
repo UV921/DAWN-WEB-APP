@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatLocalDate } from "@/lib/habits";
+import { formatDateInZone } from "@/lib/clock";
 import { challengeProgress } from "@/lib/daily-loop";
 
 function clampDays(raw: unknown): number {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const days = clampDays(body.days);
   const userRow = await prisma.user.findUnique({
     where: { id: session.user.id },

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatLocalDate } from "@/lib/habits";
+import { formatDateInZone } from "@/lib/clock";
 import { discordSendChannelMessage } from "@/lib/discord-notify";
 import { parseBotMessages, resolveChannelId } from "@/lib/bot-messages";
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const date =
     typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
       ? body.date
-      : formatLocalDate(new Date());
+      : formatDateInZone(session.user.timezone);
 
   const [user, todos] = await Promise.all([
     prisma.user.findUnique({

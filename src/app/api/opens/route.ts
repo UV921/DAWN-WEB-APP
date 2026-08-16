@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatLocalDate } from "@/lib/habits";
+import { formatDateInZone, zonedClock } from "@/lib/clock";
 import { nextOpenStreak } from "@/lib/daily-loop";
 
 const SOURCES = new Set([
@@ -13,9 +13,8 @@ const SOURCES = new Set([
   "resume",
 ]);
 
-function nowHHMM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function nowHHMM(timeZone?: string) {
+  return zonedClock(timeZone).hhmm;
 }
 
 export async function GET(req: Request) {
@@ -24,7 +23,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const { searchParams } = new URL(req.url);
   const date = searchParams.get("date") || today;
 
@@ -71,11 +70,11 @@ export async function POST(req: Request) {
     ? String(body.source)
     : "visibility";
   const standalone = Boolean(body.standalone);
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const time =
     typeof body.time === "string" && /^\d{2}:\d{2}$/.test(body.time)
       ? body.time
-      : nowHHMM();
+      : nowHHMM(session.user.timezone);
   const iso = new Date().toISOString();
 
   // Debounce: ignore duplicate opens within 90s from same source

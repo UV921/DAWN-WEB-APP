@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
-  formatLocalDate,
   isHabitDone,
   mergeLogChecks,
   slugifyHabitKey,
 } from "@/lib/habits";
+import { formatDateInZone } from "@/lib/clock";
 import { challengeProgress } from "@/lib/daily-loop";
 import { ensureDefaultHabits } from "@/lib/ensure-habits";
 
@@ -28,7 +28,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
   const habits = await ensureDefaultHabits(session.user.id);
 
   const mission = await prisma.mission.findFirst({
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const action = String(body.action || "create");
-  const today = formatLocalDate(new Date());
+  const today = formatDateInZone(session.user.timezone);
 
   if (action === "create") {
     const title = String(body.title || "7-day mission").trim().slice(0, 80);

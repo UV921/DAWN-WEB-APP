@@ -4,11 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   computeStreak,
-  formatLocalDate,
   isHabitDone,
   mergeLogChecks,
   randomInviteCode,
 } from "@/lib/habits";
+import { formatDateInZone } from "@/lib/clock";
 import { discordSendDm } from "@/lib/discord-notify";
 
 function toClientLog(l: {
@@ -66,8 +66,9 @@ export async function GET() {
   });
 
   const circles = memberships.map((m) => m.circle);
-  const today = formatLocalDate(new Date());
-  const since = formatLocalDate(
+  const today = formatDateInZone(session.user.timezone);
+  const since = formatDateInZone(
+    session.user.timezone,
     new Date(Date.now() - 21 * 24 * 60 * 60 * 1000)
   );
 
@@ -98,7 +99,14 @@ export async function GET() {
           Boolean(todayLog && isHabitDone(todayLog, "wakeEarly"));
 
         // last 7 days wake early rate
-        const last7 = userLogs.filter((l) => l.date >= formatLocalDate(new Date(Date.now() - 6 * 86400000)));
+        const last7 = userLogs.filter(
+          (l) =>
+            l.date >=
+            formatDateInZone(
+              session.user.timezone,
+              new Date(Date.now() - 6 * 86400000)
+            )
+        );
         const wakeDays = last7.filter((l) => isHabitDone(l, "wakeEarly")).length;
 
         return {
