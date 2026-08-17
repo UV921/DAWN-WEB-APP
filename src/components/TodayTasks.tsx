@@ -21,6 +21,7 @@ import {
   shareTodoListCard,
 } from "@/lib/share-todo-card";
 import { parseBotMessages } from "@/lib/bot-messages";
+import { postTodosFromBrowser } from "@/lib/post-todos-client";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
 import {
   normalizePriority,
@@ -393,8 +394,13 @@ export function TodayTasks({
           },
         }),
       });
+      const saved = await save.json().catch(() => ({}));
       if (!save.ok) {
-        onError?.("Couldn’t save that send time.");
+        onError?.(
+          save.status === 401
+            ? "Sign in again, then save the send time."
+            : saved.error || "Couldn’t save that send time."
+        );
         return;
       }
       setDiscordNote(
@@ -415,44 +421,27 @@ export function TodayTasks({
     setDiscordNote(null);
     let image: string | undefined;
     try {
-      const { blob, filename } = await pngForTodos();
-      try {
-        downloadPngBlob(blob, filename);
-      } catch {
-        /* iOS often blocks programmatic download after await */
-      }
+      const { blob } = await pngForTodos();
       const b64 = await blobToBase64Png(blob);
-      if (b64.length > 0 && b64.length < 1_200_000) image = b64;
+      if (b64.length > 0 && b64.length < 400_000) image = b64;
     } catch {
-      /* Still post the text list if the card can’t be drawn. */
+      /* Text list still posts if the card can’t be drawn. */
     }
-    try {
-      const res = await fetch("/api/discord/send-todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          message: pingText,
-          image,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        onError?.(data.error || "Couldn’t post to Discord.");
-        return;
-      }
+    const result = await postTodosFromBrowser({
+      date,
+      message: pingText,
+      image,
+    });
+    if (!result.ok) {
+      onError?.(result.error || "Couldn’t post to Discord.");
+    } else {
       setDiscordNote(
-        image
+        result.usedImage
           ? "Posted in your Discord channel."
-          : "Posted in your Discord channel (text list — PNG skipped)."
+          : "Posted in your Discord channel (text list)."
       );
-    } catch {
-      onError?.(
-        "Couldn’t reach Dawn to post. Check your connection and try Send now again."
-      );
-    } finally {
-      setSendingDiscord(false);
     }
+    setSendingDiscord(false);
   }
 
   async function shareList(name: string, items: TodayTodo[]) {
@@ -766,10 +755,9 @@ export function TodayTasks({
       {sendOpen && todos.length > 0 ? (
         <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-4">
           <p className="text-xs text-[var(--color-mist)]">
-            Send now downloads a PNG of this list, then uploads that same file
-            to your Discord channel and @’s you with your message. Set a daily
-            time to ping automatically (text list — PNG is on Send now /
-            Download).
+            Send now posts this list to your Discord channel and @’s you.
+            Use Download PNG if you also want the image (iPhone cannot attach
+            the PNG in the same tap). Set a daily time for an automatic text ping.
           </p>
           <textarea
             value={pingText}

@@ -8,11 +8,7 @@ import {
   IconPlus,
 } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
-import {
-  blobToBase64Png,
-  downloadPngBlob,
-  renderTodoListCardPng,
-} from "@/lib/share-todo-card";
+import { postTodosFromBrowser } from "@/lib/post-todos-client";
 
 type Step = "reminders" | "todos";
 
@@ -139,46 +135,15 @@ export function MorningAfterWake({
   async function finish(sendToDiscord: boolean) {
     setBusy(true);
     if (sendToDiscord && tasks.length) {
-      let image: string | undefined;
-      try {
-        const { blob, filename } = await renderTodoListCardPng({
-          listTitle: "Today",
-          date,
-          items: tasks.map((t) => ({ text: t.text, done: false })),
-        });
-        try {
-          downloadPngBlob(blob, filename);
-        } catch {
-          /* iOS may block download */
-        }
-        const b64 = await blobToBase64Png(blob);
-        if (b64.length > 0 && b64.length < 1_200_000) image = b64;
-      } catch {
-        /* post text list anyway */
-      }
-      try {
-        const res = await fetch("/api/discord/send-todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ date, image }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setBusy(false);
-          setMsg({
-            tone: "error",
-            text: err.error || "Couldn’t post to Discord.",
-          });
-          return;
-        }
-      } catch {
+      const result = await postTodosFromBrowser({ date });
+      if (!result.ok) {
         setBusy(false);
         setMsg({
           tone: "error",
-          text: "Couldn’t reach Dawn to post. Your tasks are still saved — try Send from Today.",
+          text:
+            result.error ||
+            "Couldn’t post to Discord. Your tasks are still saved — try Send from Today.",
         });
-        await setFlow("done");
-        onDone();
         return;
       }
     }

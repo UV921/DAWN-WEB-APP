@@ -5,8 +5,12 @@ Railway’s free credit ends and the bot process dies. Discord bots cannot run o
 | Piece | Where | Cost | Auto on push? |
 |-------|--------|------|----------------|
 | Website + APIs | **Vercel** | Free | Yes |
-| Discord bot | **Northflank** | Free sandbox, always-on | Yes |
+| Discord bot | **Northflank** (`uv9s-team` / `dawn` / `dawn-web-app`) | Free sandbox, always-on | Yes |
 | Database | **Neon** (Postgres) | Free | Shared by both |
+
+**Send now / morning “post today’s tasks” from the website is Vercel**, not the Northflank process. `POST /api/discord/send-todos` uses `DISCORD_BOT_TOKEN` on the Vercel project. The Northflank bot handles slash commands, morning DMs, study voice, and the scheduled daily todo ping.
+
+If a phone still shows an old error after a deploy, it is the Home Screen PWA cache — force-close Dawn and reopen (or Settings → Safari → Clear History for dawn-web-app.vercel.app).
 
 Northflank’s free plan is **always-on** (no sleep). That is why study-hour tracking and morning DMs keep working.
 
