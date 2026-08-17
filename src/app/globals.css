@@ -596,6 +596,58 @@ button,
   }
 }
 
+.feature-film-img {
+  object-position: 50% 48%;
+  will-change: transform, opacity;
+}
+
+.feature-film-img:not(.is-still) {
+  animation: feature-film-drift 28s ease-in-out infinite alternate;
+}
+
+.feature-film-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 16, 24, 0.82) 0%,
+      rgba(7, 16, 24, 0.42) 42%,
+      rgba(7, 16, 24, 0.22) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(7, 16, 24, 0.28) 0%,
+      transparent 28%,
+      rgba(7, 16, 24, 0.72) 100%
+    );
+}
+
+.feature-film-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+@keyframes feature-film-drift {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-1.4%, 1%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-film-img:not(.is-still) {
+    animation: none;
+  }
+}
+
 .mac-chassis {
   overflow: hidden;
   border-radius: 24px;
