@@ -11,6 +11,7 @@ import {
   type BotMessageKey,
   type BotMessages,
   type ChannelPing,
+  channelIdFromInput,
 } from "@/lib/bot-messages";
 
 type HabitOption = { key: string; label: string };
@@ -277,14 +278,14 @@ export function BotMessagesSettings() {
               value={ping.channelId}
               onChange={(e) =>
                 patchPing(ping.id, {
-                  channelId: e.target.value.replace(/\D/g, ""),
+                channelId: channelIdFromInput(e.target.value),
                 })
               }
               inputMode="numeric"
               placeholder={
                 channelId
                   ? `Channel ID — blank uses ${channelId}`
-                  : "Channel ID for this ping"
+                  : "Channel ID or link for this ping"
               }
               className="ui-field mt-2 font-mono text-xs"
             />
@@ -321,11 +322,11 @@ export function BotMessagesSettings() {
           onChange={(e) =>
             setSettings((prev) => ({
               ...prev,
-              todosChannelId: e.target.value.replace(/\D/g, ""),
+              todosChannelId: channelIdFromInput(e.target.value),
             }))
           }
           inputMode="numeric"
-          placeholder="Channel ID for todos"
+          placeholder="Channel ID or discord.com/channels/… link"
           className="ui-field mt-3 font-mono text-xs"
         />
       </div>

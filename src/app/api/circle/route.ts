@@ -10,6 +10,7 @@ import {
 } from "@/lib/habits";
 import { formatDateInZone } from "@/lib/clock";
 import { discordSendDm } from "@/lib/discord-notify";
+import { normChannelId } from "@/lib/bot-messages";
 
 function toClientLog(l: {
   userId: string;
@@ -171,8 +172,8 @@ export async function POST(req: Request) {
   if (action === "create") {
     const name = String(body.name || "Morning Circle").trim().slice(0, 60);
     const discordChannelId = body.discordChannelId
-      ? String(body.discordChannelId).replace(/\D/g, "").slice(0, 32)
-      : process.env.DISCORD_CHANNEL_ID || null;
+      ? normChannelId(body.discordChannelId) || null
+      : normChannelId(process.env.DISCORD_CHANNEL_ID) || null;
 
     let inviteCode = randomInviteCode();
     for (let i = 0; i < 5; i++) {
@@ -243,8 +244,7 @@ export async function POST(req: Request) {
 
   if (action === "updateChannel") {
     const circleId = String(body.circleId);
-    const discordChannelId =
-      String(body.discordChannelId || "").replace(/\D/g, "").slice(0, 32) || null;
+    const discordChannelId = normChannelId(body.discordChannelId) || null;
     const circle = await prisma.accountabilityCircle.findFirst({
       where: { id: circleId, ownerId: session.user.id },
     });
