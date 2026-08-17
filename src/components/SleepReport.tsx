@@ -162,7 +162,15 @@ export function SleepReport({ logs, today, sleepGoal, wakeGoal }: Props) {
           <Stat
             label="Last night"
             value={hoursText(need.lastNightHours)}
-            hint={need.takeHeadline}
+            hint={
+              need.lastNightHours == null
+                ? "Log last bedtime and this wake"
+                : need.vsMinHours == null
+                  ? need.takeHeadline
+                  : need.vsMinHours >= 0
+                    ? `${need.vsMinHours}h over the ${need.minHours}h minimum`
+                    : `${Math.abs(need.vsMinHours)}h under the ${need.minHours}h minimum`
+            }
             tone={
               need.status === "short"
                 ? "bad"
