@@ -15,7 +15,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { LandingNewFeatures } from "@/components/LandingNewFeatures";
 import { LandingPhilosophyFilm } from "@/components/LandingPhilosophyFilm";
 import { LandingStudyFilm } from "@/components/LandingStudyFilm";
-import { NightClosed } from "@/components/NightClosed";
+import { LandingNightDetail } from "@/components/LandingNightDetail";
 import { defaultWindowForKey } from "@/lib/habit-windows";
 import type { LandingSnapshot } from "@/lib/landing-data";
 import { cn } from "@/lib/utils";
@@ -462,12 +462,12 @@ export function LandingPage({ snap }: Props) {
             <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
               Night
             </h2>
+            <p className="mt-2 max-w-[36ch] text-[14px] leading-relaxed text-[#9aa6b2]">
+              Minimum you need. Hours you took. A suggestion for tonight. Then
+              the report and the week’s stats.
+            </p>
             <div className="mt-6 flex min-h-[20rem] flex-1">
-              <NightClosed
-                sleepGoal={SLEEP}
-                wakeGoal={WAKE}
-                className="flex h-full w-full flex-col justify-center rounded-2xl px-5 py-8"
-              />
+              <LandingNightDetail sleepGoal={SLEEP} wakeGoal={WAKE} />
             </div>
           </Fade>
         </div>

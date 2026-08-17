@@ -80,12 +80,12 @@ export function SleepClient({
         <AppNav active="sleep" />
         <div className="app-page mt-6 animate-rise space-y-8 sm:mt-10 sm:space-y-10">
           <div>
-            <p className="ui-kicker">Sleep</p>
+            <p className="ui-kicker">Night</p>
             <h1 className="ui-title mt-2">Tonight sets tomorrow</h1>
             <p className="ui-sub mt-3">
               {inSleepWindow
-                ? "Write tomorrow’s wake goal and one sentence, then log bedtime."
-                : `Set tomorrow opens in your sleep window (${sleepWin.start}–${sleepWin.end}).`}
+                ? "See how much sleep you need (minimum and your plan), how much you took, then close the night."
+                : `Need vs take, suggestion, reports, and stats stay below. Set tomorrow opens in your sleep window (${sleepWin.start}–${sleepWin.end}).`}
             </p>
           </div>
 

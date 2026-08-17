@@ -1,5 +1,6 @@
 import {
   type HabitLogLike,
+  formatLocalDate,
   isBeforeOrAt,
   isSleepEarly,
   timeToMinutes,
@@ -57,7 +58,11 @@ export type CoachPlan = {
   focus: "consistency" | "earlier_bed" | "protect_wake" | "recover" | "maintain";
 };
 
-const TARGET_HOURS = 8;
+/** Adult floor — below this, mornings and willpower usually crack. */
+export const MIN_SLEEP_HOURS = 7;
+/** Healthy target most people should plan for. */
+export const TARGET_SLEEP_HOURS = 8;
+const TARGET_HOURS = TARGET_SLEEP_HOURS;
 
 export function minutesToHHMM(total: number): string {
   let m = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
@@ -546,5 +551,236 @@ export function buildCoachPlan(
     morningWake: wakeGoal,
     steps,
     focus,
+  };
+}
+
+export type NightNeedStatus =
+  | "unknown"
+  | "short"
+  | "minimum"
+  | "on_plan"
+  | "strong";
+
+export type NightNeedTake = {
+  minHours: number;
+  targetHours: number;
+  plannedHours: number;
+  lastNightHours: number | null;
+  weekAvgHours: number | null;
+  takeHours: number | null;
+  vsMinHours: number | null;
+  vsTargetHours: number | null;
+  vsPlannedHours: number | null;
+  sleepDebtHours: number;
+  nightsAtOrAboveMin: number;
+  nightsLogged: number;
+  status: NightNeedStatus;
+  needHeadline: string;
+  takeHeadline: string;
+  gapLine: string;
+  suggestion: string;
+};
+
+export type NightLogReport = {
+  date: string;
+  weekday: string;
+  hours: number | null;
+  bedtime: string | null;
+  wakeTime: string | null;
+  metMin: boolean;
+  metPlan: boolean;
+  score: number;
+  label: string;
+};
+
+function weekdayShort(date: string) {
+  return new Date(date + "T12:00:00").toLocaleDateString(undefined, {
+    weekday: "short",
+  });
+}
+
+function hoursLabel(n: number | null, empty = "—") {
+  return n == null ? empty : `${n}h`;
+}
+
+function signedHours(n: number) {
+  const abs = Math.abs(n);
+  if (n > 0) return `+${abs}h`;
+  if (n < 0) return `−${abs}h`;
+  return "0h";
+}
+
+/** Pair previous bedtime with this morning’s wake — the real night you took. */
+export function hoursFromPrevBedToWake(
+  prevBedtime: string | null | undefined,
+  wakeTime: string | null | undefined
+): number | null {
+  if (!prevBedtime || !wakeTime) return null;
+  return sleepDurationHours(prevBedtime, wakeTime);
+}
+
+export function lastNightHours(
+  logs: HabitLogLike[],
+  today: string
+): number | null {
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  const idx = sorted.findIndex((l) => l.date === today);
+  const todayLog = idx >= 0 ? sorted[idx] : undefined;
+  const prevLog = idx > 0 ? sorted[idx - 1] : undefined;
+  const paired = hoursFromPrevBedToWake(prevLog?.bedtime, todayLog?.wakeTime);
+  if (paired != null) return paired;
+  if (todayLog?.bedtime && todayLog?.wakeTime) {
+    return sleepDurationHours(todayLog.bedtime, todayLog.wakeTime);
+  }
+  return null;
+}
+
+export function buildNightLogReports(
+  logs: HabitLogLike[],
+  today: string,
+  sleepGoal: string,
+  wakeGoal: string,
+  days = 7
+): NightLogReport[] {
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  const byDate = new Map(sorted.map((l) => [l.date, l]));
+  const planned = sleepDurationHours(sleepGoal, wakeGoal);
+  const out: NightLogReport[] = [];
+  const end = new Date(today + "T12:00:00");
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    const date = formatLocalDate(d);
+    const cur = byDate.get(date);
+    const prevDate = new Date(d);
+    prevDate.setDate(d.getDate() - 1);
+    const prevKey = formatLocalDate(prevDate);
+    const prev = byDate.get(prevKey);
+    const hours =
+      hoursFromPrevBedToWake(prev?.bedtime, cur?.wakeTime) ??
+      (cur?.bedtime && cur?.wakeTime
+        ? sleepDurationHours(cur.bedtime, cur.wakeTime)
+        : null);
+    const day = buildDaySleepReport(cur, date, sleepGoal, wakeGoal, sorted);
+    out.push({
+      date,
+      weekday: weekdayShort(date),
+      hours,
+      bedtime: prev?.bedtime ?? cur?.bedtime ?? null,
+      wakeTime: cur?.wakeTime ?? null,
+      metMin: hours != null && hours >= MIN_SLEEP_HOURS,
+      metPlan: hours != null && hours >= Math.min(planned, TARGET_HOURS) - 0.2,
+      score: day.score,
+      label: day.label,
+    });
+  }
+  return out;
+}
+
+export function buildNightNeedTake(
+  logs: HabitLogLike[],
+  today: string,
+  sleepGoal: string,
+  wakeGoal: string
+): NightNeedTake {
+  const plannedHours = sleepDurationHours(sleepGoal, wakeGoal);
+  const nightRows = buildNightLogReports(logs, today, sleepGoal, wakeGoal, 7);
+  const lastNightHoursValue = lastNightHours(logs, today);
+  const loggedHours = nightRows
+    .map((n) => n.hours)
+    .filter((h): h is number => h != null);
+  const weekAvgHours =
+    loggedHours.length > 0
+      ? Math.round(
+          (loggedHours.reduce((a, b) => a + b, 0) / loggedHours.length) * 10
+        ) / 10
+      : null;
+  const takeHours = lastNightHoursValue ?? weekAvgHours;
+  const nightsLogged = loggedHours.length;
+  const nightsAtOrAboveMin = nightRows.filter((n) => n.metMin).length;
+  const sleepDebtHours =
+    loggedHours.length > 0
+      ? Math.round(
+          loggedHours.reduce((a, d) => a + Math.max(0, TARGET_HOURS - d), 0) *
+            10
+        ) / 10
+      : 0;
+
+  const vsMinHours =
+    takeHours != null
+      ? Math.round((takeHours - MIN_SLEEP_HOURS) * 10) / 10
+      : null;
+  const vsTargetHours =
+    takeHours != null
+      ? Math.round((takeHours - TARGET_HOURS) * 10) / 10
+      : null;
+  const vsPlannedHours =
+    takeHours != null
+      ? Math.round((takeHours - plannedHours) * 10) / 10
+      : null;
+
+  let status: NightNeedStatus = "unknown";
+  if (takeHours != null) {
+    if (takeHours < MIN_SLEEP_HOURS) status = "short";
+    else if (takeHours >= 7.5 && takeHours <= 9) status = "strong";
+    else if (takeHours >= Math.min(plannedHours, TARGET_HOURS) - 0.2)
+      status = "on_plan";
+    else status = "minimum";
+  }
+
+  const needHeadline = `${plannedHours}h planned · ${MIN_SLEEP_HOURS}h minimum`;
+  const takeHeadline =
+    lastNightHoursValue != null
+      ? `${lastNightHoursValue}h last night`
+      : weekAvgHours != null
+        ? `${weekAvgHours}h avg this week`
+        : "Not logged yet";
+
+  let gapLine = "Log bedtime and wake to see need vs take.";
+  if (takeHours != null && vsMinHours != null) {
+    if (status === "short") {
+      gapLine = `You took ${hoursLabel(takeHours)} — ${signedHours(vsMinHours)} under the ${MIN_SLEEP_HOURS}h minimum.`;
+    } else if (vsPlannedHours != null && vsPlannedHours < -0.2) {
+      gapLine = `You took ${hoursLabel(takeHours)}. Plan is ${plannedHours}h (${sleepGoal} → ${wakeGoal}) — ${signedHours(vsPlannedHours)}.`;
+    } else if (vsTargetHours != null && vsTargetHours < -0.2) {
+      gapLine = `You cleared the ${MIN_SLEEP_HOURS}h floor. ${signedHours(vsTargetHours)} short of the ${TARGET_HOURS}h target.`;
+    } else {
+      gapLine = `You took ${hoursLabel(takeHours)} — at or above what this night needs.`;
+    }
+  }
+
+  const ideal = idealBedtimeForWake(wakeGoal, TARGET_HOURS);
+  let suggestion: string;
+  if (status === "unknown") {
+    suggestion = `Need at least ${MIN_SLEEP_HOURS}h, plan ${plannedHours}h. In bed by ${sleepGoal} (ideal ${ideal}) so you can take a full night before ${wakeGoal}.`;
+  } else if (status === "short") {
+    suggestion = `You are under the ${MIN_SLEEP_HOURS}h minimum. Shift bedtime toward ${ideal} — keep wake at ${wakeGoal}. Do not sleep in.`;
+  } else if (status === "minimum") {
+    suggestion = `You hit the floor, not the plan. Wind down earlier and be in bed by ${sleepGoal} for ${plannedHours}h.`;
+  } else if (status === "on_plan") {
+    suggestion = `Plan is holding. Same bed window tonight (${sleepGoal}) and the same ${wakeGoal} alarm.`;
+  } else {
+    suggestion = `Strong take. Protect it: phone out, wind-down before ${sleepGoal}, wake ${wakeGoal}.`;
+  }
+
+  return {
+    minHours: MIN_SLEEP_HOURS,
+    targetHours: TARGET_HOURS,
+    plannedHours,
+    lastNightHours: lastNightHoursValue,
+    weekAvgHours,
+    takeHours,
+    vsMinHours,
+    vsTargetHours,
+    vsPlannedHours,
+    sleepDebtHours,
+    nightsAtOrAboveMin,
+    nightsLogged,
+    status,
+    needHeadline,
+    takeHeadline,
+    gapLine,
+    suggestion,
   };
 }
