@@ -547,7 +547,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <WakeHit
         open={Boolean(hit)}
         title={hit?.title || ""}
@@ -562,19 +562,19 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       />
 
       <header>
-        <p className="text-sm text-[var(--color-mist)]">
+        <p className="ui-kicker">
           {friendlyDate(today) || "Today"}
-          {wakeTime ? ` · up at ${wakeTime}` : ` · wake by ${wakeGoal}`}
+          {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
         </p>
-        <h1 className="font-display mt-1 text-3xl text-white">
+        <h1 className="ui-title mt-2">
           {hello ? `${timeWish()}, ${hello}` : timeWish()}
         </h1>
         {todayPlan?.goalText ? (
-          <p className="mt-2 text-sm text-[var(--color-cloud)]">
+          <p className="ui-sub mt-2">
             {todayPlan.goalText}
           </p>
         ) : (
-          <p className="mt-2 text-sm text-[var(--color-mist)]">
+          <p className="ui-sub mt-2">
             Wake up, do your habits, finish your tasks.
           </p>
         )}
@@ -722,10 +722,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
             {reminders.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm"
+                className="ui-row !min-h-0 !py-2.5"
               >
-                <span className="text-white">{r.title}</span>
-                <span className="tabular-nums text-[var(--color-dawn)]">{r.time}</span>
+                <span className="min-w-0 flex-1 text-sm text-white">{r.title}</span>
+                <span className="tabular-nums text-[13px] text-[var(--color-dawn)]">{r.time}</span>
               </li>
             ))}
           </ul>

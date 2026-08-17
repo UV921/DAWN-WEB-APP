@@ -252,7 +252,7 @@ export function CloseDayPanel({
           type="button"
           disabled={busy}
           onClick={() => void saveAndSleep()}
-          className="rounded-full bg-[var(--color-dawn)] px-6 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+          className="ui-btn ui-btn-primary disabled:opacity-50"
         >
           {bedtimeLogged ? "Save tomorrow’s plan" : "Save & going to sleep"}
         </button>

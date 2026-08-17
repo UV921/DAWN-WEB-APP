@@ -37,7 +37,7 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
                 {i + 1}
               </span>
               <span
-                className={`mt-1 block truncate text-xs font-semibold ${
+                className={`mt-1 block truncate text-[13px] font-semibold ${
                   s.done ? "text-[var(--color-night)]" : "text-white"
                 }`}
               >
@@ -52,7 +52,7 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
               </span>
             </>
           );
-          const cls = `rounded-xl border px-1.5 py-2 text-left sm:px-2 sm:py-2.5 ${
+          const cls = `rounded-xl border px-2 py-2.5 text-left sm:px-3 sm:py-3 ${
             s.done
               ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]"
               : "border-white/12 bg-white/[0.03]"

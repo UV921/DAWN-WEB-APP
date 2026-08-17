@@ -46,14 +46,14 @@ export function TodayOverview({
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="ui-card ui-card-compact !text-left">
           <p className="ui-card-label">Early streak</p>
-          <p className="font-display mt-1 text-3xl text-[var(--color-leaf)]">
+          <p className="font-display mt-1 text-[1.65rem] leading-none text-[var(--color-leaf)] sm:text-3xl">
             {earlyStreak}
           </p>
           <p className="mt-1 text-xs text-[var(--color-mist)]">days in a row</p>
         </div>
         <div className="ui-card ui-card-compact !text-left">
           <p className="ui-card-label">Habits</p>
-          <p className="font-display mt-1 text-3xl text-white">
+          <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
             {habitsDone}/{habitsTotal || 1}
           </p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -67,7 +67,7 @@ export function TodayOverview({
           <p className="ui-card-label">Challenge</p>
           {active ? (
             <>
-              <p className="font-display mt-1 text-3xl text-white">
+              <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
                 {challenge?.day}/{challenge?.total}
               </p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -86,7 +86,7 @@ export function TodayOverview({
         </div>
         <div className="ui-card ui-card-compact !text-left">
           <p className="ui-card-label">Level</p>
-          <p className="font-display mt-1 text-3xl text-[var(--color-dawn)]">
+          <p className="font-display mt-1 text-[1.65rem] leading-none text-[var(--color-dawn)] sm:text-3xl">
             Lv {level}
           </p>
           <p className="mt-1 text-xs text-[var(--color-mist)]">

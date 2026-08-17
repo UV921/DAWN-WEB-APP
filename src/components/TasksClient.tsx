@@ -57,7 +57,7 @@ export function TasksClient() {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="tasks" />
-        <div className="mt-4 space-y-6 sm:mt-8">
+        <div className="mt-4 space-y-6 animate-rise sm:mt-8">
           <header>
             <p className="ui-kicker">Tasks</p>
             <h1 className="ui-title mt-2">What to finish</h1>

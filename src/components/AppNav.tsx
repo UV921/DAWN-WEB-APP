@@ -204,19 +204,7 @@ export function AppNav({ active }: { active: NavKey }) {
             <IconPanelClose size={16} />
           </button>
         </div>
-        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#8ba3b8]">
-            Workspace
-          </p>
-          <p className="mt-1 truncate text-[13px] font-medium text-white">
-            Morning loop
-          </p>
-        </div>
-
-        <p className="mt-6 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#6d8090]">
-          Navigation
-        </p>
-        <nav className="mt-2 flex min-h-0 flex-1 flex-col gap-0.5" aria-label="Primary">
+        <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-0.5" aria-label="Primary">
           {PRIMARY.map((l) => {
             const isActive = active === l.key;
             return (
@@ -226,7 +214,7 @@ export function AppNav({ active }: { active: NavKey }) {
                 prefetch
                 className={`inline-flex items-center gap-2.5 rounded-full px-3 py-2 text-[13px] transition ${
                   isActive
-                    ? "bg-white/[0.09] font-medium text-white"
+                    ? "bg-[var(--color-dawn)]/12 font-medium text-white"
                     : "text-[#9aa8b5] hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
@@ -243,7 +231,7 @@ export function AppNav({ active }: { active: NavKey }) {
             prefetch
             className={`inline-flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-[13px] transition ${
               active === "settings"
-                ? "bg-white/[0.09] font-medium text-white"
+                ? "bg-[var(--color-dawn)]/12 font-medium text-white"
                 : "text-[#9aa8b5] hover:bg-white/[0.04] hover:text-white"
             }`}
           >
@@ -266,16 +254,31 @@ export function AppNav({ active }: { active: NavKey }) {
           aria-label="Dawn"
         >
           <DawnSquare size={26} />
-          <span className="truncate text-[15px] font-semibold tracking-tight text-white">
+          <span className="truncate font-display text-[17px] tracking-tight text-white">
             {MOBILE.find((l) => l.key === active)?.label ||
               DESKTOP.find((l) => l.key === active)?.label ||
               "Dawn"}
           </span>
         </Link>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Link
+            href="/leaderboard"
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              active === "leaderboard"
+                ? "text-[var(--color-dawn)]"
+                : "text-[var(--color-mist)]"
+            }`}
+            aria-label="Board"
+          >
+            <FlameIcon size={20} />
+          </Link>
           <Link
             href="/circle"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-mist)]"
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              active === "circle"
+                ? "text-[var(--color-dawn)]"
+                : "text-[var(--color-mist)]"
+            }`}
             aria-label="Friends"
           >
             <UsersIcon size={20} />

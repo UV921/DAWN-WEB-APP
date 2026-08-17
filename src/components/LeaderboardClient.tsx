@@ -137,7 +137,7 @@ export function LeaderboardClient() {
   const top = rows.slice(0, 3);
 
   return (
-    <main className="dawn-bg noise relative min-h-screen">
+    <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="leaderboard" />
         <div className="mt-6 animate-rise sm:mt-10">
@@ -174,33 +174,21 @@ export function LeaderboardClient() {
             <button
               type="button"
               onClick={() => setScope("discord")}
-              className={`rounded-full px-4 py-2 text-sm ${
-                scope === "discord"
-                  ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                  : "border border-white/15 text-[var(--color-mist)]"
-              }`}
+              className={`ui-chip ${scope === "discord" ? "is-on" : ""}`}
             >
               Discord circle
             </button>
             <button
               type="button"
               onClick={() => setScope("circle")}
-              className={`rounded-full px-4 py-2 text-sm ${
-                scope === "circle"
-                  ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                  : "border border-white/15 text-[var(--color-mist)]"
-              }`}
+              className={`ui-chip ${scope === "circle" ? "is-on" : ""}`}
             >
               Friend circle
             </button>
             <button
               type="button"
               onClick={() => setScope("global")}
-              className={`rounded-full px-4 py-2 text-sm ${
-                scope === "global"
-                  ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                  : "border border-white/15 text-[var(--color-mist)]"
-              }`}
+              className={`ui-chip ${scope === "global" ? "is-on" : ""}`}
             >
               Global
             </button>
@@ -232,17 +220,13 @@ export function LeaderboardClient() {
           </p>
 
           {/* Metric */}
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="ui-scroll mt-4 flex gap-2 pb-1">
             {METRICS.map((m) => (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => setMetric(m.id)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm ${
-                  metric === m.id
-                    ? "border border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
-                    : "border border-white/10 text-[var(--color-mist)]"
-                }`}
+                className={`ui-chip shrink-0 ${metric === m.id ? "is-on" : ""}`}
               >
                 {m.label}
               </button>

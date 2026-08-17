@@ -47,7 +47,7 @@ export function ProgressClient() {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="progress" />
-        <div className="mt-8">
+        <div className="mt-8 animate-rise">
           <p className="ui-kicker">Progress</p>
           <h1 className="ui-title mt-2">How you’re doing</h1>
           <p className="ui-sub mt-3 max-w-xl">

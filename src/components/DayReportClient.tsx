@@ -185,12 +185,12 @@ export function DayReportClient({ date }: { date: string }) {
       </nav>
 
       <header>
-        <p className="text-sm text-[var(--color-mist)]">{data.date}</p>
-        <h1 className="font-display mt-1 text-3xl text-white">
+        <p className="ui-kicker">{data.date}</p>
+        <h1 className="ui-title mt-2">
           {friendlyDay(data.date, data.today)}
         </h1>
         {plan?.goalText ? (
-          <p className="mt-2 text-sm text-[var(--color-cloud)]">
+          <p className="ui-sub mt-2">
             {plan.goalText}
           </p>
         ) : null}

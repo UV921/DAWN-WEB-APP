@@ -211,7 +211,7 @@ export function CircleClient() {
   const empty = !loading && circles.length === 0;
 
   return (
-    <main className="dawn-bg noise relative min-h-screen">
+    <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="circle" />
         <div className="mt-6 animate-rise sm:mt-10">
@@ -231,7 +231,7 @@ export function CircleClient() {
             </p>
           )}
 
-          <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5">
+          <section className="mt-8 rounded-2xl border border-white/10 bg-[#0d131a] px-4 py-4 sm:px-5">
             <button
               type="button"
               onClick={() => setShowHow((v) => !v)}

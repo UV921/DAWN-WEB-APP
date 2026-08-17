@@ -78,7 +78,7 @@ export function SleepClient({
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="sleep" />
-        <div className="mt-6 space-y-8 sm:mt-10 sm:space-y-10">
+        <div className="mt-6 animate-rise space-y-8 sm:mt-10 sm:space-y-10">
           <div>
             <p className="ui-kicker">Sleep</p>
             <h1 className="ui-title mt-2">Tonight sets tomorrow</h1>

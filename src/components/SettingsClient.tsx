@@ -52,7 +52,7 @@ export function SettingsClient() {
   }, [session?.user?.wakeGoal, session?.user?.sleepGoal]);
 
   return (
-    <main className="dawn-bg noise relative min-h-screen">
+    <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="settings" />
         <div className="mt-8 animate-rise sm:mt-10">
@@ -66,7 +66,7 @@ export function SettingsClient() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Link
               href="/circle"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className="ui-card px-4 py-4"
             >
               <p className="text-sm font-medium text-white">Friends</p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -76,7 +76,7 @@ export function SettingsClient() {
             </Link>
             <Link
               href="/leaderboard"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className="ui-card px-4 py-4"
             >
               <p className="text-sm font-medium text-white">Board</p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -88,7 +88,7 @@ export function SettingsClient() {
           <div className="mt-8 md:mt-10 md:grid md:grid-cols-[13.75rem_minmax(0,1fr)] md:items-start md:gap-8 lg:gap-10">
             <div
               role="tablist"
-              className="flex gap-1 overflow-x-auto md:sticky md:top-6 md:flex-col md:gap-0.5 md:overflow-visible"
+              className="ui-scroll flex gap-1 md:sticky md:top-6 md:flex-col md:gap-0.5 md:overflow-visible"
             >
               {TABS.map((t) => (
                 <button
@@ -113,7 +113,7 @@ export function SettingsClient() {
               ))}
             </div>
 
-            <div className="mt-8 min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
+            <div className="mt-8 min-w-0 rounded-2xl border border-white/[0.1] bg-[#0d131a] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
               {tab === "morning" ? <MorningClockSettings /> : null}
 
               {tab === "you" ? <ProfileSettings /> : null}
