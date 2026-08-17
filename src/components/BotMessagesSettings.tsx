@@ -56,17 +56,33 @@ export function BotMessagesSettings() {
     setSettings(next);
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ botMessages: next }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setMsg({ tone: "error", text: "Couldn’t save. Try again." });
-      return;
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botMessages: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg({
+          tone: "error",
+          text:
+            res.status === 401
+              ? "Sign in again, then save."
+              : (typeof data.error === "string" && data.error) ||
+                "Couldn’t save. Try again.",
+        });
+        return;
+      }
+      setMsg({ tone: "success", text: "Saved. The bot uses this from now on." });
+    } catch {
+      setMsg({
+        tone: "error",
+        text: "Couldn’t reach Dawn to save. Check your connection.",
+      });
+    } finally {
+      setBusy(false);
     }
-    setMsg({ tone: "success", text: "Saved. The bot uses this from now on." });
   }
 
   function patchMessage(key: BotMessageKey, patch: Partial<BotMessages[BotMessageKey]>) {

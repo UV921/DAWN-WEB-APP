@@ -6,6 +6,13 @@ function botToken() {
   return process.env.DISCORD_BOT_TOKEN?.trim() || "";
 }
 
+function missingBotTokenError() {
+  return (
+    "Dawn’s website is missing DISCORD_BOT_TOKEN. Add the same bot token to Vercel Production — " +
+    "Send now does not use the Northflank bot process."
+  );
+}
+
 /**
  * Invite permission integer:
  * View Channel, Send Messages, Embed Links, Attach Files, Read Message History,
@@ -235,7 +242,7 @@ export async function discordSendChannelMessage(
   opts: DiscordSendOpts
 ): Promise<{ ok: boolean; error?: string }> {
   const token = botToken();
-  if (!token) return { ok: false, error: "DISCORD_BOT_TOKEN not set" };
+  if (!token) return { ok: false, error: missingBotTokenError() };
   const id = normChannelId(channelId);
   if (!id) {
     return {
@@ -296,7 +303,7 @@ export async function discordSendDm(
   opts: DiscordSendOpts
 ): Promise<{ ok: boolean; error?: string }> {
   const token = botToken();
-  if (!token) return { ok: false, error: "DISCORD_BOT_TOKEN not set" };
+  if (!token) return { ok: false, error: missingBotTokenError() };
   if (!discordUserId) return { ok: false, error: "No Discord user id" };
 
   try {
