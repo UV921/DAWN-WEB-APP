@@ -9,9 +9,12 @@ type BeforeInstallPromptEvent = Event & {
 
 const DISMISS_KEY = "dawn-pwa-dismiss-until";
 const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+/** Bump with public/sw.js CACHE so Home Screen apps pick up a new worker. */
+const SW_VERSION = "3";
 
 let cachedPrompt: BeforeInstallPromptEvent | null = null;
 const promptSubs = new Set<(event: BeforeInstallPromptEvent | null) => void>();
+let reloadingForSw = false;
 
 function isStandaloneWindow() {
   return (
@@ -53,11 +56,35 @@ export function PwaRegister() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
+      const onControllerChange = () => {
+        if (reloadingForSw) return;
+        try {
+          if (sessionStorage.getItem("dawn-sw-reloaded") === SW_VERSION) return;
+          sessionStorage.setItem("dawn-sw-reloaded", SW_VERSION);
+        } catch {
+          /* private mode */
+        }
+        reloadingForSw = true;
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        onControllerChange
+      );
+      navigator.serviceWorker.register(`/sw.js?v=${SW_VERSION}`).catch(() => {
         /* ignore */
       });
+      return () => {
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          onControllerChange
+        );
+      };
     }
+    return undefined;
+  }, []);
 
+  useEffect(() => {
     if (isStandaloneWindow()) {
       setInstalled(true);
       return;

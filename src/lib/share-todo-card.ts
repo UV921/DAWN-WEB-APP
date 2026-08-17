@@ -108,14 +108,26 @@ export async function renderTodoListCardPng(opts: {
   return { blob, filename: todoCardFilename(opts.listTitle) };
 }
 
-/** Always save the PNG locally — does not open the share sheet. */
-export function downloadPngBlob(blob: Blob, filename: string) {
+/** Save the PNG locally. Never call this during Send now — iOS treats a blob
+ *  download as navigation and aborts the Discord POST. */
+export async function downloadPngBlob(blob: Blob, filename: string) {
+  const file = new File([blob], filename, { type: "image/png" });
+  const nav = navigator as Navigator & {
+    canShare?: (data: ShareData) => boolean;
+  };
+  if (nav.share && nav.canShare?.({ files: [file] })) {
+    await nav.share({ files: [file], title: filename });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
   a.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 export function blobToBase64Png(blob: Blob): Promise<string> {

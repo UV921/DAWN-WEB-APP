@@ -10,6 +10,8 @@ Railway’s free credit ends and the bot process dies. Discord bots cannot run o
 
 Northflank’s free plan is **always-on** (no sleep). That is why study-hour tracking and morning DMs keep working.
 
+**Send now** on the website is a Vercel API (`POST /api/discord/send-todos`). The Northflank bot is only slash commands, DMs, and the scheduled daily ping.
+
 Until the new host is live, run the bot on your computer: `npm run bot`.
 
 ---

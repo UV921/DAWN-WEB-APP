@@ -11,6 +11,9 @@ import {
   userTodoChannelIds,
 } from "@/lib/todo-discord";
 
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
 /** Post the day's task list into the user's Discord channel. */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
