@@ -10,6 +10,8 @@ import {
   mergeLogChecks,
 } from "@/lib/habits";
 import { enrollDiscordFriend } from "@/lib/discord-enroll";
+import { combinedScore } from "@/lib/circle-board";
+import { studyMinutesByUser } from "@/lib/study-stats";
 
 export type LeaderboardMetric =
   | "earlyStreak"
@@ -19,7 +21,8 @@ export type LeaderboardMetric =
   | "totalEarly"
   | "studyWeek"
   | "studyTotal"
-  | "habits";
+  | "habits"
+  | "combined";
 
 type Scope = "discord" | "global" | "circle";
 
@@ -267,53 +270,15 @@ export async function GET(req: Request) {
   }
 
   const userIdsForStudy = users.map((u) => u.id);
-  const [studyWeekRows, studyAllRows, openSessions, habitDefs] = await Promise.all([
-    prisma.studySession.groupBy({
-      by: ["userId"],
-      where: {
-        userId: { in: userIdsForStudy },
-        endedAt: { not: null },
-        date: { gte: weekStart },
-      },
-      _sum: { minutes: true },
-    }),
-    prisma.studySession.groupBy({
-      by: ["userId"],
-      where: {
-        userId: { in: userIdsForStudy },
-        endedAt: { not: null },
-      },
-      _sum: { minutes: true },
-    }),
-    prisma.studySession.findMany({
-      where: { userId: { in: userIdsForStudy }, endedAt: null },
-      select: { userId: true, startedAt: true, date: true },
-    }),
+  const [studyMaps, habitDefs] = await Promise.all([
+    studyMinutesByUser(userIdsForStudy, weekStart),
     prisma.habit.findMany({
       where: { userId: { in: userIdsForStudy }, active: true },
       select: { userId: true, key: true },
     }),
   ]);
-
-  const studyWeekMap = new Map<string, number>();
-  const studyTotalMap = new Map<string, number>();
-  for (const r of studyWeekRows) {
-    studyWeekMap.set(r.userId, r._sum.minutes || 0);
-  }
-  for (const r of studyAllRows) {
-    studyTotalMap.set(r.userId, r._sum.minutes || 0);
-  }
-  const now = Date.now();
-  for (const s of openSessions) {
-    const extra = Math.max(
-      0,
-      Math.round((now - s.startedAt.getTime()) / 60_000)
-    );
-    studyTotalMap.set(s.userId, (studyTotalMap.get(s.userId) || 0) + extra);
-    if (s.date >= weekStart) {
-      studyWeekMap.set(s.userId, (studyWeekMap.get(s.userId) || 0) + extra);
-    }
-  }
+  const studyWeekMap = studyMaps.week;
+  const studyTotalMap = studyMaps.total;
   const habitKeysByUser = new Map<string, string[]>();
   for (const h of habitDefs) {
     const list = habitKeysByUser.get(h.userId) || [];
@@ -342,15 +307,19 @@ export async function GET(req: Request) {
     const habitSlots = Math.max(1, keys.length) * 7;
     const habitPct = Math.round((habitHits / habitSlots) * 100);
 
+    const studyWeek = studyWeekMap.get(u.id) || 0;
+    const studyTotal = studyTotalMap.get(u.id) || 0;
+    const combined = combinedScore(habitPct, studyWeek);
     const scores: Record<LeaderboardMetric, number> = {
       earlyStreak,
       openStreak: u.openStreak,
       xp: u.xp,
       consistency,
       totalEarly: u.totalEarlyWakes,
-      studyWeek: studyWeekMap.get(u.id) || 0,
-      studyTotal: studyTotalMap.get(u.id) || 0,
+      studyWeek,
+      studyTotal,
       habits: habitPct,
+      combined,
     };
 
     return {
@@ -372,9 +341,10 @@ export async function GET(req: Request) {
       wakeOnTime7,
       checkedIn7,
       consistency,
-      studyWeek: studyWeekMap.get(u.id) || 0,
-      studyTotal: studyTotalMap.get(u.id) || 0,
+      studyWeek,
+      studyTotal,
       habits: habitPct,
+      combined,
       score: scores[metric] ?? earlyStreak,
       isMe: u.id === session.user.id,
     };
@@ -415,6 +385,7 @@ export async function GET(req: Request) {
       studyWeek: "Study hours this week",
       studyTotal: "Study hours all time",
       habits: "Habit completion · 7 days",
+      combined: "Habits + study (combined)",
     },
     scoreKind:
       metric === "studyWeek" || metric === "studyTotal"

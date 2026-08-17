@@ -16,7 +16,8 @@ type Metric =
   | "totalEarly"
   | "studyWeek"
   | "studyTotal"
-  | "habits";
+  | "habits"
+  | "combined";
 
 type Row = {
   rank: number;
@@ -37,6 +38,7 @@ type Row = {
   studyWeek?: number;
   studyTotal?: number;
   habits?: number;
+  combined?: number;
   score: number;
   isMe: boolean;
 };
@@ -44,12 +46,13 @@ type Row = {
 type CircleOpt = { id: string; name: string };
 
 const METRICS: { id: Metric; label: string; unit: string }[] = [
+  { id: "combined", label: "Habits + study", unit: "score" },
   { id: "studyWeek", label: "Study · week", unit: "studied" },
   { id: "studyTotal", label: "Study · all time", unit: "studied" },
   { id: "habits", label: "Habits · 7d", unit: "%" },
+  { id: "consistency", label: "7-day on-time", unit: "%" },
   { id: "earlyStreak", label: "Early streak", unit: "days" },
   { id: "openStreak", label: "Open streak", unit: "days" },
-  { id: "consistency", label: "7-day on-time", unit: "%" },
   { id: "xp", label: "XP", unit: "xp" },
   { id: "totalEarly", label: "Lifetime early", unit: "wakes" },
 ];
@@ -73,7 +76,7 @@ function formatScore(metric: Metric, score: number) {
 
 export function LeaderboardClient() {
   const { data: session } = useSession();
-  const [metric, setMetric] = useState<Metric>("studyWeek");
+  const [metric, setMetric] = useState<Metric>("combined");
   const [scope, setScope] = useState<"discord" | "global" | "circle">("discord");
   const [circleId, setCircleId] = useState("");
   const [circles, setCircles] = useState<CircleOpt[]>([]);
@@ -109,6 +112,16 @@ export function LeaderboardClient() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const s = p.get("scope");
+    const m = p.get("metric");
+    const c = p.get("circleId");
+    if (s === "circle" || s === "global" || s === "discord") setScope(s);
+    if (m && METRICS.some((x) => x.id === m)) setMetric(m as Metric);
+    if (c) setCircleId(c);
+  }, []);
+
   if (!session?.user) {
     return (
       <main className="dawn-bg min-h-screen">
@@ -132,10 +145,10 @@ export function LeaderboardClient() {
           <h1 className="ui-title mt-2">Who showed up</h1>
           <p className="ui-sub mt-3">
             {scope === "discord"
-              ? "People on your Discord server who logged into Dawn — ranked by study hours, habits, and streaks. Time only counts after they sign in with Discord."
+              ? "People on your Discord server who logged into Dawn — ranked by habit consistency, study hours, and a combined score. Time only counts after they sign in with Discord."
               : scope === "circle"
-                ? "Your friend circle only. Invite people from Friends if this looks empty."
-                : "Everyone on Dawn — ranked by study, habits, and streaks."}{" "}
+                ? "Your friend circle only. Add Discord friends from Friends if this looks empty."
+                : "Everyone on Dawn — ranked by habits, study, and streaks."}{" "}
             {today ? `Updated for ${today}.` : ""}{" "}
             Share a card of your rank or the board.
           </p>
@@ -214,7 +227,7 @@ export function LeaderboardClient() {
             {scope === "discord"
               ? "Shows Dawn users who share your Discord server board (login with Discord + bot board)."
               : scope === "circle"
-                ? "Only people in the invite-code friend circle."
+                ? "Only people in the invite-code / Discord friend circle."
                 : "Everyone who finished Dawn onboarding."}
           </p>
 
@@ -448,7 +461,8 @@ export function LeaderboardClient() {
           <p className="mt-8 text-xs text-[var(--color-mist)]">
             <strong className="text-white">Discord circle</strong> = people who
             logged into Dawn with Discord on your Dawn server. Friend circle =
-            invite-code groups. Early streak = on-time wakes in a row.
+            invite-code groups (you can also add Discord / same-server friends
+            in one tap). Combined score = 7-day habit % + weekly study hours.
           </p>
         </div>
       </div>
