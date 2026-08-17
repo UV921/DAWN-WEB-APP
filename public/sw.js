@@ -1,10 +1,10 @@
-/* Dawn PWA service worker — cache shell for offline open.
+/* Dawn PWA service worker — offline icons + last HTML fallback.
+   Do not precache HTML routes. /dashboard redirects when logged out, and
+   cache.addAll() then fails the whole install — the old worker keeps serving
+   hashed /_next chunks from a previous deploy and the app white-screens.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v5";
+const CACHE = "dawn-v6";
 const PRECACHE = [
-  "/",
-  "/login",
-  "/dashboard",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -12,15 +12,23 @@ const PRECACHE = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE)
+      .then((cache) =>
+        Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => undefined)))
+      )
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      )
+      .then(() => self.clients.claim())
   );
 });
 

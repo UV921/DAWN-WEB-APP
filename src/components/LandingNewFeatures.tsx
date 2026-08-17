@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useInView,
-  useReducedMotion,
-} from "motion/react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { IconGoogle } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -92,23 +87,19 @@ export function LandingNewFeatures() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.85, ease: EASE }}
         >
-          <AnimatePresence mode="sync" initial={false}>
-            <motion.img
-              key={feature.image}
-              src={feature.image}
-              alt={feature.alt}
-              width={1536}
-              height={864}
-              className={cn(
-                "feature-film-img absolute inset-0 h-full w-full object-cover",
-                still && "is-still"
-              )}
-              initial={reduce ? false : { opacity: 0, scale: 1.08 }}
-              animate={{ opacity: 1, scale: 1.02 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.9, ease: EASE }}
-            />
-          </AnimatePresence>
+          <img
+            key={feature.image}
+            src={feature.image}
+            alt={feature.alt}
+            width={1536}
+            height={864}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              "feature-film-img absolute inset-0 h-full w-full object-cover",
+              still && "is-still"
+            )}
+          />
           <div aria-hidden className="feature-film-vignette" />
           <div aria-hidden className="feature-film-grain" />
 
@@ -152,6 +143,8 @@ export function LandingNewFeatures() {
                     alt=""
                     width={640}
                     height={360}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e12] to-transparent" />
