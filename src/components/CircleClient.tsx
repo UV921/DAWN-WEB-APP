@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
+import { DEFAULT_HABITS, type HabitDef } from "@/lib/habits";
+import { parseInviteInput } from "@/lib/circle-invite";
+import type { CircleBoardSort } from "@/lib/circle-board";
 import {
-  DEFAULT_HABITS,
-  completedCount,
-  isHabitDone,
-  type HabitDef,
-} from "@/lib/habits";
+  CircleAddFriends,
+  type DiscordGroupInfo,
+  type FriendSuggestion,
+} from "@/components/CircleAddFriends";
+import {
+  CircleRankBoard,
+  type BoardMember,
+} from "@/components/CircleRankBoard";
 
 type MemberUser = {
   id: string;
@@ -19,31 +25,6 @@ type MemberUser = {
   openStreak?: number;
   wakeGoal?: string;
   level?: number;
-};
-
-type Log = {
-  date?: string;
-  bedtime?: string | null;
-  checks?: Record<string, boolean>;
-  sleepEarly?: boolean;
-  noPhone?: boolean;
-  wakeEarly?: boolean;
-  gym?: boolean;
-  reading?: boolean;
-  quran?: boolean;
-  wakeTime: string | null;
-};
-
-type MemberStats = {
-  checkedIn: boolean;
-  wakeOnTime: boolean;
-  earlyStreak: number;
-  openStreak: number;
-  level: number;
-  xp: number;
-  wakeGoal: string;
-  wakeDays7: number;
-  needsNudge: boolean;
 };
 
 type Circle = {
@@ -60,11 +41,7 @@ type Board = {
   circleId: string;
   date: string;
   summary: { total: number; up: number; onTime: number; needNudge: number };
-  members: {
-    user: MemberUser;
-    log: Log | null;
-    stats: MemberStats;
-  }[];
+  members: BoardMember[];
 };
 
 export function CircleClient() {
@@ -72,6 +49,11 @@ export function CircleClient() {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [howTo, setHowTo] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);
+  const [discordGroup, setDiscordGroup] = useState<DiscordGroupInfo | null>(
+    null
+  );
+  const [hasDiscord, setHasDiscord] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [circleName, setCircleName] = useState("Morning Circle");
   const [message, setMessage] = useState("");
@@ -80,6 +62,11 @@ export function CircleClient() {
   const [busy, setBusy] = useState(false);
   const [showHow, setShowHow] = useState(true);
   const [myHabits, setMyHabits] = useState<HabitDef[]>([...DEFAULT_HABITS]);
+  const [boardSort, setBoardSort] = useState<CircleBoardSort>("combined");
+  const [addTargetId, setAddTargetId] = useState("");
+  const [searchQ, setSearchQ] = useState("");
+  const [searchHits, setSearchHits] = useState<FriendSuggestion[]>([]);
+  const autoJoin = useRef(false);
 
   const load = useCallback(async () => {
     const [circleRes, habitRes] = await Promise.all([
@@ -98,6 +85,10 @@ export function CircleClient() {
     setCircles(data.circles || []);
     setBoards(data.boards || []);
     setHowTo(data.howTo || []);
+    setSuggestions(data.suggestions || []);
+    setDiscordGroup(data.discordGroup || null);
+    setHasDiscord(Boolean(data.hasDiscord));
+    setAddTargetId((current) => current || data.circles?.[0]?.id || "");
     setLoading(false);
   }, []);
 
@@ -129,13 +120,19 @@ export function CircleClient() {
     const data = await api("create", { name: circleName });
     if (!data) return;
     setMessage(
-      `Circle created. Share code ${data.circle.inviteCode} with your friend.`
+      `Circle created. Share code ${data.circle.inviteCode} — or add Discord friends below.`
     );
+    if (data.circle?.id) setAddTargetId(data.circle.id);
     await load();
   }
 
-  async function joinCircle() {
-    const data = await api("join", { inviteCode });
+  async function joinCircle(code = inviteCode) {
+    const parsed = parseInviteInput(code);
+    if (!parsed) {
+      setError("Paste an invite code or link");
+      return;
+    }
+    const data = await api("join", { inviteCode: parsed });
     if (!data) return;
     setMessage("You’re in. Check the board below.");
     setInviteCode("");
@@ -154,6 +151,15 @@ export function CircleClient() {
   async function copyInviteLink(code: string) {
     const url = `${window.location.origin}/circle?join=${encodeURIComponent(code)}`;
     try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join my Dawn circle",
+          text: `Use code ${code} or open this link`,
+          url,
+        });
+        setMessage("Invite shared.");
+        return;
+      }
       await navigator.clipboard.writeText(url);
       setMessage("Invite link copied — send it to your friend.");
     } catch {
@@ -164,7 +170,22 @@ export function CircleClient() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const join = params.get("join");
-    if (join) setInviteCode(join.toUpperCase());
+    if (!join || autoJoin.current) return;
+    autoJoin.current = true;
+    const parsed = parseInviteInput(join);
+    setInviteCode(parsed);
+    void (async () => {
+      const data = await api("join", { inviteCode: parsed });
+      if (data) {
+        setMessage("You’re in from the invite link. Check the board below.");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("join");
+        window.history.replaceState({}, "", url.toString());
+        await load();
+      }
+    })();
+    // Join once from the URL; load/api are stable enough for this mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!session?.user) {
@@ -178,8 +199,6 @@ export function CircleClient() {
     );
   }
 
-  const habitKeys = myHabits.map((h) => h.key);
-  const totalHabits = Math.max(habitKeys.length, 1);
   const empty = !loading && circles.length === 0;
 
   return (
@@ -190,8 +209,8 @@ export function CircleClient() {
           <p className="ui-kicker">Accountability</p>
           <h1 className="ui-title mt-2">Friend circle</h1>
           <p className="ui-sub mt-3">
-            Create or join a circle, share the code, then check in on Today —
-            friends see who’s up. Discord nudges are optional.
+            Add friends with an invite code, from Discord, or from the same
+            server — then rank each other on habit consistency and study hours.
           </p>
 
           {(message || error) && (
@@ -202,7 +221,6 @@ export function CircleClient() {
             </p>
           )}
 
-          {/* How it works */}
           <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5">
             <button
               type="button"
@@ -222,10 +240,9 @@ export function CircleClient() {
                   {(howTo.length
                     ? howTo
                     : [
-                        "Create a circle.",
-                        "Share the invite code.",
-                        "Friend joins on this page.",
-                        "Both check in on Today — board updates.",
+                        "Create a circle or paste an invite code.",
+                        "Add Discord / same-server friends in one tap.",
+                        "The board ranks habits and study hours.",
                       ]
                   ).map((step) => (
                     <li key={step}>{step}</li>
@@ -234,16 +251,16 @@ export function CircleClient() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     {
-                      t: "Today board",
-                      d: "See who’s checked in, wake time, and habits done.",
+                      t: "Invite code",
+                      d: "Share a code or link. Friends can paste either — even a full URL.",
                     },
                     {
-                      t: "Nudge",
-                      d: "Ping a friend on Discord if they’re still asleep (bot must run).",
+                      t: "Discord add",
+                      d: "One tap for people already on Dawn with Discord, or in your server.",
                     },
                     {
-                      t: "Discord channel",
-                      d: "Owner can attach a channel so check-ins post for the group.",
+                      t: "Rank board",
+                      d: "Habits · 7 days, study hours this week, on-time wakes, or combined.",
                     },
                   ].map((c) => (
                     <div
@@ -265,62 +282,59 @@ export function CircleClient() {
                   >
                     Settings → Discord
                   </Link>{" "}
-                  so nudges and DMs work.
+                  so nudges, study hours, and DMs work.
                 </p>
               </div>
             ) : null}
           </section>
 
-          {/* Create / Join */}
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.06] px-5 py-5">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-                Start a circle
-              </p>
-              <p className="mt-2 text-sm text-[var(--color-mist)]">
-                You’re the owner. You’ll get an invite code to share.
-              </p>
-              <input
-                value={circleName}
-                onChange={(e) => setCircleName(e.target.value)}
-                placeholder="Circle name"
-                className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
-              />
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void createCircle()}
-                className="mt-3 rounded-full bg-[var(--color-dawn)] px-6 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
-              >
-                Create circle
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
-                Join a friend
-              </p>
-              <p className="mt-2 text-sm text-[var(--color-mist)]">
-                Paste the code they sent you (or open their invite link).
-              </p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  placeholder="INVITE CODE"
-                  className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono tracking-widest text-white outline-none focus:border-[var(--color-dawn)]"
-                />
-                <button
-                  type="button"
-                  disabled={busy || !inviteCode.trim()}
-                  onClick={() => void joinCircle()}
-                  className="rounded-full border border-white/20 px-6 py-3 text-sm text-white disabled:opacity-40"
-                >
-                  Join
-                </button>
-              </div>
-            </div>
-          </div>
+          <CircleAddFriends
+            inviteCode={inviteCode}
+            onInviteCode={setInviteCode}
+            onJoin={() => void joinCircle()}
+            circleName={circleName}
+            onCircleName={setCircleName}
+            onCreate={() => void createCircle()}
+            busy={busy}
+            hasDiscord={hasDiscord}
+            discordGroup={discordGroup}
+            onJoinDiscordGroup={async () => {
+              const data = await api("joinDiscordGroup");
+              if (data) {
+                setMessage("You’re on the Discord server board.");
+                await load();
+              }
+            }}
+            suggestions={suggestions}
+            circles={circles}
+            addTargetId={addTargetId}
+            onAddTarget={setAddTargetId}
+            onAddMember={async (userId) => {
+              const circleId = addTargetId || circles[0]?.id;
+              if (!circleId) {
+                setError("Create a circle first, then add friends.");
+                return;
+              }
+              const data = await api("addMember", { circleId, userId });
+              if (data) {
+                setMessage(`Added ${data.name || "friend"} to the circle.`);
+                setSearchHits((prev) => prev.filter((p) => p.id !== userId));
+                await load();
+              }
+            }}
+            searchQ={searchQ}
+            onSearchQ={setSearchQ}
+            onSearch={async () => {
+              const data = await api("search", {
+                q: searchQ,
+                excludeIds: (circles.find((c) => c.id === addTargetId) ||
+                  circles[0]
+                )?.members.map((m) => m.userId),
+              });
+              if (data) setSearchHits(data.results || []);
+            }}
+            searchHits={searchHits}
+          />
 
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Loading circles…</p>
@@ -328,8 +342,9 @@ export function CircleClient() {
             <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-8 text-center">
               <p className="font-display text-2xl text-white">No circle yet</p>
               <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-mist)]">
-                Create one above and share the invite code, or paste a friend’s
-                code to join. Once you’re in, today’s board shows who’s awake.
+                Create one, paste a friend’s code, join the Discord server
+                group, or add someone already on Dawn with Discord. The board
+                ranks habits and study hours.
               </p>
             </div>
           ) : (
@@ -366,7 +381,6 @@ export function CircleClient() {
                       ) : null}
                     </div>
 
-                    {/* Invite tools */}
                     <div className="mt-5 flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/10 px-4 py-2 font-mono text-sm text-[var(--color-dawn)]">
                         {circle.inviteCode}
@@ -385,7 +399,20 @@ export function CircleClient() {
                         onClick={() => void copyInviteLink(circle.inviteCode)}
                         className="rounded-full border border-white/20 px-4 py-2 text-xs text-white"
                       >
-                        Copy invite link
+                        Share invite
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          const data = await api("shareInvite", {
+                            circleId: circle.id,
+                          });
+                          if (data) setMessage("Invite posted to Discord.");
+                        }}
+                        className="rounded-full border border-white/20 px-4 py-2 text-xs text-white"
+                      >
+                        Post to Discord
                       </button>
                       {isOwner ? (
                         <button
@@ -396,9 +423,7 @@ export function CircleClient() {
                               circleId: circle.id,
                             });
                             if (data) {
-                              setMessage(
-                                `New code: ${data.circle.inviteCode}`
-                              );
+                              setMessage(`New code: ${data.circle.inviteCode}`);
                               await load();
                             }
                           }}
@@ -482,160 +507,36 @@ export function CircleClient() {
                       </div>
                     ) : null}
 
-                    {/* Member board */}
-                    <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                      {(board?.members || []).map((row) => {
-                        const score = row.log
-                          ? completedCount(
-                              {
-                                date: row.log.date || "",
-                                wakeTime: row.log.wakeTime,
-                                bedtime: row.log.bedtime ?? null,
-                                checks: row.log.checks,
-                                sleepEarly: row.log.sleepEarly,
-                                noPhone: row.log.noPhone,
-                                wakeEarly: row.log.wakeEarly,
-                                gym: row.log.gym,
-                                reading: row.log.reading,
-                                quran: row.log.quran,
-                              },
-                              habitKeys
-                            )
-                          : 0;
-                        const isMe = row.user.id === session?.user?.id;
-                        return (
-                          <li
-                            key={row.user.id}
-                            className={`rounded-2xl border p-4 ${
-                              row.stats.checkedIn
-                                ? "border-[var(--color-dawn)]/35 bg-[var(--color-dawn)]/[0.07]"
-                                : "border-white/10 bg-white/[0.03]"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-3">
-                                {row.user.image ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={row.user.image}
-                                    alt=""
-                                    className="h-10 w-10 rounded-full border border-white/20"
-                                  />
-                                ) : (
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm text-white">
-                                    {(row.user.name || "?").slice(0, 1)}
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <p className="truncate font-medium text-white">
-                                    {row.user.name || "Member"}
-                                    {isMe ? " · you" : ""}
-                                  </p>
-                                  <p className="text-xs text-[var(--color-mist)]">
-                                    Lv {row.stats.level} · open {row.stats.openStreak}d ·
-                                    early {row.stats.earlyStreak}d
-                                  </p>
-                                </div>
-                              </div>
-                              <span
-                                className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider ${
-                                  row.stats.wakeOnTime
-                                    ? "bg-[var(--color-leaf)]/20 text-[var(--color-leaf)]"
-                                    : row.stats.checkedIn
-                                      ? "bg-[var(--color-dawn)]/20 text-[var(--color-dawn)]"
-                                      : "bg-white/10 text-[var(--color-mist)]"
-                                }`}
-                              >
-                                {row.stats.wakeOnTime
-                                  ? "On time"
-                                  : row.stats.checkedIn
-                                    ? "Up"
-                                    : "Not yet"}
-                              </span>
-                            </div>
-
-                            <p className="mt-3 text-sm text-[var(--color-mist)]">
-                              {row.log
-                                ? `${score}/${totalHabits} habits · woke ${row.log.wakeTime || "—"} · goal ${row.stats.wakeGoal}`
-                                : `Not checked in · wake goal ${row.stats.wakeGoal}`}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--color-mist)]">
-                              Last 7 days early wakes · {row.stats.wakeDays7}/7
-                            </p>
-
-                            {row.log ? (
-                              <div className="mt-3 flex flex-wrap gap-1.5">
-                                {myHabits.map((h) => (
-                                  <span
-                                    key={h.key}
-                                    className={`rounded-full px-2 py-0.5 text-[11px] ${
-                                      isHabitDone(row.log!, h.key)
-                                        ? "bg-[var(--color-dawn)]/20 text-[var(--color-dawn)]"
-                                        : "bg-white/5 text-white/35"
-                                    }`}
-                                  >
-                                    {h.label}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {!isMe && row.stats.needsNudge ? (
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={async () => {
-                                    const data = await api("nudge", {
-                                      circleId: circle.id,
-                                      userId: row.user.id,
-                                    });
-                                    if (data?.ok) {
-                                      setMessage(
-                                        `Nudged ${row.user.name || "friend"} on Discord.`
-                                      );
-                                    }
-                                  }}
-                                  className="rounded-full bg-[var(--color-dawn)] px-4 py-1.5 text-xs font-semibold text-[var(--color-night)] disabled:opacity-50"
-                                >
-                                  Nudge on Discord
-                                </button>
-                              ) : null}
-                              {isOwner && !isMe ? (
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={async () => {
-                                    if (
-                                      !confirm(
-                                        `Remove ${row.user.name || "member"}?`
-                                      )
-                                    )
-                                      return;
-                                    const data = await api("removeMember", {
-                                      circleId: circle.id,
-                                      userId: row.user.id,
-                                    });
-                                    if (data) {
-                                      setMessage("Member removed.");
-                                      await load();
-                                    }
-                                  }}
-                                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-[var(--color-mist)]"
-                                >
-                                  Remove
-                                </button>
-                              ) : null}
-                              {!row.user.discordId && !isMe ? (
-                                <span className="text-[11px] text-[var(--color-mist)]">
-                                  No Discord linked — nudge won’t work yet
-                                </span>
-                              ) : null}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <CircleRankBoard
+                      members={board?.members || []}
+                      sort={boardSort}
+                      onSort={setBoardSort}
+                      myHabits={myHabits}
+                      meId={session.user.id}
+                      isOwner={isOwner}
+                      busy={busy}
+                      circleId={circle.id}
+                      onNudge={async (userId, name) => {
+                        const data = await api("nudge", {
+                          circleId: circle.id,
+                          userId,
+                        });
+                        if (data?.ok) {
+                          setMessage(`Nudged ${name || "friend"} on Discord.`);
+                        }
+                      }}
+                      onRemove={async (userId, name) => {
+                        if (!confirm(`Remove ${name || "member"}?`)) return;
+                        const data = await api("removeMember", {
+                          circleId: circle.id,
+                          userId,
+                        });
+                        if (data) {
+                          setMessage("Member removed.");
+                          await load();
+                        }
+                      }}
+                    />
                   </section>
                 );
               })}

@@ -1,17 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { discordFriendsInviteCode } from "@/lib/circle-invite";
 import { normChannelId } from "@/lib/bot-messages";
 
 /** Put a Discord-logged Dawn user on the server board + Discord friends circle. */
 export async function enrollDiscordFriend(opts: {
   userId: string;
   discordId: string | null;
-}) {
+}): Promise<{ circleId: string | null; tracked: boolean }> {
   const guildId = process.env.DISCORD_GUILD_ID?.trim() || "";
   const channelId = normChannelId(process.env.DISCORD_CHANNEL_ID);
-  if (!opts.discordId) return;
+  if (!opts.discordId) return { circleId: null, tracked: false };
 
+  let tracked = false;
   if (guildId && channelId) {
-    const tracked = await prisma.trackedChannel.upsert({
+    const board = await prisma.trackedChannel.upsert({
       where: { channelId },
       create: {
         channelId,
@@ -23,18 +25,19 @@ export async function enrollDiscordFriend(opts: {
     await prisma.trackedMember.upsert({
       where: {
         trackedChannelId_userId: {
-          trackedChannelId: tracked.id,
+          trackedChannelId: board.id,
           userId: opts.userId,
         },
       },
-      create: { trackedChannelId: tracked.id, userId: opts.userId },
+      create: { trackedChannelId: board.id, userId: opts.userId },
       update: {},
     });
+    tracked = true;
   }
 
-  if (!guildId) return;
+  const inviteCode = discordFriendsInviteCode(guildId);
+  if (!inviteCode) return { circleId: null, tracked };
 
-  const inviteCode = `DS${guildId.replace(/\D/g, "").slice(-8).toUpperCase() || "FRIENDS"}`;
   let circle = await prisma.accountabilityCircle.findUnique({
     where: { inviteCode },
   });
@@ -48,7 +51,7 @@ export async function enrollDiscordFriend(opts: {
         members: { create: { userId: opts.userId } },
       },
     });
-    return;
+    return { circleId: circle.id, tracked };
   }
   await prisma.circleMember.upsert({
     where: {
@@ -57,4 +60,5 @@ export async function enrollDiscordFriend(opts: {
     create: { circleId: circle.id, userId: opts.userId },
     update: {},
   });
+  return { circleId: circle.id, tracked };
 }

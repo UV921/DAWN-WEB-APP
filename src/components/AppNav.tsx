@@ -272,24 +272,33 @@ export function AppNav({ active }: { active: NavKey }) {
               "Dawn"}
           </span>
         </Link>
-        <Link
-          href="/settings"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          aria-label="Your account"
-        >
-          {data?.user?.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.user.image}
-              alt=""
-              className="h-8 w-8 rounded-full border border-white/20 object-cover"
-            />
-          ) : (
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[13px] font-medium text-white">
-              {(data?.user?.name || "?").slice(0, 1).toUpperCase()}
-            </span>
-          )}
-        </Link>
+        <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/circle"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-mist)]"
+            aria-label="Friends"
+          >
+            <UsersIcon size={20} />
+          </Link>
+          <Link
+            href="/settings"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            aria-label="Your account"
+          >
+            {data?.user?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.user.image}
+                alt=""
+                className="h-8 w-8 rounded-full border border-white/20 object-cover"
+              />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[13px] font-medium text-white">
+                {(data?.user?.name || "?").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+          </Link>
+        </div>
       </header>
 
       <nav

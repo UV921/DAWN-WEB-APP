@@ -17,7 +17,7 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 - Daily check-in + “I woke up” timestamp  
 - Per-habit & perfect-day streaks  
 - Wake-time chart, completion bars, 6-week heatmap  
-- Friend circle with invite code  
+- Friend circle: invite code, Discord / same-server add, rank board (habits + study hours)  
 - Check-ins posted to your Discord channel  
 - Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`, `/study-room`, `/studied`
 - Study hours from marked Discord voice channels (Dawn’s own timer)
@@ -99,9 +99,18 @@ Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Continue with Discord*
 ### 4. Friend / study circle flow
 
 1. Everyone signs in with **Discord** on Dawn  
-2. One person creates a circle on **Friends** and shares the invite code  
-3. Owner pastes the **study channel ID** on the circle  
-4. Web check-ins post embeds to that channel  
+2. Add friends the easy way:
+   - **Invite code / link** — paste a code or a `/circle?join=CODE` link (auto-joins)
+   - **Same Discord server** — people already on Dawn in your study server show as one-tap Add
+   - **On Discord** — search a Discord name or ID and add them
+   - **Server group** — tap **Join Discord server group** to share one board with the whole guild
+3. Owner can paste a **study channel ID** and **Post to Discord** so the invite lands in the channel  
+4. The circle **rank board** sorts by:
+   - Habits + study (combined)
+   - Habit consistency (7-day %)
+   - Study hours this week (voice rooms)
+   - On-time wakes
+   - Today’s check-in
 5. In Discord you can use:
    - `/setup` — button onboarding (why, wake, sleep, focus…)
    - `/track ping_time:06:00 board_time:08:00` — morning board channel

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
@@ -61,6 +62,28 @@ export function SettingsClient() {
             Wake time first — then habits, reminders, Discord, and your mission.
             Each tab has one job.
           </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/circle"
+              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+            >
+              <p className="text-sm font-medium text-white">Friends</p>
+              <p className="mt-1 text-xs text-[var(--color-mist)]">
+                Add by invite code, Discord, or same server — then see the rank
+                board.
+              </p>
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+            >
+              <p className="text-sm font-medium text-white">Board</p>
+              <p className="mt-1 text-xs text-[var(--color-mist)]">
+                Rank habit consistency, study hours, or both combined.
+              </p>
+            </Link>
+          </div>
 
           <div className="mt-8 md:mt-10 md:grid md:grid-cols-[13.75rem_minmax(0,1fr)] md:items-start md:gap-8 lg:gap-10">
             <div
