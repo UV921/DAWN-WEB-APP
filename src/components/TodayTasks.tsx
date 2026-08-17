@@ -21,7 +21,7 @@ import {
   shareTodoListCard,
 } from "@/lib/share-todo-card";
 import { parseBotMessages } from "@/lib/bot-messages";
-import { postTodosFromBrowser } from "@/lib/post-todos-client";
+import { isIosClient, postTodosFromBrowser } from "@/lib/post-todos-client";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
 import {
   normalizePriority,
@@ -369,9 +369,10 @@ export function TodayTasks({
   async function downloadTasksPng() {
     try {
       const { blob, filename } = await pngForTodos();
-      downloadPngBlob(blob, filename);
-      setDiscordNote("PNG saved to your downloads.");
-    } catch {
+      await downloadPngBlob(blob, filename);
+      setDiscordNote("PNG saved.");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       onError?.("Couldn’t make the PNG.");
     }
   }
@@ -394,13 +395,8 @@ export function TodayTasks({
           },
         }),
       });
-      const saved = await save.json().catch(() => ({}));
       if (!save.ok) {
-        onError?.(
-          save.status === 401
-            ? "Sign in again, then save the send time."
-            : saved.error || "Couldn’t save that send time."
-        );
+        onError?.("Couldn’t save that send time.");
         return;
       }
       setDiscordNote(
@@ -420,28 +416,35 @@ export function TodayTasks({
     setSendingDiscord(true);
     setDiscordNote(null);
     let image: string | undefined;
+    // Never auto-download, and never build a PNG on iPhone — Safari treats a
+    // blob download as navigation and aborts the POST with TypeError: Load failed.
+    if (!isIosClient()) {
+      try {
+        const { blob } = await pngForTodos();
+        const b64 = await blobToBase64Png(blob);
+        if (b64.length > 0 && b64.length < 400_000) image = b64;
+      } catch {
+        /* Text list still posts if the card can’t be drawn. */
+      }
+    }
     try {
-      const { blob } = await pngForTodos();
-      const b64 = await blobToBase64Png(blob);
-      if (b64.length > 0 && b64.length < 400_000) image = b64;
-    } catch {
-      /* Text list still posts if the card can’t be drawn. */
+      const result = await postTodosFromBrowser({
+        date,
+        message: pingText,
+        image,
+      });
+      if (!result.ok) {
+        onError?.(result.error || "Couldn’t post to Discord.");
+      } else {
+        setDiscordNote(
+          result.usedImage
+            ? "Posted in your Discord channel."
+            : "Posted in your Discord channel (text list)."
+        );
+      }
+    } finally {
+      setSendingDiscord(false);
     }
-    const result = await postTodosFromBrowser({
-      date,
-      message: pingText,
-      image,
-    });
-    if (!result.ok) {
-      onError?.(result.error || "Couldn’t post to Discord.");
-    } else {
-      setDiscordNote(
-        result.usedImage
-          ? "Posted in your Discord channel."
-          : "Posted in your Discord channel (text list)."
-      );
-    }
-    setSendingDiscord(false);
   }
 
   async function shareList(name: string, items: TodayTodo[]) {

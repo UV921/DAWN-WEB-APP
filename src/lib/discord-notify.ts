@@ -253,10 +253,25 @@ export async function discordSendChannelMessage(
   }
 
   try {
+    // Happy path: one Discord POST. A GET first often pushed Vercel past
+    // the 10s Hobby limit, which the phone then showed as “couldn’t reach Dawn.”
+    const posted = await postToChannel(id, opts, false);
+    if (posted.ok) return { ok: true };
+
+    let code: number | undefined;
+    try {
+      code = (JSON.parse(posted.raw || "") as DiscordApiError).code;
+    } catch {
+      code = undefined;
+    }
+    if (code === 50001 || code === 50013 || code === 10003) {
+      return { ok: false, error: posted.error };
+    }
+
     const chRes = await discordFetch(`/channels/${id}`);
     if (!chRes.ok) {
       const raw = await chRes.text();
-      return { ok: false, error: formatDiscordApiError(raw) };
+      return { ok: false, error: formatDiscordApiError(raw) || posted.error };
     }
     const channel = (await chRes.json()) as DiscordChannel;
     if (channel.type === 4) {
@@ -276,7 +291,7 @@ export async function discordSendChannelMessage(
           "Dawn can only post in a text, announcement, thread, or forum channel — not this channel type.",
       };
     }
-    return postToChannel(id, opts, false);
+    return { ok: false, error: posted.error };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }

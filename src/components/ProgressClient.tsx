@@ -23,7 +23,7 @@ export function ProgressClient() {
   useEffect(() => {
     void Promise.all([
       fetch("/api/habits?days=365").then((r) => r.json()),
-      fetch("/api/study?days=365").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/study?days=365", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([d, s]: [
         {

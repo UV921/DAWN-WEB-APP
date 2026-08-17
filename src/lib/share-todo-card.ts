@@ -110,12 +110,19 @@ export async function renderTodoListCardPng(opts: {
 
 /** Save the PNG locally. Never call this during Send now — iOS treats a blob
  *  download as navigation and aborts the Discord POST. */
-export function downloadPngBlob(blob: Blob, filename: string) {
+export async function downloadPngBlob(blob: Blob, filename: string) {
+  const file = new File([blob], filename, { type: "image/png" });
+  const nav = navigator as Navigator & {
+    canShare?: (data: ShareData) => boolean;
+  };
+  if (nav.share && nav.canShare?.({ files: [file] })) {
+    await nav.share({ files: [file], title: filename });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
-  a.target = "_blank";
   a.rel = "noopener";
   document.body.appendChild(a);
   a.click();

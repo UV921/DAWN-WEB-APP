@@ -1,7 +1,14 @@
 /* Dawn PWA service worker — cache shell for offline open.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v2";
-const PRECACHE = ["/", "/login", "/dashboard", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE = "dawn-v3";
+const PRECACHE = [
+  "/",
+  "/login",
+  "/dashboard",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -26,6 +33,7 @@ function isNetworkFirst(req, url) {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+  // Never touch POST/PATCH — iPhone Send now must hit Vercel directly.
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);

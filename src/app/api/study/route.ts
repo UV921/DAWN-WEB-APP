@@ -23,10 +23,16 @@ function snowflake(raw: unknown): string {
 async function roomsForGuild(guildId: string | null) {
   const envIds = envStudyVoiceIds();
   const rows = await prisma.studyRoom.findMany({
-    where: guildId ? { guildId } : undefined,
     orderBy: { createdAt: "asc" },
     select: { channelId: true, name: true, guildId: true },
   });
+  const scoped =
+    guildId && rows.some((r) => r.guildId === guildId)
+      ? [
+          ...rows.filter((r) => r.guildId === guildId),
+          ...rows.filter((r) => r.guildId !== guildId),
+        ]
+      : rows;
   const seen = new Set(rows.map((r) => r.channelId));
   const extra = envIds
     .filter((id) => !seen.has(id))
@@ -35,7 +41,7 @@ async function roomsForGuild(guildId: string | null) {
       name: "From .env",
       guildId: guildId || "",
     }));
-  return [...rows, ...extra];
+  return [...scoped, ...extra];
 }
 
 export async function GET(req: Request) {
@@ -71,7 +77,13 @@ export async function GET(req: Request) {
     roomsForGuild(guildId),
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { discordId: true },
+      select: {
+        discordId: true,
+        accounts: {
+          where: { provider: "discord" },
+          select: { id: true },
+        },
+      },
     }),
     prisma.studySession.groupBy({
       by: ["date"],
@@ -131,7 +143,9 @@ export async function GET(req: Request) {
     ),
   }));
   const week = series.slice(-7);
-  const todayMinutes = Math.round(closedByDate.get(today) || byDate.get(today) || 0);
+  const todayMinutes = Math.round(
+    Math.max(closedByDate.get(today) || 0, byDate.get(today) || 0)
+  );
   const weekMinutes = sumSince(weekStart);
   const monthMinutes = sumSince(monthStart);
   const yearMinutes = sumSince(yearStart);
@@ -143,9 +157,10 @@ export async function GET(req: Request) {
     ([d, m]) => d >= monthStart && m > 0
   ).length;
   const best = [...week].sort((a, b) => b.minutes - a.minutes)[0];
+  const hasDiscord = Boolean(user?.discordId || user?.accounts?.length);
   const status = buildStudyStatus({
     configured,
-    hasDiscord: Boolean(user?.discordId),
+    hasDiscord,
     live: Boolean(live),
     todayMinutes,
     weekMinutes,
@@ -161,9 +176,10 @@ export async function GET(req: Request) {
     all: { minutes: Math.round(allMinutes), label: formatStudyDuration(allMinutes) },
   };
 
-  return NextResponse.json({
+  return NextResponse.json(
+    {
     configured,
-    hasDiscord: Boolean(user?.discordId),
+    hasDiscord,
     rooms,
     today: {
       date: today,
@@ -192,7 +208,9 @@ export async function GET(req: Request) {
       : null,
     status,
     hint: status.body,
-  });
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 export async function POST(req: Request) {
