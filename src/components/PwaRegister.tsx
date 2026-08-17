@@ -10,7 +10,7 @@ type BeforeInstallPromptEvent = Event & {
 const DISMISS_KEY = "dawn-pwa-dismiss-until";
 const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
 /** Bump with public/sw.js CACHE so Home Screen apps pick up a new worker. */
-const SW_VERSION = "4";
+const SW_VERSION = "5";
 
 let cachedPrompt: BeforeInstallPromptEvent | null = null;
 const promptSubs = new Set<(event: BeforeInstallPromptEvent | null) => void>();

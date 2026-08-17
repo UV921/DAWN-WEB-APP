@@ -1,6 +1,6 @@
 /* Dawn PWA service worker — cache shell for offline open.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v4";
+const CACHE = "dawn-v5";
 const PRECACHE = [
   "/",
   "/login",
@@ -38,6 +38,11 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Do not intercept NextAuth. On iPhone, a SW fetch of the Discord
+  // callback drops the state/PKCE cookies, so the first Continue with
+  // Discord fails and the second tap then works.
+  if (url.pathname.startsWith("/api/auth")) return;
 
   if (isNetworkFirst(req, url)) {
     event.respondWith(
