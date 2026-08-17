@@ -172,7 +172,7 @@ export function GoalsManager({
                   onChange={(e) =>
                     void patchGoal(g.id, { targetTime: e.target.value || null })
                   }
-                  className="rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
+                  className="ui-field text-sm !px-2 !py-1.5"
                   aria-label="Target time"
                 />
                 <button

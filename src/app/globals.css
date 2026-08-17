@@ -37,6 +37,17 @@ html {
 html.dark,
 :root {
   color-scheme: dark;
+  --steel-rim: linear-gradient(
+    145deg,
+    #f8f9fb 0%,
+    #d7dce2 10%,
+    #8f98a2 24%,
+    #4c545c 40%,
+    #1a1e24 52%,
+    #5a626c 68%,
+    #c2c8ce 88%,
+    #eef0f3 100%
+  );
 }
 
 body {
@@ -149,10 +160,27 @@ button,
     padding-bottom: 2rem;
     min-height: calc(100dvh - 24px);
     border-radius: 1.35rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
+    position: relative;
     background: #0d131a;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
     transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .app-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    border-radius: inherit;
+    pointer-events: none;
+    padding: 2px;
+    background: var(--steel-rim);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
   }
 
   html.sidebar-collapsed .app-shell {
@@ -213,14 +241,14 @@ button,
     transform: scale(0.94);
   }
 
-  .sidebar-toggle.is-dock {
+    .sidebar-toggle.is-dock {
     position: fixed;
     left: 10px;
     top: 22px;
     z-index: 50;
     width: 2.15rem;
     height: 2.15rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
     background: #10161c;
     color: #f0b45a;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -383,6 +411,7 @@ button,
   letter-spacing: 0.01em;
   color: var(--color-night);
   background: var(--color-dawn);
+  border: none;
   box-shadow: none;
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
@@ -621,12 +650,16 @@ button,
   background-size: 160px 160px;
 }
 
-/* Brushed steel rim — used on landing panels and most app boxes */
+/* Brushed steel rim — landing panels, app chrome, and UI primitives */
 .steel-plate,
 .steel-plate-sm,
 .ui-card,
 .ui-row,
-.floating-nav {
+.ui-chip,
+.ui-btn-ghost,
+.ui-btn-primary,
+.floating-nav,
+.sidebar-toggle.is-dock {
   position: relative;
 }
 
@@ -634,7 +667,11 @@ button,
 .steel-plate-sm::after,
 .ui-card::after,
 .ui-row::after,
-.floating-nav::after {
+.ui-chip::after,
+.ui-btn-ghost::after,
+.ui-btn-primary::after,
+.floating-nav::after,
+.sidebar-toggle.is-dock::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -642,17 +679,7 @@ button,
   border-radius: inherit;
   pointer-events: none;
   padding: 2px;
-  background: linear-gradient(
-    145deg,
-    #f8f9fb 0%,
-    #d7dce2 10%,
-    #8f98a2 24%,
-    #4c545c 40%,
-    #1a1e24 52%,
-    #5a626c 68%,
-    #c2c8ce 88%,
-    #eef0f3 100%
-  );
+  background: var(--steel-rim);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -662,7 +689,10 @@ button,
 
 .steel-plate-sm::after,
 .ui-card::after,
-.ui-row::after {
+.ui-row::after,
+.ui-chip::after,
+.ui-btn-ghost::after,
+.sidebar-toggle.is-dock::after {
   padding: 1.5px;
 }
 
@@ -984,11 +1014,11 @@ button,
   min-height: 2.75rem;
   padding: 0.65rem 1.35rem;
   border-radius: 9999px;
+  border: none;
   font-size: 0.875rem;
   font-weight: 600;
   transition:
     background 0.2s ease,
-    border-color 0.2s ease,
     color 0.2s ease,
     opacity 0.2s ease;
 }
@@ -1011,7 +1041,7 @@ button,
 .ui-btn-primary {
   background: var(--color-dawn);
   color: var(--color-night);
-  border: 1px solid transparent;
+  border: none;
 }
 
 .ui-btn-primary:hover:not(:disabled) {
@@ -1021,11 +1051,11 @@ button,
 .ui-btn-ghost {
   background: transparent;
   color: var(--color-cloud);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: none;
 }
 
 .ui-btn-ghost:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
 
@@ -1049,15 +1079,23 @@ button,
 .ui-field {
   width: 100%;
   border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)) padding-box,
+    var(--steel-rim) border-box;
   padding: 0.8rem 1rem;
   color: #fff;
   outline: none;
 }
 
 .ui-field:focus {
-  border-color: color-mix(in oklab, var(--color-dawn) 70%, transparent);
+  background:
+    linear-gradient(
+      color-mix(in oklab, var(--color-dawn) 10%, #10161c),
+      color-mix(in oklab, var(--color-dawn) 10%, #10161c)
+    )
+      padding-box,
+    var(--steel-rim) border-box;
 }
 
 .ui-row {
@@ -1124,25 +1162,24 @@ button,
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: none;
   padding: 0.45rem 0.95rem;
   font-size: 0.8125rem;
   color: var(--color-mist);
+  background: transparent;
   transition:
     background 0.2s ease,
-    border-color 0.2s ease,
     color 0.2s ease;
 }
 
 .ui-chip.is-on {
-  border-color: transparent;
   background: var(--color-dawn);
   color: var(--color-night);
   font-weight: 600;
 }
 
 .ui-chip:hover:not(.is-on) {
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
 

@@ -298,7 +298,7 @@ export function RemindersManager() {
                   onChange={(e) =>
                     void patchReminder(r.id, { time: e.target.value })
                   }
-                  className="rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
+                  className="ui-field text-sm !px-2 !py-1.5"
                 />
                 <button
                   type="button"

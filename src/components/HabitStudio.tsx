@@ -402,7 +402,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                   {lockedHabits.map((s) => (
                     <li
                       key={s.key}
-                      className="rounded-xl border border-[var(--color-leaf)]/25 bg-[var(--color-leaf)]/[0.06] px-4 py-3"
+                      className="steel-plate-sm rounded-xl bg-[var(--color-leaf)]/[0.06] px-4 py-3"
                     >
                       <p className="font-medium text-white">{s.label}</p>
                       <p className="text-sm text-[var(--color-mist)]">
@@ -575,7 +575,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                     type="time"
                     defaultValue={h.windowStart || ""}
                     key={`${h.id}-s-${h.windowStart || "d"}`}
-                    className="mt-1 block rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
+                    className="ui-field mt-1 text-sm !px-2 !py-1.5"
                     id={`ws-${h.id}`}
                   />
                 </label>
@@ -585,7 +585,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                     type="time"
                     defaultValue={h.windowEnd || ""}
                     key={`${h.id}-e-${h.windowEnd || "d"}`}
-                    className="mt-1 block rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
+                    className="ui-field mt-1 text-sm !px-2 !py-1.5"
                     id={`we-${h.id}`}
                   />
                 </label>

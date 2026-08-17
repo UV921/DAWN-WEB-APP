@@ -84,7 +84,7 @@ export function MorningClockSettings() {
           type="time"
           value={wakeGoal}
           onChange={(e) => setWakeGoal(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-[var(--color-dawn)]/40 bg-white/5 px-4 py-4 font-mono text-2xl text-[var(--color-dawn)] outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2 font-mono text-2xl text-[var(--color-dawn)]"
         />
         <span className="mt-2 block text-xs text-[var(--color-mist)]">
           Hold — I’m awake only works in the window around this time.

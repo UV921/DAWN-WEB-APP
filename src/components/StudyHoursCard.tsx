@@ -67,10 +67,10 @@ export function StudyHoursCard() {
     <section className={`steel-plate rounded-2xl px-4 py-4 sm:px-5 ${border}`}>
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <div
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
+          className={`steel-plate flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${
             live
-              ? "border-[var(--color-leaf)]/40 bg-[var(--color-leaf)]/10 text-[var(--color-leaf)]"
-              : "border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/10 text-[var(--color-dawn)]"
+              ? "bg-[var(--color-leaf)]/10 text-[var(--color-leaf)]"
+              : "bg-[var(--color-dawn)]/10 text-[var(--color-dawn)]"
           }`}
         >
           <GraduationCapIcon

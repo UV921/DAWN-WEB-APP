@@ -174,7 +174,7 @@ export function LandingHeroFilm() {
               return (
                 <article
                   key={list.name}
-                  className="overflow-hidden border border-white/10 bg-black/25"
+                  className="steel-plate-sm overflow-hidden rounded-xl bg-black/25"
                 >
                   <div className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
                     <div className="min-w-0">

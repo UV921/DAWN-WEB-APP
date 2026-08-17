@@ -142,7 +142,7 @@ export function CircleRankBoard({
       </div>
 
       {me ? (
-        <p className="mt-4 rounded-xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-white">
+        <p className="steel-plate-sm mt-4 rounded-xl bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-white">
           You’re #{rankOf(sort, me)} · {scoreLabel(sort, me)}
           {" · "}
           {me.stats.habitPct}% habits · {formatStudyDuration(me.stats.studyWeek)}{" "}

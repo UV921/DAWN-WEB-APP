@@ -91,7 +91,7 @@ export function TodoHistory() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between steel-plate rounded-2xl bg-white/[0.03] px-4 py-3 text-left transition hover:border-white/20"
+        className="steel-plate flex w-full items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.06]"
       >
         <span>
           <span className="block text-[15px] font-medium text-white">
@@ -217,7 +217,7 @@ export function TodoHistory() {
             return (
               <li
                 key={d.date}
-                className="overflow-hidden rounded-xl border border-white/[0.08]"
+                className="steel-plate-sm overflow-hidden rounded-xl"
               >
                 <div className="flex items-center gap-1 px-1">
                   <Link

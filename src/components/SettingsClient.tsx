@@ -104,7 +104,7 @@ export function SettingsClient() {
                   }}
                   className={`ui-chip shrink-0 md:w-full md:justify-start md:rounded-xl ${
                     tab === t.id
-                      ? "is-on md:!border-transparent md:!bg-[var(--color-dawn)]/15 md:!text-[var(--color-dawn)]"
+                      ? "is-on md:!bg-[var(--color-dawn)]/15 md:!text-[var(--color-dawn)]"
                       : ""
                   }`}
                 >
