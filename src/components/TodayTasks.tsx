@@ -751,7 +751,7 @@ export function TodayTasks({
       </header>
 
       {sendOpen && todos.length > 0 ? (
-        <div className="space-y-3 steel-plate rounded-2xl bg-white/[0.03] px-3 py-3 sm:px-4">
+        <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-4">
           <p className="text-xs text-[var(--color-mist)]">
             Send now posts the same card as Download PNG into your Discord
             channel and @’s you. Daily send time is a text ping only.
@@ -816,7 +816,7 @@ export function TodayTasks({
             void addTask();
           }}
         >
-          <div className="flex items-center gap-1 steel-plate rounded-2xl bg-white/[0.03] py-1 pl-2 pr-1.5">
+          <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] py-1 pl-2 pr-1.5">
             <button
               type="button"
               onClick={() => {
@@ -1051,7 +1051,7 @@ export function TodayTasks({
                     {shareNote.text}
                   </p>
                 ) : null}
-                <ul className="overflow-hidden steel-plate rounded-2xl bg-white/[0.02]">
+                <ul className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
                   {roots.map((t) => renderRow(t, kids.get(t.id) || []))}
                 </ul>
               </article>

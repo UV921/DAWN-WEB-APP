@@ -119,7 +119,7 @@ export function CircleAddFriends({
 
   return (
     <div className="mt-8 space-y-4">
-      <div className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.07] px-5 py-5">
+      <div className="rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
           {hasGoogle && !hasDiscord
             ? "Google friends · just a code"
@@ -144,7 +144,7 @@ export function CircleAddFriends({
           ))}
         </ol>
 
-        <div className="mt-5 steel-plate-sm rounded-xl bg-black/25 px-4 py-4">
+        <div className="mt-5 rounded-xl border border-white/10 bg-black/25 px-4 py-4">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
             Your friend code
           </p>
@@ -178,7 +178,7 @@ export function CircleAddFriends({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
             They sent you a code
           </p>
@@ -207,7 +207,7 @@ export function CircleAddFriends({
           </div>
         </div>
 
-        <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
             Extra circle
           </p>
@@ -232,7 +232,7 @@ export function CircleAddFriends({
         </div>
       </div>
 
-      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Discord · same server
         </p>
@@ -381,7 +381,7 @@ function SuggestList({
         {people.slice(0, 12).map((p) => (
           <li
             key={p.id}
-            className="flex items-center gap-3 steel-plate-sm rounded-xl bg-black/20 px-3 py-2.5"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5"
           >
             <Avatar name={p.name} image={p.image} />
             <div className="min-w-0 flex-1">

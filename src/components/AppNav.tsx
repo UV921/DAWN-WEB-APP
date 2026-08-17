@@ -114,7 +114,7 @@ function SidebarAccount() {
       {open ? (
         <div
           role="menu"
-          className="absolute bottom-full left-0 right-0 z-50 mb-2 steel-plate-sm rounded-xl bg-[#10161c] py-1 shadow-xl"
+          className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
         >
           <Link
             href="/settings"
@@ -183,7 +183,7 @@ export function AppNav({ active }: { active: NavKey }) {
       ) : null}
 
       <aside
-        className={`dawn-sidebar pointer-events-auto fixed inset-y-3 left-3 z-40 hidden w-[228px] flex-col steel-plate rounded-[1.35rem] px-3 py-4 md:flex ${
+        className={`dawn-sidebar pointer-events-auto fixed inset-y-3 left-3 z-40 hidden w-[228px] flex-col rounded-[1.35rem] border border-white/[0.07] px-3 py-4 md:flex ${
           sidebarOpen ? "" : "is-closed"
         }`}
       >

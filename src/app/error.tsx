@@ -10,7 +10,7 @@ export default function ErrorPage({
 }) {
   return (
     <main className="flex min-h-screen min-h-dvh items-center justify-center px-6">
-      <div className="w-full max-w-md steel-plate rounded-2xl bg-[#0d1b2a] p-6 text-center">
+      <div className="w-full max-w-md rounded-2xl border border-white/12 bg-[#0d1b2a] p-6 text-center">
         <p className="flex justify-center text-[var(--color-dawn)]">
           <DawnMark size={28} />
         </p>

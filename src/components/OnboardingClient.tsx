@@ -247,10 +247,10 @@ export function OnboardingClient() {
                   type="button"
                   disabled={busy}
                   onClick={() => pickChoice(opt)}
-                  className={`steel-plate rounded-2xl px-4 py-3.5 text-left text-white transition ${
+                  className={`rounded-2xl border px-4 py-3.5 text-left text-white transition ${
                     answers.focusHabitKey === opt.key
-                      ? "bg-[var(--color-dawn)]/15"
-                      : "bg-white/[0.03]"
+                      ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15"
+                      : "border-white/15 bg-white/[0.03] hover:border-[var(--color-dawn)]/50"
                   }`}
                 >
                   {opt.label}
@@ -267,7 +267,7 @@ export function OnboardingClient() {
                   type="button"
                   disabled={busy}
                   onClick={() => pickChoice(opt)}
-                  className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-3.5 text-left text-white transition hover:bg-white/[0.06]"
+                  className="rounded-2xl border border-white/15 bg-white/[0.03] px-4 py-3.5 text-left text-white transition hover:border-[var(--color-dawn)]/50"
                 >
                   {opt}
                 </button>

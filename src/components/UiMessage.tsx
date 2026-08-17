@@ -58,7 +58,7 @@ export function UiMessage({
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={`steel-plate rounded-2xl px-4 py-3.5 ${t.bg} ${className}`}
+      className={`rounded-2xl border px-4 py-3.5 ${t.border} ${t.bg} ${className}`}
     >
       <p className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${t.text}`}>
         {title || t.label}

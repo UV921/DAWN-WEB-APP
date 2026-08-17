@@ -233,7 +233,7 @@ export function CircleClient() {
             </p>
           )}
 
-          <section className="mt-8 steel-plate rounded-2xl bg-[#0d131a] px-4 py-4 sm:px-5">
+          <section className="mt-8 rounded-2xl border border-white/10 bg-[#0d131a] px-4 py-4 sm:px-5">
             <button
               type="button"
               onClick={() => setShowHow((v) => !v)}
@@ -277,7 +277,7 @@ export function CircleClient() {
                   ].map((c) => (
                     <div
                       key={c.t}
-                      className="steel-plate-sm rounded-xl bg-black/20 px-3 py-3"
+                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-3"
                     >
                       <p className="text-sm font-medium text-white">{c.t}</p>
                       <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -351,7 +351,7 @@ export function CircleClient() {
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Loading circles…</p>
           ) : empty ? (
-            <div className="mt-10 steel-plate rounded-2xl bg-white/[0.03] px-5 py-8 text-center">
+            <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-8 text-center">
               <p className="font-display text-2xl text-white">No circle yet</p>
               <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-mist)]">
                 Create one, paste a friend’s code, join the Discord server
@@ -381,7 +381,7 @@ export function CircleClient() {
                         </p>
                       </div>
                       {board?.summary ? (
-                        <div className="steel-plate-sm rounded-xl bg-white/[0.03] px-4 py-3 text-sm">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm">
                           <p className="text-[var(--color-leaf)]">
                             Up today · {board.summary.up}/{board.summary.total}
                           </p>

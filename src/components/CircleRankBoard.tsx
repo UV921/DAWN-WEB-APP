@@ -142,7 +142,7 @@ export function CircleRankBoard({
       </div>
 
       {me ? (
-        <p className="steel-plate-sm mt-4 rounded-xl bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-white">
+        <p className="mt-4 rounded-xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-white">
           You’re #{rankOf(sort, me)} · {scoreLabel(sort, me)}
           {" · "}
           {me.stats.habitPct}% habits · {formatStudyDuration(me.stats.studyWeek)}{" "}
@@ -174,12 +174,12 @@ export function CircleRankBoard({
           return (
             <li
               key={row.user.id}
-              className={`steel-plate rounded-2xl p-4 ${
+              className={`rounded-2xl border p-4 ${
                 isMe
-                  ? "bg-[var(--color-dawn)]/[0.08]"
+                  ? "border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/[0.08]"
                   : row.stats.checkedIn
-                    ? "bg-white/[0.04]"
-                    : "bg-white/[0.03]"
+                    ? "border-white/15 bg-white/[0.04]"
+                    : "border-white/10 bg-white/[0.03]"
               }`}
             >
               <div className="flex items-start justify-between gap-3">

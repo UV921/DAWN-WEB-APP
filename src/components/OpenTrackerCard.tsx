@@ -62,7 +62,7 @@ export function OpenTrackerCard() {
       : null;
 
   return (
-    <section className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-4 sm:px-5">
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5">
       <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
         Open sensing
       </p>

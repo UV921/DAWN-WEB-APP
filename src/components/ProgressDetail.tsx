@@ -462,7 +462,7 @@ export function ProgressDetail({
         </p>
       </div>
 
-      <div className={`steel-plate rounded-2xl px-5 py-5 ${briefTone.bg}`}>
+      <div className={`rounded-2xl border px-5 py-5 ${briefTone.border} ${briefTone.bg}`}>
         <div className="flex items-start justify-between gap-3">
           <p
             className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${briefTone.kicker}`}
@@ -631,7 +631,7 @@ export function ProgressDetail({
           <p className="mt-1 text-sm text-[var(--color-mist)]">
             Green means done. Dash or “open” means it still needs you.
           </p>
-          <ul className="mt-4 divide-y divide-white/10 overflow-hidden steel-plate rounded-2xl bg-white/[0.03]">
+          <ul className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
             <LoopRow
               label="Wake"
               value={todayRow.wake || "—"}
@@ -715,7 +715,7 @@ export function ProgressDetail({
             just go to bed on time.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="steel-plate rounded-2xl bg-white/[0.03] p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-dawn)]">
                 Stronger than average
               </p>
@@ -733,7 +733,7 @@ export function ProgressDetail({
                 ) : null}
               </ul>
             </div>
-            <div className="steel-plate rounded-2xl bg-white/[0.03] p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-ember)]">
                 Weaker than average
               </p>

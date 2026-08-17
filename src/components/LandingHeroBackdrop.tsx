@@ -25,6 +25,14 @@ export function LandingHeroBackdrop() {
         fetchPriority="high"
         decoding="async"
       />
+      <img
+        className="hero-photo-img hero-photo-blur"
+        src="/images/landing-hero.png"
+        alt=""
+        width={1680}
+        height={1050}
+        decoding="async"
+      />
       <div className="hero-photo-vignette" />
     </div>
   );

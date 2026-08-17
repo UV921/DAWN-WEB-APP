@@ -37,17 +37,6 @@ html {
 html.dark,
 :root {
   color-scheme: dark;
-  --steel-rim: linear-gradient(
-    145deg,
-    #f8f9fb 0%,
-    #d7dce2 10%,
-    #8f98a2 24%,
-    #4c545c 40%,
-    #1a1e24 52%,
-    #5a626c 68%,
-    #c2c8ce 88%,
-    #eef0f3 100%
-  );
 }
 
 body {
@@ -160,27 +149,10 @@ button,
     padding-bottom: 2rem;
     min-height: calc(100dvh - 24px);
     border-radius: 1.35rem;
-    border: none;
-    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background: #0d131a;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
     transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .app-shell::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 8;
-    border-radius: inherit;
-    pointer-events: none;
-    padding: 2px;
-    background: var(--steel-rim);
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
   }
 
   html.sidebar-collapsed .app-shell {
@@ -199,10 +171,6 @@ button,
   transition:
     transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.32s ease;
-}
-
-.dawn-sidebar.steel-plate::after {
-  z-index: 1;
 }
 
 .dawn-sidebar.is-closed {
@@ -241,14 +209,14 @@ button,
     transform: scale(0.94);
   }
 
-    .sidebar-toggle.is-dock {
+  .sidebar-toggle.is-dock {
     position: fixed;
     left: 10px;
     top: 22px;
     z-index: 50;
     width: 2.15rem;
     height: 2.15rem;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background: #10161c;
     color: #f0b45a;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -266,10 +234,11 @@ button,
 /* Floating mobile dock */
 .floating-nav {
   border-radius: 1.65rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(8, 16, 26, 0.78);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(240, 180, 90, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(22px) saturate(1.45);
   -webkit-backdrop-filter: blur(22px) saturate(1.45);
@@ -411,7 +380,6 @@ button,
   letter-spacing: 0.01em;
   color: var(--color-night);
   background: var(--color-dawn);
-  border: none;
   box-shadow: none;
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
@@ -580,6 +548,36 @@ button,
   }
 }
 
+.hero-photo-blur {
+  inset: -14%;
+  width: 128%;
+  height: 128%;
+  filter: blur(22px) saturate(1.08);
+  opacity: 0.9;
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 44%,
+    #000 18%,
+    #000 42%,
+    transparent 74%
+  );
+  mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 44%,
+    #000 18%,
+    #000 42%,
+    transparent 74%
+  );
+}
+
+.hero-photo-still .hero-photo-blur {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo-blur {
+    animation: none;
+  }
+}
+
 .hero-photo-vignette {
   position: absolute;
   inset: 0;
@@ -650,70 +648,20 @@ button,
   background-size: 160px 160px;
 }
 
-/* Brushed steel rim — landing panels, app chrome, and UI primitives */
-.steel-plate,
-.steel-plate-sm,
-.ui-card,
-.ui-row,
-.ui-chip,
-.ui-btn-ghost,
-.ui-btn-primary,
-.floating-nav,
-.sidebar-toggle.is-dock {
-  position: relative;
-}
-
-.steel-plate::after,
-.steel-plate-sm::after,
-.ui-card::after,
-.ui-row::after,
-.ui-chip::after,
-.ui-btn-ghost::after,
-.ui-btn-primary::after,
-.floating-nav::after,
-.sidebar-toggle.is-dock::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  border-radius: inherit;
-  pointer-events: none;
-  padding: 2px;
-  background: var(--steel-rim);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-.steel-plate-sm::after,
-.ui-card::after,
-.ui-row::after,
-.ui-chip::after,
-.ui-btn-ghost::after,
-.sidebar-toggle.is-dock::after {
-  padding: 1.5px;
-}
-
 .mac-chassis {
   overflow: hidden;
   border-radius: 24px;
   background: linear-gradient(
-    145deg,
-    #f2f4f6 0%,
-    #c5ccd3 8%,
-    #7b838c 22%,
-    #3a4048 40%,
-    #1a1d22 52%,
-    #4e555e 70%,
-    #a8b0b8 88%,
-    #e8eaed 100%
+    180deg,
+    #6a6f76 0%,
+    #3e4248 22%,
+    #2a2d32 70%,
+    #1c1e22 100%
   );
   padding: 8px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
 }
 
 @media (min-width: 768px) {
@@ -1014,11 +962,11 @@ button,
   min-height: 2.75rem;
   padding: 0.65rem 1.35rem;
   border-radius: 9999px;
-  border: none;
   font-size: 0.875rem;
   font-weight: 600;
   transition:
     background 0.2s ease,
+    border-color 0.2s ease,
     color 0.2s ease,
     opacity 0.2s ease;
 }
@@ -1041,7 +989,7 @@ button,
 .ui-btn-primary {
   background: var(--color-dawn);
   color: var(--color-night);
-  border: none;
+  border: 1px solid transparent;
 }
 
 .ui-btn-primary:hover:not(:disabled) {
@@ -1051,11 +999,11 @@ button,
 .ui-btn-ghost {
   background: transparent;
   color: var(--color-cloud);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .ui-btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.35);
   color: #fff;
 }
 
@@ -1079,23 +1027,15 @@ button,
 .ui-field {
   width: 100%;
   border-radius: 0.85rem;
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)) padding-box,
-    var(--steel-rim) border-box;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
   padding: 0.8rem 1rem;
   color: #fff;
   outline: none;
 }
 
 .ui-field:focus {
-  background:
-    linear-gradient(
-      color-mix(in oklab, var(--color-dawn) 10%, #10161c),
-      color-mix(in oklab, var(--color-dawn) 10%, #10161c)
-    )
-      padding-box,
-    var(--steel-rim) border-box;
+  border-color: color-mix(in oklab, var(--color-dawn) 70%, transparent);
 }
 
 .ui-row {
@@ -1104,20 +1044,21 @@ button,
   align-items: center;
   gap: 0.85rem;
   border-radius: 1rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: #0d131a;
   padding: 0.9rem 1.1rem;
   min-height: 3.35rem;
   text-align: left;
-  transition: background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .ui-row:hover {
-  background: #121820;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ui-row.is-done {
-  background: color-mix(in oklab, var(--color-dawn) 8%, #0d131a);
+  border-color: color-mix(in oklab, var(--color-dawn) 45%, transparent);
+  background: color-mix(in oklab, var(--color-dawn) 8%, transparent);
 }
 
 .ui-row.is-locked {
@@ -1152,7 +1093,7 @@ button,
 /* Card boxes — consistent panels for Today stats / challenge */
 .ui-card {
   border-radius: 1.1rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: #0d131a;
   padding: 1rem 1.1rem;
 }
@@ -1162,24 +1103,25 @@ button,
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.45rem 0.95rem;
   font-size: 0.8125rem;
   color: var(--color-mist);
-  background: transparent;
   transition:
     background 0.2s ease,
+    border-color 0.2s ease,
     color 0.2s ease;
 }
 
 .ui-chip.is-on {
+  border-color: transparent;
   background: var(--color-dawn);
   color: var(--color-night);
   font-weight: 600;
 }
 
 .ui-chip:hover:not(.is-on) {
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.28);
   color: #fff;
 }
 

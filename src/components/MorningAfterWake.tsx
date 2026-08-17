@@ -171,7 +171,7 @@ export function MorningAfterWake({
   const drafts = onReminders ? reminders : tasks;
 
   return (
-    <section className="steel-plate rounded-3xl bg-[var(--color-dawn)]/[0.05] p-4 sm:p-5">
+    <section className="rounded-3xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.05] p-4 sm:p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
@@ -196,7 +196,7 @@ export function MorningAfterWake({
         </button>
       </div>
 
-      <div className="mt-4 flex items-center gap-1.5 steel-plate rounded-2xl bg-white/[0.04] py-1 pl-3 pr-1.5">
+      <div className="mt-4 flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] py-1 pl-3 pr-1.5">
         <input
           ref={inputRef}
           value={onReminders ? remText : taskText}

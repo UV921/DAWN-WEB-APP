@@ -96,7 +96,7 @@ export function LandingStudyFilm() {
           {PEOPLE.map((p, i) => (
             <motion.div
               key={p.name}
-              className="flex min-w-0 items-center gap-2 steel-plate-sm rounded-xl bg-white/[0.03] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+              className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
               initial={reduce ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 * i, duration: 0.45, ease: EASE }}

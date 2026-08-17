@@ -122,7 +122,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                 {BUY.map((item, i) => (
                   <motion.li
                     key={item.text}
-                    className="flex items-center gap-3 steel-plate-sm rounded-xl bg-black/30 px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5"
                     initial={reduce ? false : { opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.12 + i * 0.12, duration: 0.4, ease: EASE }}
@@ -204,7 +204,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                 {STEPS[2].hint}
               </p>
               <motion.div
-                className="relative mt-4 overflow-hidden steel-plate rounded-2xl bg-[#071018] px-5 py-5"
+                className="relative mt-4 overflow-hidden rounded-2xl border border-[#f0b45a]/25 bg-[#071018] px-5 py-5"
                 initial={reduce ? false : { opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.55, ease: EASE }}
@@ -231,7 +231,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                   ].map(([k, v], i) => (
                     <motion.div
                       key={k}
-                      className="steel-plate-sm rounded-xl bg-white/[0.04] px-3 py-2.5"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
                       initial={reduce ? false : { opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 + i * 0.08, duration: 0.35 }}
@@ -271,7 +271,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                 ].map(([k, v], i) => (
                   <motion.div
                     key={k}
-                    className="steel-plate-sm rounded-xl bg-white/[0.04] px-3 py-3"
+                    className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3"
                     initial={reduce ? false : { opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1, duration: 0.4, ease: EASE }}

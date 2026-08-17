@@ -246,7 +246,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
   return (
     <section className="mt-10 space-y-10 border-t border-white/10 pt-10">
       {/* Personal life interview first */}
-      <div className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.06] p-5">
+      <div className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.06] p-5">
         <h2 className="font-display text-3xl text-white">Know your life</h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           Wide questions so Dawn actually knows you — work, home, nights, what
@@ -402,7 +402,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                   {lockedHabits.map((s) => (
                     <li
                       key={s.key}
-                      className="steel-plate-sm rounded-xl bg-[var(--color-leaf)]/[0.06] px-4 py-3"
+                      className="rounded-xl border border-[var(--color-leaf)]/25 bg-[var(--color-leaf)]/[0.06] px-4 py-3"
                     >
                       <p className="font-medium text-white">{s.label}</p>
                       <p className="text-sm text-[var(--color-mist)]">
@@ -428,7 +428,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
               {suggestions.map((s) => (
                 <li
                   key={s.key}
-                  className="flex flex-wrap items-start justify-between gap-3 steel-plate-sm rounded-xl bg-black/20 px-4 py-3"
+                  className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3"
                 >
                   <div>
                     <p className="font-medium text-white">{s.label}</p>
@@ -524,10 +524,10 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
         {all.map((h) => (
           <li
             key={h.id}
-            className={`steel-plate rounded-2xl px-4 py-4 ${
+            className={`rounded-2xl border px-4 py-4 ${
               h.active
-                ? "bg-white/[0.03]"
-                : "bg-transparent opacity-50"
+                ? "border-white/10 bg-white/[0.03]"
+                : "border-white/5 bg-transparent opacity-50"
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -575,7 +575,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                     type="time"
                     defaultValue={h.windowStart || ""}
                     key={`${h.id}-s-${h.windowStart || "d"}`}
-                    className="ui-field mt-1 text-sm !px-2 !py-1.5"
+                    className="mt-1 block rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
                     id={`ws-${h.id}`}
                   />
                 </label>
@@ -585,7 +585,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                     type="time"
                     defaultValue={h.windowEnd || ""}
                     key={`${h.id}-e-${h.windowEnd || "d"}`}
-                    className="ui-field mt-1 text-sm !px-2 !py-1.5"
+                    className="mt-1 block rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white"
                     id={`we-${h.id}`}
                   />
                 </label>

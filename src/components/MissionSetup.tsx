@@ -136,7 +136,7 @@ export function MissionSetup({
     const p = mission.progress;
     return (
       <section
-        className={`steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.07] px-5 py-5 ${compact ? "" : ""}`}
+        className={`rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5 ${compact ? "" : ""}`}
       >
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
           Mission
@@ -236,7 +236,7 @@ export function MissionSetup({
   ];
 
   return (
-    <section className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.05] px-5 py-5 space-y-5">
+    <section className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.05] px-5 py-5 space-y-5">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
           Setup · pick length

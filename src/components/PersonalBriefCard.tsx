@@ -35,7 +35,7 @@ export function PersonalBriefCard({
   if (!brief) return null;
 
   return (
-    <section className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.05] px-5 py-5">
+    <section className="rounded-2xl border border-[var(--color-dawn)]/20 bg-[var(--color-dawn)]/[0.05] px-5 py-5">
       <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
         Built for you
       </p>

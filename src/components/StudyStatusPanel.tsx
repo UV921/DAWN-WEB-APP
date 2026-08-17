@@ -102,7 +102,7 @@ export function StudyStatusPanel({
   const maxBar = Math.max(1, ...bars.map((d) => d.minutes));
 
   return (
-    <section className={`steel-plate rounded-2xl px-5 py-5 ${t.bg}`}>
+    <section className={`rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <GraduationCapIcon
@@ -225,7 +225,7 @@ function Mini({
   live?: boolean;
 }) {
   return (
-    <div className="steel-plate-sm rounded-xl bg-black/20 px-3 py-2.5">
+    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-mist)]">
         {label}
       </p>
