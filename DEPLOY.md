@@ -75,7 +75,7 @@ Do **not** commit `.env`.
 3. Environment variables (Production):
 
 ```
-NEXTAUTH_URL=https://YOUR-PROJECT.vercel.app
+NEXTAUTH_URL=https://dawn.uvesh.in
 NEXTAUTH_SECRET=paste-a-long-random-string
 DATABASE_URL=same-neon-url-as-above
 GOOGLE_CLIENT_ID=...
@@ -93,16 +93,41 @@ AI_PROVIDER=gemini
 
 4. Deploy → copy the live URL  
 
-5. Discord Developer Portal → OAuth2 → Redirects → **add**:
+5. **Google Cloud Console** → APIs & Services → Credentials → your **OAuth 2.0 Client ID** (Web application).
+
+   Google compares the callback **exactly**. Two Vercel hosts are two different URIs. Adding only `dawn.uvesh.in` does **not** allow `dawn-web-app.vercel.app`.
+
+   Authorized JavaScript origins:
+
+   ```
+   https://dawn.uvesh.in
+   https://dawn-web-app.vercel.app
+   ```
+
+   Authorized redirect URIs:
+
+   ```
+   https://dawn.uvesh.in/api/auth/callback/google
+   https://dawn-web-app.vercel.app/api/auth/callback/google
+   ```
+
+   The `redirect_uri=` value in the Google 400 page is the string that must appear in that list.
+
+6. Discord Developer Portal → OAuth2 → Redirects → **add both hosts**:
 
 ```
-https://YOUR-PROJECT.vercel.app/api/auth/callback/discord
-https://YOUR-PROJECT.vercel.app/api/auth/callback/google
+https://dawn.uvesh.in/api/auth/callback/discord
+https://dawn-web-app.vercel.app/api/auth/callback/discord
 ```
 
-Google Cloud → OAuth client → add the Google callback too.
+Set `NEXTAUTH_URL` to the domain people should use (`https://dawn.uvesh.in`, no trailing slash). Pages on `dawn-web-app.vercel.app` redirect there so Google login starts on the custom domain. `/api/auth/*` is left on the Vercel host so an in-flight Google callback still works.
 
-Also set `NEXTAUTH_URL` to that exact URL (no trailing slash).
+If you still see `Error 400: redirect_uri_mismatch`, copy the `redirect_uri=` from that Google page and paste it into **Authorized redirect URIs**. Typical misses:
+
+- Added `https://dawn.uvesh.in` but opened `https://dawn-web-app.vercel.app`
+- Trailing slash (`.../google/` vs `.../google`)
+- `http` vs `https`
+- A different OAuth client than the one whose ID is in Vercel `GOOGLE_CLIENT_ID`
 
 ---
 
@@ -127,7 +152,7 @@ Start command:  npx tsx bot/index.ts
    - Build context: `/`
    - Dockerfile location: `/Dockerfile`
 
-5. Add the **same env vars** as Vercel (`DATABASE_URL`, Discord keys, `NEXTAUTH_URL` = your Vercel URL).  
+5. Add the **same env vars** as Vercel (`DATABASE_URL`, Discord keys, `NEXTAUTH_URL` = `https://dawn.uvesh.in`).  
    Northflank will set `PORT` — the bot already serves a health check on that port.
 
 6. Deploy. Logs should show:
@@ -176,8 +201,8 @@ Keep that terminal open. Study hours and slash commands work only while it runs.
 - [ ] `provider = "postgresql"` committed  
 - [ ] Neon `DATABASE_URL` + `npx prisma db push`  
 - [ ] GitHub repo pushed  
-- [ ] Vercel live + Discord **and Google** OAuth redirects updated  
-- [ ] Google / Discord login works on the Vercel URL  
+- [ ] Vercel live + Discord **and Google** OAuth redirects updated for **both** `dawn.uvesh.in` and `dawn-web-app.vercel.app`  
+- [ ] Google / Discord login works on `https://dawn.uvesh.in`  
 - [ ] Northflank bot online (logs show logged in)  
 - [ ] Bot slash command works in your server  
 - [ ] Railway service deleted (optional)  

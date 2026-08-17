@@ -74,12 +74,18 @@ openssl rand -base64 32
 ### 2b. Google login (optional, recommended)
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Create credentials → OAuth client ID** → **Web application**
-2. Authorized JavaScript origins: `http://127.0.0.1:3066` (and your live URL)
-3. Authorized redirect URIs:
+2. Authorized JavaScript origins — every host people open, with **no path**:
+   - `http://127.0.0.1:3066`
+   - `https://YOUR-PROJECT.vercel.app`
+   - `https://YOUR-CUSTOM-DOMAIN` (example: `https://dawn.uvesh.in`)
+3. Authorized redirect URIs — Google matches these **character-for-character**. A custom domain does **not** cover `*.vercel.app`:
    - `http://127.0.0.1:3066/api/auth/callback/google`
    - `https://YOUR-PROJECT.vercel.app/api/auth/callback/google`
+   - `https://YOUR-CUSTOM-DOMAIN/api/auth/callback/google`
 4. Copy Client ID → `GOOGLE_CLIENT_ID`  
    Copy Client secret → `GOOGLE_CLIENT_SECRET`
+
+`Error 400: redirect_uri_mismatch` means the URL in the Google error (`redirect_uri=...`) is missing from that list. Add that exact string. On Vercel, NextAuth sends the **hostname you opened**, so logging in on `*.vercel.app` will not use the custom-domain URI.
 
 Same Google email as Discord will land on the same Dawn account.
 
