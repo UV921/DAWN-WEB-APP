@@ -8,6 +8,7 @@ import { LandingCharts } from "@/components/LandingCharts";
 import { LandingDayClock } from "@/components/LandingDayClock";
 import { LandingHeroBackdrop } from "@/components/LandingHeroBackdrop";
 import { LandingHeroFilm } from "@/components/LandingHeroFilm";
+import { LandingInstall } from "@/components/LandingInstall";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import { LandingLifecycleFilm } from "@/components/LandingLifecycleFilm";
 import { LandingNav } from "@/components/LandingNav";
@@ -94,6 +95,7 @@ export function LandingPage({ snap }: Props) {
   return (
     <main className="bg-[#0a0e12] text-[#e8e4dc]">
       <LandingNav />
+      <LandingInstall />
 
       <section
         id="top"
