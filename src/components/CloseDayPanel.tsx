@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { FlowSteps, IconPlus, IconSparkles } from "@/components/icons";
 import { NightClosed } from "@/components/NightClosed";
+import {
+  MIN_SLEEP_HOURS,
+  sleepDurationHours,
+} from "@/lib/sleep-report";
 
 type Props = {
   sleepGoal: string;
@@ -158,8 +162,9 @@ export function CloseDayPanel({
         Set tomorrow before you sleep
       </h2>
       <p className="ui-sub mt-2">
-        Sleep target {sleepGoal}. Set tomorrow’s tasks now so you don’t
-        procrastinate in the morning. Closing night keeps the streak and pays XP.
+        You need at least {MIN_SLEEP_HOURS}h. Your plan is{" "}
+        {sleepDurationHours(sleepGoal, wake)}h ({sleepGoal} → {wake}). Set
+        tomorrow’s tasks now so you don’t procrastinate in the morning.
       </p>
 
       {aiReady ? (

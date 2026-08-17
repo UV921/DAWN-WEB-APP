@@ -3,8 +3,10 @@ import type { HabitLogLike } from "@/lib/habits";
 import {
   buildCoachPlan,
   buildDaySleepReport,
+  buildNightNeedTake,
   buildWeekSleepReport,
   idealBedtimeForWake,
+  TARGET_SLEEP_HOURS,
 } from "@/lib/sleep-report";
 
 export const AiCoachSchema = z.object({
@@ -87,7 +89,13 @@ function buildPrompt(opts: {
     opts.wakeGoal
   );
   const local = buildCoachPlan(opts.logs, opts.sleepGoal, opts.wakeGoal);
-  const idealBed = idealBedtimeForWake(opts.wakeGoal, 8);
+  const need = buildNightNeedTake(
+    opts.logs,
+    opts.today,
+    opts.sleepGoal,
+    opts.wakeGoal
+  );
+  const idealBed = idealBedtimeForWake(opts.wakeGoal, TARGET_SLEEP_HOURS);
 
   const system = `You are Dawn, a high-level morning architect.
 You already know this person's life (work, home, nights, why they care). Use that. Do not give generic advice.
@@ -107,6 +115,19 @@ Return ONLY valid JSON matching the schema — no markdown.`;
       sleepGoal: opts.sleepGoal,
       wakeGoal: opts.wakeGoal,
       idealBedFor8h: idealBed,
+      minHours: need.minHours,
+      targetHours: need.targetHours,
+      plannedHours: need.plannedHours,
+    },
+    needVsTake: {
+      lastNightHours: need.lastNightHours,
+      weekAvgHours: need.weekAvgHours,
+      takeHours: need.takeHours,
+      vsMinHours: need.vsMinHours,
+      vsPlannedHours: need.vsPlannedHours,
+      status: need.status,
+      gapLine: need.gapLine,
+      suggestion: need.suggestion,
     },
     todayScore: day,
     weekStats: week,
