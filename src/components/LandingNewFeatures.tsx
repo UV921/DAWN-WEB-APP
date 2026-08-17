@@ -16,7 +16,8 @@ const FEATURES = [
     title: "Google in one tap",
     body: "Start Dawn with Google. Discord still works. Same email, same account.",
     image: "/images/landing-phone.jpg",
-    alt: "A phone in a stripe of dawn light",
+    alt: "Sunrise over dark water",
+    position: "68% 42%",
   },
   {
     id: "code",
@@ -24,7 +25,8 @@ const FEATURES = [
     title: "Add anyone with a code",
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
     image: "/images/landing-friends.jpg",
-    alt: "Two chairs and a path of morning light",
+    alt: "Two people watching the sunrise",
+    position: "50% 40%",
   },
   {
     id: "board",
@@ -32,7 +34,8 @@ const FEATURES = [
     title: "Rank habits and study",
     body: "Who stayed consistent. Who sat in the room. Combined score.",
     image: "/images/landing-board.jpg",
-    alt: "Steps rising into a shaft of sunlight",
+    alt: "Mountain peaks above the clouds at dawn",
+    position: "58% 46%",
   },
   {
     id: "study",
@@ -40,7 +43,8 @@ const FEATURES = [
     title: "Study time that counts",
     body: "Sit in a marked voice room. Dawn counts the hours for the board.",
     image: "/images/landing-study.jpg",
-    alt: "Clock, headphones, and a desk at dawn",
+    alt: "A library aisle lit by warm lamps",
+    position: "36% 38%",
   },
 ] as const;
 
@@ -58,7 +62,7 @@ export function LandingNewFeatures() {
       setStep((n) => (n + 1) % FEATURES.length);
     }, SCENE_MS);
     return () => window.clearInterval(id);
-  }, [still]);
+  }, [still, step]);
 
   return (
     <section
@@ -81,29 +85,32 @@ export function LandingNewFeatures() {
         </div>
 
         <motion.div
-          className="relative mt-8 min-h-[28rem] overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a] sm:min-h-[32rem]"
+          className="relative mt-8 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]"
           initial={reduce ? false : { opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.85, ease: EASE }}
         >
-          <img
-            key={feature.image}
-            src={feature.image}
-            alt={feature.alt}
-            width={1536}
-            height={864}
-            loading="lazy"
-            decoding="async"
-            className={cn(
-              "feature-film-img absolute inset-0 h-full w-full object-cover",
-              still && "is-still"
-            )}
-          />
-          <div aria-hidden className="feature-film-vignette" />
-          <div aria-hidden className="feature-film-grain" />
+          <div className="relative h-52 overflow-hidden sm:h-64 lg:absolute lg:inset-0 lg:h-full">
+            <img
+              key={feature.image}
+              src={feature.image}
+              alt={feature.alt}
+              width={1600}
+              height={1000}
+              loading="lazy"
+              decoding="async"
+              style={{ objectPosition: feature.position }}
+              className={cn(
+                "feature-film-img h-full w-full object-cover lg:absolute lg:inset-0",
+                still && "is-still"
+              )}
+            />
+            <div aria-hidden className="feature-film-vignette" />
+            <div aria-hidden className="feature-film-grain" />
+          </div>
 
-          <div className="relative z-10 flex min-h-[28rem] flex-col justify-between gap-6 p-5 sm:min-h-[32rem] sm:p-8 lg:flex-row lg:items-end">
+          <div className="relative z-10 flex flex-col justify-between gap-6 p-5 sm:p-6 lg:min-h-[32rem] lg:flex-row lg:items-end lg:p-8">
             <div className="max-w-md">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
                 {feature.kicker}
@@ -111,7 +118,7 @@ export function LandingNewFeatures() {
               <h3 className="font-display mt-2 text-[1.7rem] leading-tight text-white sm:text-[2.1rem]">
                 {feature.title}
               </h3>
-              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[#d6e2ec]/90">
+              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[#9aa6b2] lg:text-[#d6e2ec]/90">
                 {feature.body}
               </p>
               <Link href="/signup" className="dawn-btn mt-6">
@@ -122,7 +129,7 @@ export function LandingNewFeatures() {
           </div>
         </motion.div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           {FEATURES.map((f, i) => {
             const active = i === step;
             return (
@@ -131,32 +138,34 @@ export function LandingNewFeatures() {
                 type="button"
                 onClick={() => setStep(i)}
                 className={cn(
-                  "overflow-hidden rounded-2xl border text-left transition",
+                  "rounded-xl border px-3 py-3 text-left transition sm:px-4",
                   active
                     ? "border-[#f0b45a]/50 bg-[#f0b45a]/10"
                     : "border-white/[0.1] bg-white/[0.03] hover:border-white/20"
                 )}
               >
-                <div className="relative h-24 overflow-hidden sm:h-28">
-                  <img
-                    src={f.image}
-                    alt=""
-                    width={640}
-                    height={360}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+                  {f.kicker}
+                </p>
+                <p className="mt-1 text-[13px] font-medium leading-snug text-white">
+                  {f.title}
+                </p>
+                <span
+                  className="mt-3 block h-0.5 overflow-hidden rounded-full bg-white/10"
+                  aria-hidden
+                >
+                  <motion.span
+                    key={active ? `run-${step}` : "idle"}
+                    className="block h-full w-full origin-left bg-[#f0b45a]"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: active ? 1 : 0 }}
+                    transition={
+                      active && !still
+                        ? { duration: SCENE_MS / 1000, ease: "linear" }
+                        : { duration: 0.25, ease: EASE }
+                    }
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e12] to-transparent" />
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
-                    {f.kicker}
-                  </p>
-                  <p className="mt-1 text-[13px] font-medium text-white">
-                    {f.title}
-                  </p>
-                </div>
+                </span>
               </button>
             );
           })}
@@ -179,7 +188,7 @@ function FeatureOverlay({
       initial={reduce ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE }}
-      className="w-full max-w-[18.5rem] shrink-0 rounded-2xl border border-white/15 bg-[#0a121a]/82 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
+      className="w-full max-w-none shrink-0 rounded-2xl border border-white/15 bg-[#0a121a]/90 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md sm:max-w-[18.5rem]"
     >
       {id === "google" ? (
         <>

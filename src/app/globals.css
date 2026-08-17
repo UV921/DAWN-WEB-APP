@@ -508,7 +508,7 @@ button,
   width: 112%;
   height: 112%;
   object-fit: cover;
-  object-position: 78% 48%;
+  object-position: 32% 48%;
   animation: hero-photo-fade 1.2s ease both,
     hero-photo-drift 32s ease-in-out infinite alternate;
 }
@@ -532,18 +532,17 @@ button,
   inset: 0;
   background:
     linear-gradient(
-      90deg,
-      #0a0e12 0%,
-      rgba(10, 14, 18, 0.78) 28%,
-      rgba(10, 14, 18, 0.28) 62%,
-      rgba(10, 14, 18, 0.42) 100%
+      180deg,
+      rgba(10, 14, 18, 0.72) 0%,
+      rgba(10, 14, 18, 0.28) 22%,
+      rgba(10, 14, 18, 0.12) 48%,
+      #0a0e12 100%
     ),
     linear-gradient(
-      180deg,
-      rgba(10, 14, 18, 0.55) 0%,
-      transparent 22%,
-      transparent 58%,
-      #0a0e12 100%
+      90deg,
+      rgba(10, 14, 18, 0.38) 0%,
+      transparent 42%,
+      rgba(10, 14, 18, 0.22) 100%
     );
 }
 
@@ -608,19 +607,29 @@ button,
 .feature-film-vignette {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(7, 16, 24, 0.82) 0%,
-      rgba(7, 16, 24, 0.42) 42%,
-      rgba(7, 16, 24, 0.22) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(7, 16, 24, 0.28) 0%,
-      transparent 28%,
-      rgba(7, 16, 24, 0.72) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    transparent 35%,
+    rgba(7, 16, 24, 0.35) 100%
+  );
+}
+
+@media (min-width: 1024px) {
+  .feature-film-vignette {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(7, 16, 24, 0.58) 0%,
+        rgba(7, 16, 24, 0.16) 48%,
+        rgba(7, 16, 24, 0.28) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(7, 16, 24, 0.18) 0%,
+        transparent 30%,
+        rgba(7, 16, 24, 0.58) 100%
+      );
+  }
 }
 
 .feature-film-grain {

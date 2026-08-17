@@ -20,8 +20,8 @@ export function LandingHeroBackdrop() {
         className="hero-photo-img"
         src="/images/landing-hero.jpg"
         alt=""
-        width={1536}
-        height={1024}
+        width={1680}
+        height={1050}
         fetchPriority="high"
         decoding="async"
       />
