@@ -1,6 +1,6 @@
 /* Dawn PWA service worker — cache shell for offline open.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v3";
+const CACHE = "dawn-v4";
 const PRECACHE = [
   "/",
   "/login",

@@ -5,30 +5,60 @@ import { prisma } from "@/lib/prisma";
 import { formatDateInZone } from "@/lib/clock";
 import { parseBotMessages } from "@/lib/bot-messages";
 import {
+  discordImageFromBytes,
   pingTextForUser,
   pngFileFromBase64,
   postTodosToDiscord,
   userTodoChannelIds,
 } from "@/lib/todo-discord";
+import type { DiscordFile } from "@/lib/discord-notify";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-/** Post the day's task list into the user's Discord channel. */
+async function readSendPayload(req: Request): Promise<{
+  dateRaw: string;
+  pingText: string;
+  image: DiscordFile | null;
+}> {
+  const ct = req.headers.get("content-type") || "";
+  if (ct.includes("multipart/form-data")) {
+    const form = await req.formData().catch(() => null);
+    const dateRaw = String(form?.get("date") || "");
+    const pingText = String(form?.get("message") || "").trim().slice(0, 300);
+    const file = form?.get("image");
+    let image: DiscordFile | null = null;
+    if (file instanceof Blob && file.size > 24) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      image = discordImageFromBytes(bytes);
+    }
+    return { dateRaw, pingText, image };
+  }
+
+  const body = (await req.json().catch(() => ({}))) as {
+    date?: unknown;
+    message?: unknown;
+    image?: unknown;
+  };
+  return {
+    dateRaw: typeof body.date === "string" ? body.date : "",
+    pingText:
+      typeof body.message === "string" ? body.message.trim().slice(0, 300) : "",
+    image: pngFileFromBase64(body.image),
+  };
+}
+
+/** Post the day's task list (and the same card as Download PNG) into Discord. */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const date =
-    typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
-      ? body.date
-      : formatDateInZone(session.user.timezone);
-  const pingText =
-    typeof body.message === "string" ? body.message.trim().slice(0, 300) : "";
-  const image = pngFileFromBase64(body.image);
+  const { dateRaw, pingText, image } = await readSendPayload(req);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw)
+    ? dateRaw
+    : formatDateInZone(session.user.timezone);
 
   const [user, todos] = await Promise.all([
     prisma.user.findUnique({
@@ -92,5 +122,9 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, count: todos.length });
+  return NextResponse.json({
+    ok: true,
+    count: todos.length,
+    usedImage: Boolean(sent.usedImage),
+  });
 }

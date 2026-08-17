@@ -67,30 +67,36 @@ export async function userTodoChannelIds(
   };
 }
 
+/** PNG or JPEG card from raw bytes (multipart upload or base64). */
+export function discordImageFromBytes(bytes: Uint8Array): DiscordFile | null {
+  if (bytes.length < 24 || bytes.length > 7_500_000) return null;
+  const png =
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47;
+  const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+  if (!png && !jpeg) return null;
+  return {
+    filename: png ? "dawn-tasks.png" : "dawn-tasks.jpg",
+    bytes,
+    contentType: png ? "image/png" : "image/jpeg",
+  };
+}
+
 export function pngFileFromBase64(raw: unknown): DiscordFile | null {
   const s = String(raw || "").trim();
   if (!s) return null;
-  const b64 = s.replace(/^data:image\/png;base64,/i, "").replace(/\s/g, "");
+  const b64 = s
+    .replace(/^data:image\/(?:png|jpe?g);base64,/i, "")
+    .replace(/\s/g, "");
   let bytes: Uint8Array;
   try {
     bytes = Uint8Array.from(Buffer.from(b64, "base64"));
   } catch {
     return null;
   }
-  if (bytes.length < 24 || bytes.length > 7_500_000) return null;
-  if (
-    bytes[0] !== 0x89 ||
-    bytes[1] !== 0x50 ||
-    bytes[2] !== 0x4e ||
-    bytes[3] !== 0x47
-  ) {
-    return null;
-  }
-  return {
-    filename: "dawn-tasks.png",
-    bytes,
-    contentType: "image/png",
-  };
+  return discordImageFromBytes(bytes);
 }
 
 export async function postTodosToDiscord(opts: {
@@ -101,7 +107,7 @@ export async function postTodosToDiscord(opts: {
   pingText?: string;
   mentionUserId?: string | null;
   image?: DiscordFile | null;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; usedImage?: boolean }> {
   const title = `${opts.name || "Dawn"} · tasks for ${opts.date}`;
   const listBody = formatTodoDiscordBody(opts.todos);
   const ping = (opts.pingText || "").trim();
@@ -122,7 +128,7 @@ export async function postTodosToDiscord(opts: {
       mentionUserId: opts.mentionUserId,
       files: opts.image ? [opts.image] : undefined,
     });
-    if (sent.ok) return { ok: true };
+    if (sent.ok) return { ok: true, usedImage: Boolean(opts.image) };
     lastError = sent.error || lastError;
     if (opts.image) {
       const fallback = await discordSendChannelMessage(channelId, {
@@ -131,7 +137,7 @@ export async function postTodosToDiscord(opts: {
         content: content || title,
         mentionUserId: opts.mentionUserId,
       });
-      if (fallback.ok) return { ok: true };
+      if (fallback.ok) return { ok: true, usedImage: false };
       lastError = fallback.error || lastError;
     }
   }
