@@ -25,8 +25,8 @@ const SLEEP_WIN = defaultWindowForKey("sleepEarly", WAKE, SLEEP);
 const WAKE_WIN = defaultWindowForKey("wakeEarly", WAKE, SLEEP);
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const PANEL = "overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]";
-const INSET = "rounded-xl border border-white/[0.1] bg-white/[0.03]";
+const PANEL = "steel-plate overflow-hidden rounded-2xl bg-[#0d131a]";
+const INSET = "steel-plate-sm rounded-xl bg-white/[0.03]";
 
 const HABITS_TODAY = [
   { label: "Wake early", meta: "Done · 05:52", done: true },
@@ -236,7 +236,7 @@ export function LandingPage({ snap }: Props) {
                   </div>
                 </div>
 
-                <div className="mx-4 flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3">
+                <div className="steel-plate-sm mx-4 flex items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0b45a] text-[12px] font-semibold text-[#0a0e12]">
                     ✓
                   </span>
@@ -403,14 +403,14 @@ export function LandingPage({ snap }: Props) {
                   </span>
                 ))}
               </div>
-              <p className="mx-5 mt-3 border border-white/12 bg-white/[0.03] px-3 py-2.5 text-[13px] text-[#8ba3b8]">
+              <p className="steel-plate-sm mx-5 mt-3 rounded-lg bg-white/[0.03] px-3 py-2.5 text-[13px] text-[#8ba3b8]">
                 Add to Want to buy
               </p>
               <div className="flex flex-1 flex-col gap-3 p-5 pt-4">
                 {NAMED_LISTS.map((list) => (
                   <div
                     key={list.name}
-                    className="border border-white/10 bg-black/25"
+                    className="steel-plate-sm overflow-hidden rounded-xl bg-black/25"
                   >
                     <div className="flex items-baseline justify-between border-b border-white/[0.07] px-3 py-2">
                       <p className="font-display text-lg text-[#f0b45a]">
@@ -899,11 +899,10 @@ function LoopChip({
     <motion.div
       animate={{
         backgroundColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.03)",
-        borderColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.1)",
         color: on ? "#0a0e12" : "#e8e4dc",
       }}
       transition={{ duration: 0.45, ease: EASE }}
-      className="flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center rounded-xl border px-2.5 py-2 sm:min-h-[4.75rem] sm:px-3 sm:py-2.5"
+      className="steel-plate-sm flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center rounded-xl px-2.5 py-2 sm:min-h-[4.75rem] sm:px-3 sm:py-2.5"
     >
       <p
         className={`text-[10px] uppercase tracking-[0.12em] ${

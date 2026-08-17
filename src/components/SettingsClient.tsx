@@ -113,7 +113,7 @@ export function SettingsClient() {
               ))}
             </div>
 
-            <div className="mt-8 min-w-0 rounded-2xl border border-white/[0.1] bg-[#0d131a] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
+            <div className="mt-8 min-w-0 steel-plate rounded-2xl bg-[#0d131a] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
               {tab === "morning" ? <MorningClockSettings /> : null}
 
               {tab === "you" ? <ProfileSettings /> : null}

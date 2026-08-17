@@ -71,9 +71,9 @@ export function LandingHeroFilm() {
 
         <MorningPulseCard pulse={PULSE} />
 
-        <section className="rounded-2xl border border-[var(--color-leaf)]/40 bg-[var(--color-leaf)]/[0.08] px-4 py-4 sm:px-5">
+        <section className="steel-plate rounded-2xl bg-[var(--color-leaf)]/[0.08] px-4 py-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-leaf)]/40 bg-[var(--color-leaf)]/10 text-[var(--color-leaf)]">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center steel-plate rounded-2xl bg-[var(--color-leaf)]/10 text-[var(--color-leaf)]">
               <GraduationCapIcon size={30} />
             </div>
             <div className="min-w-0 flex-1">

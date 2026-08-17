@@ -179,7 +179,7 @@ export function RemindersManager() {
       </div>
 
       {/* Discord destination — full wizard: Settings → Discord */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] p-4 space-y-3">
         <p className="font-medium text-white">Discord for reminders</p>
         <p className="text-sm text-[var(--color-mist)]">
           {hasDiscord
@@ -270,10 +270,10 @@ export function RemindersManager() {
         {reminders.map((r) => (
           <li
             key={r.id}
-            className={`rounded-2xl border px-4 py-3 ${
+            className={`steel-plate rounded-2xl px-4 py-3 ${
               r.enabled
-                ? "border-white/10 bg-white/[0.03]"
-                : "border-white/5 opacity-50"
+                ? "bg-white/[0.03]"
+                : "bg-transparent opacity-50"
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">

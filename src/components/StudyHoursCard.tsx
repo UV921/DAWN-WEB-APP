@@ -48,12 +48,12 @@ export function StudyHoursCard() {
   const tone = data.status.tone;
   const border =
     tone === "live"
-      ? "border-[var(--color-leaf)]/40 bg-[var(--color-leaf)]/[0.08]"
+      ? "bg-[var(--color-leaf)]/[0.08]"
       : tone === "good"
-        ? "border-[var(--color-dawn)]/35 bg-[var(--color-dawn)]/[0.07]"
+        ? "bg-[var(--color-dawn)]/[0.07]"
         : tone === "thin"
-          ? "border-[var(--color-ember)]/40 bg-[var(--color-ember)]/[0.08]"
-          : "border-white/12 bg-white/[0.03]";
+          ? "bg-[var(--color-ember)]/[0.08]"
+          : "bg-white/[0.03]";
   const kicker =
     tone === "live"
       ? "text-[var(--color-leaf)]"
@@ -64,7 +64,7 @@ export function StudyHoursCard() {
   const todayLabel = data.periods?.today.label || data.today.label;
 
   return (
-    <section className={`rounded-2xl border px-4 py-4 sm:px-5 ${border}`}>
+    <section className={`steel-plate rounded-2xl px-4 py-4 sm:px-5 ${border}`}>
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <div
           className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${

@@ -47,10 +47,10 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
               </span>
             </>
           );
-          const cls = `rounded-xl border px-2 py-2.5 text-left sm:px-3 sm:py-3 ${
+          const cls = `steel-plate-sm rounded-xl px-2 py-2.5 text-left sm:px-3 sm:py-3 ${
             s.done
-              ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]"
-              : "border-white/12 bg-white/[0.03]"
+              ? "bg-[var(--color-dawn)]"
+              : "bg-white/[0.03]"
           }`;
           return (
             <li key={s.key}>

@@ -153,7 +153,7 @@ export function BotMessagesSettings() {
           return (
             <div
               key={meta.key}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5"
+              className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-4 sm:px-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -221,7 +221,7 @@ export function BotMessagesSettings() {
         {settings.channelPings.map((ping) => (
           <div
             key={ping.id}
-            className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5"
+            className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-4 sm:px-5"
           >
             <div className="flex items-center gap-2">
               <input
@@ -320,7 +320,7 @@ export function BotMessagesSettings() {
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-4 sm:px-5">
         <h3 className="text-[15px] font-medium text-white">
           Where your task list goes
         </h3>

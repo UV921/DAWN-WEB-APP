@@ -306,7 +306,7 @@ function WakeCard({
   iconRef: Ref<AnimatedIconHandle>;
 }) {
   return (
-    <div className="flex min-h-[11.5rem] flex-col justify-center rounded-2xl border border-white/15 bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
+    <div className="flex min-h-[11.5rem] flex-col justify-center steel-plate rounded-2xl bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
       <div className="flex items-center gap-2 text-[#f0b45a]">
         <SunIcon ref={iconRef} size={22} />
         <p className="text-[10px] uppercase tracking-[0.16em]">Wake</p>
@@ -342,7 +342,7 @@ function HabitsCard({
     { label: "Sleep early", state: "locked" as const },
   ];
   return (
-    <div className="flex min-h-[11.5rem] flex-col justify-center rounded-2xl border border-white/15 bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
+    <div className="flex min-h-[11.5rem] flex-col justify-center steel-plate rounded-2xl bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
       <div className="mb-2.5 flex items-center gap-2 text-[#f0b45a]">
         <FlameIcon ref={iconRef} size={20} />
         <p className="text-[10px] uppercase tracking-[0.16em]">Habits</p>
@@ -391,7 +391,7 @@ function TasksCard({
     { text: "Call back before 11", done: false },
   ];
   return (
-    <div className="flex min-h-[11.5rem] flex-col justify-center rounded-2xl border border-white/15 bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
+    <div className="flex min-h-[11.5rem] flex-col justify-center steel-plate rounded-2xl bg-[#0a0e12]/72 px-4 py-3.5 backdrop-blur-md">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[#f0b45a]">
           <ListTodoIcon ref={iconRef} size={20} />
@@ -452,7 +452,7 @@ function NightCard({
   iconRef: Ref<AnimatedIconHandle>;
 }) {
   return (
-    <div className="flex min-h-[11.5rem] flex-col justify-center rounded-2xl border border-[#f0b45a]/25 bg-[#081018]/80 px-4 py-4 text-center backdrop-blur-md">
+    <div className="flex min-h-[11.5rem] flex-col justify-center steel-plate rounded-2xl bg-[#081018]/80 px-4 py-4 text-center backdrop-blur-md">
       <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[#f0b45a]/40 bg-[#f0b45a]/10 text-[#f0b45a]">
         <MoonIcon ref={iconRef} size={22} />
       </div>

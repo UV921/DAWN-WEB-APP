@@ -113,7 +113,7 @@ export function GoalsManager({
           {core.map((g) => (
             <div
               key={g.id}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className="steel-plate rounded-2xl bg-white/[0.03] px-4 py-4"
             >
               <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-mist)]">
                 {g.kind}
@@ -140,10 +140,10 @@ export function GoalsManager({
         {custom.map((g) => (
           <li
             key={g.id}
-            className={`rounded-2xl border px-4 py-4 ${
+            className={`steel-plate rounded-2xl px-4 py-4 ${
               g.active
-                ? "border-white/10 bg-white/[0.03]"
-                : "border-white/5 opacity-50"
+                ? "bg-white/[0.03]"
+                : "bg-transparent opacity-50"
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -207,7 +207,7 @@ export function GoalsManager({
         </button>
       ) : (
         <form
-          className="space-y-3 rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.05] px-5 py-5"
+          className="space-y-3 steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.05] px-5 py-5"
           onSubmit={(e) => {
             e.preventDefault();
             void addGoal();

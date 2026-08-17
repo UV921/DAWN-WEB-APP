@@ -164,7 +164,7 @@ export function LeaderboardClient() {
           {!hasDiscord ? (
             <a
               href="/settings?tab=discord"
-              className="mt-4 inline-flex items-center gap-1 rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-[var(--color-cloud)]"
+              className="mt-4 inline-flex items-center gap-1 steel-plate rounded-2xl bg-[var(--color-dawn)]/10 px-4 py-3 text-sm text-[var(--color-cloud)]"
             >
               Link Discord in Settings so you appear on the server board
               <IconChevronRight size={16} />
@@ -241,7 +241,7 @@ export function LeaderboardClient() {
 
           {/* Your rank card */}
           {me ? (
-            <section className="mt-6 rounded-2xl border border-[var(--color-dawn)]/35 bg-[var(--color-dawn)]/10 px-5 py-4">
+            <section className="mt-6 steel-plate rounded-2xl bg-[var(--color-dawn)]/10 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
                   Your place
@@ -313,10 +313,10 @@ export function LeaderboardClient() {
                 return (
                   <div
                     key={r.userId}
-                    className={`rounded-2xl border px-2 py-4 text-center sm:px-3 ${
+                    className={`steel-plate rounded-2xl px-2 py-4 text-center sm:px-3 ${
                       place === 1
-                        ? "border-[var(--color-dawn)]/50 bg-[var(--color-dawn)]/15"
-                        : "border-white/10 bg-white/[0.03]"
+                        ? "bg-[var(--color-dawn)]/15"
+                        : "bg-white/[0.03]"
                     } ${tall ? "pb-6 sm:pb-8" : ""}`}
                   >
                     <p className="text-xs text-[var(--color-mist)]">#{place}</p>

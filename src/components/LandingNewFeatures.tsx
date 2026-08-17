@@ -73,7 +73,7 @@ export function LandingNewFeatures() {
         </div>
 
         <motion.div
-          className="relative mt-8 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]"
+          className="relative mt-8 overflow-hidden steel-plate rounded-2xl bg-[#0d131a]"
           initial={reduce ? false : { opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -124,10 +124,10 @@ export function LandingNewFeatures() {
                 type="button"
                 onClick={() => setStep(i)}
                 className={cn(
-                  "rounded-xl border px-3 py-3 text-left transition sm:px-4",
+                  "steel-plate-sm rounded-xl px-3 py-3 text-left transition sm:px-4",
                   active
-                    ? "border-[#f0b45a]/50 bg-[#f0b45a]/10"
-                    : "border-white/[0.1] bg-white/[0.03] hover:border-white/20"
+                    ? "bg-[#f0b45a]/10"
+                    : "bg-white/[0.03] hover:bg-white/[0.06]"
                 )}
               >
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">

@@ -31,7 +31,7 @@ export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "relative overflow-hidden rounded-3xl border border-[var(--color-dawn)]/25 bg-[#081018] px-5 py-8 text-center sm:px-8",
+        "relative overflow-hidden steel-plate rounded-3xl bg-[#081018] px-5 py-8 text-center sm:px-8",
         className
       )}
     >

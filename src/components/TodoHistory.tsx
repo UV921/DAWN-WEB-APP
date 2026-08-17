@@ -91,7 +91,7 @@ export function TodoHistory() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-white/20"
+        className="flex w-full items-center justify-between steel-plate rounded-2xl bg-white/[0.03] px-4 py-3 text-left transition hover:border-white/20"
       >
         <span>
           <span className="block text-[15px] font-medium text-white">
@@ -107,7 +107,7 @@ export function TodoHistory() {
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <section className="steel-plate rounded-2xl bg-white/[0.03] p-4">
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[15px] font-medium text-white">Past tasks</h2>
@@ -129,7 +129,7 @@ export function TodoHistory() {
       </div>
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 steel-plate-sm rounded-xl bg-white/[0.04] px-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}

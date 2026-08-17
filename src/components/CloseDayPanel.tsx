@@ -175,7 +175,7 @@ export function CloseDayPanel({
       ) : null}
 
       {tip ? (
-        <p className="mt-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[var(--color-cloud)]">
+        <p className="mt-3 steel-plate-sm rounded-xl bg-black/20 px-4 py-3 text-sm text-[var(--color-cloud)]">
           {tip}
         </p>
       ) : null}

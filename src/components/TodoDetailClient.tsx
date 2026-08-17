@@ -236,7 +236,7 @@ export function TodoDetailClient({ id }: { id: string }) {
 
           {error ? <UiMessage tone="error">{error}</UiMessage> : null}
 
-          <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <section className="space-y-3 steel-plate rounded-2xl bg-white/[0.03] p-4">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-[var(--color-mist)]">Category</span>
               <button
@@ -398,7 +398,7 @@ export function TodoDetailClient({ id }: { id: string }) {
                 ) : null}
               </div>
               {children.length ? (
-                <ul className="overflow-hidden rounded-2xl border border-white/[0.08]">
+                <ul className="overflow-hidden steel-plate rounded-2xl">
                   {children.map((k) => (
                     <li
                       key={k.id}

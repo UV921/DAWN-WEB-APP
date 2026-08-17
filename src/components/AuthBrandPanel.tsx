@@ -43,7 +43,7 @@ export function AuthBrandPanel() {
         </ul>
 
         <div className="mt-8 hidden max-w-sm grid-cols-2 gap-3 sm:grid">
-          <div className="rounded-2xl border border-white/12 bg-black/30 px-4 py-4 backdrop-blur-md">
+          <div className="steel-plate rounded-2xl bg-black/30 px-4 py-4 backdrop-blur-md">
             <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
               Habits · 7d
             </p>
@@ -52,7 +52,7 @@ export function AuthBrandPanel() {
             </p>
             <p className="mt-1 text-xs text-[var(--color-mist)]">consistency</p>
           </div>
-          <div className="rounded-2xl border border-white/12 bg-black/30 px-4 py-4 backdrop-blur-md">
+          <div className="steel-plate rounded-2xl bg-black/30 px-4 py-4 backdrop-blur-md">
             <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
               Study · week
             </p>

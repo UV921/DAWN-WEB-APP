@@ -362,10 +362,10 @@ export function HabitCharts({
         </div>
 
         <div
-          className="contrib-grid mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+          className="contrib-grid mt-4 steel-plate rounded-2xl bg-white/[0.03] p-4"
           onMouseLeave={() => setHover(null)}
         >
-          <div className="min-h-[6.5rem] rounded-xl border border-white/10 bg-black/25 px-3 py-3">
+          <div className="min-h-[6.5rem] steel-plate-sm rounded-xl bg-black/25 px-3 py-3">
             <DayDetail cell={shown} />
           </div>
 

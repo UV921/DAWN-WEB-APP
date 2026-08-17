@@ -199,10 +199,10 @@ export function DiscordSetup() {
         {(data?.checklist || []).map((c, i) => (
           <li
             key={c.id}
-            className={`rounded-2xl border px-4 py-3 ${
+            className={`steel-plate rounded-2xl px-4 py-3 ${
               c.done
-                ? "border-[var(--color-leaf)]/30 bg-[var(--color-leaf)]/5"
-                : "border-white/10 bg-white/[0.03]"
+                ? "bg-[var(--color-leaf)]/5"
+                : "bg-white/[0.03]"
             }`}
           >
             <div className="flex gap-3">
@@ -227,7 +227,7 @@ export function DiscordSetup() {
       </ul>
 
       {/* Step: Link account */}
-      <div className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.06] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.06] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
           Step A · Link your Discord
         </p>
@@ -272,7 +272,7 @@ export function DiscordSetup() {
       </div>
 
       {/* Step: Invite bot */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Step B · Add Dawn bot to your server
         </p>
@@ -307,7 +307,7 @@ export function DiscordSetup() {
       </div>
 
       {/* Step: Channel */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Step C · Progress channel (optional but recommended)
         </p>
@@ -350,7 +350,7 @@ export function DiscordSetup() {
       </div>
 
       {/* Step: Notify mode */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Step D · Where should Dawn ping you?
         </p>
@@ -364,10 +364,10 @@ export function DiscordSetup() {
                 setMode(m.value);
                 void savePrefs({ discordNotifyDefault: m.value });
               }}
-              className={`rounded-2xl border px-4 py-3 text-left transition ${
+              className={`steel-plate rounded-2xl px-4 py-3 text-left transition ${
                 mode === m.value
-                  ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/10"
-                  : "border-white/10 hover:border-white/25"
+                  ? "bg-[var(--color-dawn)]/10"
+                  : "bg-white/[0.03] hover:bg-white/[0.06]"
               }`}
             >
               <p className="font-medium text-white">{m.label}</p>
@@ -378,7 +378,7 @@ export function DiscordSetup() {
       </div>
 
       {/* Study voice rooms */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Step E · Study voice rooms
         </p>
@@ -395,7 +395,7 @@ export function DiscordSetup() {
             {studyRooms.map((r) => (
               <li
                 key={r.channelId}
-                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm"
+                className="flex items-center justify-between gap-2 steel-plate-sm rounded-xl px-3 py-2 text-sm"
               >
                 <span className="min-w-0 truncate text-white">
                   {r.name}
@@ -440,7 +440,7 @@ export function DiscordSetup() {
       </div>
 
       {/* Test */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="steel-plate rounded-2xl bg-white/[0.03] px-5 py-5">
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
           Step F · Test it
         </p>
@@ -470,7 +470,7 @@ export function DiscordSetup() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[var(--color-mist)]">
+      <div className="steel-plate-sm rounded-xl bg-black/20 px-4 py-3 text-sm text-[var(--color-mist)]">
         <p className="font-medium text-white">Morning calls from Discord</p>
         <p className="mt-1">
           With the bot running, Dawn can DM “are you awake?”, take your plan at

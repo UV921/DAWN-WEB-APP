@@ -174,12 +174,12 @@ export function CircleRankBoard({
           return (
             <li
               key={row.user.id}
-              className={`rounded-2xl border p-4 ${
+              className={`steel-plate rounded-2xl p-4 ${
                 isMe
-                  ? "border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/[0.08]"
+                  ? "bg-[var(--color-dawn)]/[0.08]"
                   : row.stats.checkedIn
-                    ? "border-white/15 bg-white/[0.04]"
-                    : "border-white/10 bg-white/[0.03]"
+                    ? "bg-white/[0.04]"
+                    : "bg-white/[0.03]"
               }`}
             >
               <div className="flex items-start justify-between gap-3">

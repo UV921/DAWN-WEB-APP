@@ -254,7 +254,7 @@ export function DayReportClient({ date }: { date: string }) {
       ) : null}
 
       {summary.total > 0 ? (
-        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <section className="space-y-4 steel-plate rounded-2xl bg-white/[0.03] p-4">
           <div>
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="text-[15px] font-medium text-white">
@@ -322,7 +322,7 @@ export function DayReportClient({ date }: { date: string }) {
             Nothing was listed for this day.
           </p>
         ) : (
-          <ul className="overflow-hidden rounded-2xl border border-white/[0.08]">
+          <ul className="overflow-hidden steel-plate rounded-2xl">
             {roots.map((t) => {
               const sub = kids.get(t.id) || [];
               return (

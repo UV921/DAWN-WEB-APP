@@ -57,7 +57,7 @@ export function MorningClockSettings() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-6">
+      <div className="steel-plate rounded-2xl bg-[var(--color-dawn)]/[0.07] px-5 py-6">
         <ol className="space-y-3 text-sm text-[var(--color-cloud)]">
           <li className="flex gap-3">
             <span className="font-mono text-[var(--color-dawn)]">1</span>

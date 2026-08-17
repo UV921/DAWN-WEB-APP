@@ -155,7 +155,7 @@ export function PwaRegister() {
   if (!ready || installed || dismissed) return null;
 
   return (
-    <div className="fixed z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d131a]/95 p-4 shadow-2xl backdrop-blur left-4 right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-4 md:bottom-4">
+    <div className="fixed z-50 mx-auto max-w-md steel-plate rounded-2xl bg-[#0d131a]/95 p-4 shadow-2xl backdrop-blur left-4 right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-4 md:bottom-4">
       <p className="font-display text-lg text-white">Install Dawn</p>
       <p className="mt-1 text-sm text-[var(--color-mist)]">
         {ios

@@ -63,7 +63,7 @@ export function AuthOverlay({ open, onClose }: Props) {
           onClick={closeBackdrop}
         >
           <motion.div
-            className="relative z-10 w-full max-w-md rounded-2xl border border-[var(--color-dawn)]/20 bg-[#0a121a] px-5 py-7 sm:px-8 sm:py-8"
+            className="relative z-10 w-full max-w-md steel-plate rounded-2xl bg-[#0a121a] px-5 py-7 sm:px-8 sm:py-8"
             initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
