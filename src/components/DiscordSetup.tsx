@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { IconChevronRight } from "@/components/icons";
+import { channelIdFromInput } from "@/lib/bot-messages";
 
 type ChecklistItem = {
   id: string;
@@ -279,6 +280,10 @@ export function DiscordSetup() {
           <li>Open the invite link (needs Manage Server on that Discord).</li>
           <li>Pick your study / accountability server, then Authorize.</li>
           <li>
+            Keep View Channel, Send Messages, and Embed Links checked. If the
+            channel is private, add the Dawn bot role to it after inviting.
+          </li>
+          <li>
             Keep the bot online: run{" "}
             <code className="text-[var(--color-dawn)]">npm run bot</code> in a
             terminal.
@@ -310,7 +315,10 @@ export function DiscordSetup() {
           In Discord: User Settings, Advanced, turn on{" "}
           <strong className="text-white">Developer Mode</strong>. Then
           right‑click your progress channel and{" "}
-          <strong className="text-white">Copy Channel ID</strong>. Paste below.
+          <strong className="text-white">Copy Channel ID</strong>, or copy the
+          channel link. Paste below. The Dawn bot must be in that server and
+          allowed to View Channel, Send Messages, and Embed Links — private
+          channels need the bot role added.
         </p>
         {data?.config.defaultChannelId ? (
           <p className="mt-2 text-xs text-[var(--color-mist)]">
@@ -324,8 +332,8 @@ export function DiscordSetup() {
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <input
             value={channelId}
-            onChange={(e) => setChannelId(e.target.value)}
-            placeholder="Channel ID (numbers only)"
+            onChange={(e) => setChannelId(channelIdFromInput(e.target.value))}
+            placeholder="Channel ID or discord.com/channels/… link"
             className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
           />
           <button
@@ -437,8 +445,10 @@ export function DiscordSetup() {
           Step F · Test it
         </p>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Send a test now. If DM fails: open Discord Privacy → allow DMs from
-          server members, and share a server with the bot.
+          Send a test now. If the channel test says missing access (50001),
+          re-invite the bot and check channel permissions. If DM fails: open
+          Discord Privacy → allow DMs from server members, and share a server
+          with the bot.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button

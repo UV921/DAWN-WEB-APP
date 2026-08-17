@@ -2,16 +2,17 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normChannelId } from "@/lib/bot-messages";
 import {
+  DISCORD_BOT_INVITE_PERMISSIONS,
   discordSendChannelMessage,
   discordSendDm,
 } from "@/lib/discord-notify";
 
 function botInviteUrl(clientId: string) {
-  const perms = "2147552256"; // Send Messages, Embeds, Read History, Use Slash Commands-ish set
   return `https://discord.com/api/oauth2/authorize?client_id=${encodeURIComponent(
     clientId
-  )}&permissions=${perms}&scope=bot%20applications.commands`;
+  )}&permissions=${DISCORD_BOT_INVITE_PERMISSIONS}&scope=bot%20applications.commands`;
 }
 
 export async function GET() {
@@ -101,7 +102,8 @@ export async function GET() {
         id: "channel",
         done: Boolean(user?.discordChannelId || defaultChannelId),
         title: "Progress channel chosen",
-        detail: "Paste a channel ID below so Dawn knows where to post.",
+        detail:
+          "Paste a Channel ID or discord.com/channels/… link so Dawn knows where to post.",
       },
       {
         id: "notify",
@@ -152,9 +154,9 @@ export async function POST(req: Request) {
 
   if (action === "test-channel") {
     const channelId =
-      (typeof body.channelId === "string" && body.channelId.trim()) ||
-      user?.discordChannelId ||
-      process.env.DISCORD_CHANNEL_ID?.trim() ||
+      normChannelId(body.channelId) ||
+      normChannelId(user?.discordChannelId) ||
+      normChannelId(process.env.DISCORD_CHANNEL_ID) ||
       "";
     if (!channelId) {
       return NextResponse.json(

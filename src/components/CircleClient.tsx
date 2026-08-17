@@ -461,7 +461,7 @@ export function CircleClient() {
                           <input
                             key={circle.discordChannelId || circle.id}
                             defaultValue={circle.discordChannelId || ""}
-                            placeholder="Channel ID (Developer Mode → Copy)"
+                            placeholder="Channel ID or discord.com/channels/… link"
                             onBlur={(e) => {
                               const v = e.target.value.trim();
                               if (v !== (circle.discordChannelId || "")) {

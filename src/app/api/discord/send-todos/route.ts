@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDateInZone } from "@/lib/clock";
 import { discordSendChannelMessage } from "@/lib/discord-notify";
-import { parseBotMessages, resolveChannelId } from "@/lib/bot-messages";
+import { collectChannelIds, parseBotMessages } from "@/lib/bot-messages";
 
 /** Post the day's task list into the user's Discord channel. */
 export async function POST(req: Request) {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       ? body.date
       : formatDateInZone(session.user.timezone);
 
-  const [user, todos] = await Promise.all([
+  const [user, todos, tracked] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { name: true, discordChannelId: true, botMessagesJson: true },
@@ -28,16 +28,31 @@ export async function POST(req: Request) {
       where: { userId: session.user.id, date },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.trackedMember.findMany({
+      where: { userId: session.user.id },
+      select: { channel: { select: { channelId: true } } },
+    }),
   ]);
 
   const settings = parseBotMessages(user?.botMessagesJson);
-  const channelId = resolveChannelId(
-    settings.todosChannelId,
-    user?.discordChannelId
+  const hadConfiguredId = Boolean(
+    settings.todosChannelId ||
+      user?.discordChannelId ||
+      process.env.DISCORD_CHANNEL_ID
   );
-  if (!channelId) {
+  const channelIds = collectChannelIds(
+    settings.todosChannelId,
+    user?.discordChannelId,
+    process.env.DISCORD_CHANNEL_ID,
+    ...tracked.map((t) => t.channel.channelId)
+  );
+  if (channelIds.length === 0) {
     return NextResponse.json(
-      { error: "No channel set. Add a channel ID in Settings → Discord." },
+      {
+        error: hadConfiguredId
+          ? "That Discord channel ID looks invalid (a server link may have been pasted). In Settings → Discord, paste a Channel ID or a discord.com/channels/… link — not the Server ID."
+          : "No channel set. Add a Channel ID (or paste a discord.com/channels/… link) in Settings → Discord.",
+      },
       { status: 400 }
     );
   }
@@ -67,17 +82,19 @@ export async function POST(req: Request) {
   lines.push("");
   lines.push(`**${done}/${todos.length} done**`);
 
-  const sent = await discordSendChannelMessage(channelId, {
+  const payload = {
     title: `${user?.name || "Dawn"} · tasks for ${date}`,
     body: lines.join("\n").slice(0, 3900),
-  });
+  };
 
-  if (!sent.ok) {
-    return NextResponse.json(
-      { error: sent.error || "Discord rejected the message." },
-      { status: 502 }
-    );
+  let lastError = "Discord rejected the message.";
+  for (const channelId of channelIds) {
+    const sent = await discordSendChannelMessage(channelId, payload);
+    if (sent.ok) {
+      return NextResponse.json({ ok: true, count: todos.length });
+    }
+    lastError = sent.error || lastError;
   }
 
-  return NextResponse.json({ ok: true, count: todos.length });
+  return NextResponse.json({ error: lastError }, { status: 502 });
 }
