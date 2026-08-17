@@ -32,8 +32,17 @@ export function AuthPanel({ onClose }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get("error");
-    if (code) setError(oauthErrorMessage(code));
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("error");
+    if (!code) return;
+    setError(oauthErrorMessage(code));
+    params.delete("error");
+    const rest = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      rest ? `${window.location.pathname}?${rest}` : window.location.pathname
+    );
   }, []);
 
   async function demoLogin(who: "you" | "friend") {
@@ -106,10 +115,17 @@ export function AuthPanel({ onClose }: Props) {
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => signIn("discord", { callbackUrl: "/dashboard" })}
+          onClick={() => {
+            setBusy("discord");
+            setError("");
+            void signIn("discord", { callbackUrl: "/dashboard" }).catch(() => {
+              setError("Check your connection and try again.");
+              setBusy(null);
+            });
+          }}
           className="dawn-btn dawn-btn-discord w-full"
         >
-          Continue with Discord
+          {busy === "discord" ? "Opening Discord…" : "Continue with Discord"}
         </button>
       </div>
     </div>

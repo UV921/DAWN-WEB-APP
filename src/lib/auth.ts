@@ -8,6 +8,30 @@ const discordConfigured =
   Boolean(process.env.DISCORD_CLIENT_ID?.trim()) &&
   Boolean(process.env.DISCORD_CLIENT_SECRET?.trim());
 
+/** HTTPS production (Vercel) needs Secure cookies. Local http cannot use SameSite=None. */
+const useSecureCookies =
+  (process.env.NEXTAUTH_URL || "").startsWith("https://") ||
+  Boolean(process.env.VERCEL);
+
+/**
+ * OAuth state/PKCE cookies. Safari (and the Discord iOS app handoff) often
+ * treats the return to /api/auth/callback/discord as cross-site, so default
+ * SameSite=Lax cookies are missing on the first attempt.
+ */
+function oauthCheckCookie(name: string) {
+  const prefix = useSecureCookies ? "__Secure-" : "";
+  return {
+    name: `${prefix}${name}`,
+    options: {
+      httpOnly: true,
+      sameSite: useSecureCookies ? ("none" as const) : ("lax" as const),
+      path: "/",
+      secure: useSecureCookies,
+      maxAge: 60 * 15,
+    },
+  };
+}
+
 async function ensureDemoUser(email: string, name: string) {
   return prisma.user.upsert({
     where: { email },
@@ -274,6 +298,11 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
+  cookies: {
+    pkceCodeVerifier: oauthCheckCookie("next-auth.pkce.code_verifier"),
+    state: oauthCheckCookie("next-auth.state"),
+    nonce: oauthCheckCookie("next-auth.nonce"),
+  },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -282,17 +311,22 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "discord" && profile && "id" in profile) {
         const discordId = String((profile as { id: string }).id);
-        const dbUser = await ensureDiscordUser({
-          discordId,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        });
-        user.id = dbUser.id;
-        void enrollDiscordFriend({
-          userId: dbUser.id,
-          discordId,
-        }).catch((e) => console.error("Discord enroll failed", e));
+        try {
+          const dbUser = await ensureDiscordUser({
+            discordId,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          });
+          user.id = dbUser.id;
+          void enrollDiscordFriend({
+            userId: dbUser.id,
+            discordId,
+          }).catch((e) => console.error("Discord enroll failed", e));
+        } catch (e) {
+          // Don't fail the OAuth round-trip — jwt retries ensureDiscordUser.
+          console.error("Discord signIn ensure failed", e);
+        }
       }
       return true;
     },
