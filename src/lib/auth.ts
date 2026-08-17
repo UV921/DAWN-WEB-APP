@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { enrollDiscordFriend } from "@/lib/discord-enroll";
@@ -7,6 +8,10 @@ import { enrollDiscordFriend } from "@/lib/discord-enroll";
 const discordConfigured =
   Boolean(process.env.DISCORD_CLIENT_ID?.trim()) &&
   Boolean(process.env.DISCORD_CLIENT_SECRET?.trim());
+
+const googleConfigured =
+  Boolean(process.env.GOOGLE_CLIENT_ID?.trim()) &&
+  Boolean(process.env.GOOGLE_CLIENT_SECRET?.trim());
 
 /** HTTPS production (Vercel) needs Secure cookies. Local http cannot use SameSite=None. */
 const useSecureCookies =
@@ -251,6 +256,147 @@ async function createDiscordUser(bits: {
   }
 }
 
+async function findUserByGoogle(googleId: string) {
+  const account = await prisma.account.findUnique({
+    where: {
+      provider_providerAccountId: {
+        provider: "google",
+        providerAccountId: googleId,
+      },
+    },
+    include: { user: { select: sessionUserSelect } },
+  });
+  return account?.user ?? null;
+}
+
+async function linkGoogleAccount(opts: {
+  userId: string;
+  googleId: string;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expires_at?: number | null;
+  id_token?: string | null;
+  token_type?: string | null;
+  scope?: string | null;
+}) {
+  await prisma.account.upsert({
+    where: {
+      provider_providerAccountId: {
+        provider: "google",
+        providerAccountId: opts.googleId,
+      },
+    },
+    create: {
+      userId: opts.userId,
+      type: "oauth",
+      provider: "google",
+      providerAccountId: opts.googleId,
+      access_token: opts.access_token,
+      refresh_token: opts.refresh_token,
+      expires_at: opts.expires_at ?? undefined,
+      id_token: opts.id_token,
+      token_type: opts.token_type,
+      scope: opts.scope,
+    },
+    update: {
+      access_token: opts.access_token ?? undefined,
+      refresh_token: opts.refresh_token ?? undefined,
+      expires_at: opts.expires_at ?? undefined,
+      id_token: opts.id_token ?? undefined,
+    },
+  });
+}
+
+/** Find or create the Dawn user for a Google account. Same email → same row as Discord. */
+async function ensureGoogleUser(bits: {
+  googleId: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expires_at?: number | null;
+  id_token?: string | null;
+  token_type?: string | null;
+  scope?: string | null;
+}) {
+  const { googleId, name, image } = bits;
+  const fallbackEmail = `${googleId}@users.noreply.google.local`;
+  const email = bits.email || fallbackEmail;
+  const tokens = {
+    googleId,
+    access_token: bits.access_token,
+    refresh_token: bits.refresh_token,
+    expires_at: bits.expires_at,
+    id_token: bits.id_token,
+    token_type: bits.token_type,
+    scope: bits.scope,
+  };
+
+  const existing = await findUserByGoogle(googleId);
+  if (existing) {
+    const nextEmail =
+      bits.email && bits.email !== existing.email
+        ? await uniqueEmailOrKeep(bits.email, existing.id, existing.email)
+        : undefined;
+    await linkGoogleAccount({ userId: existing.id, ...tokens });
+    return prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name: existing.name ?? name,
+        image: image ?? existing.image,
+        ...(nextEmail && nextEmail !== existing.email ? { email: nextEmail } : {}),
+      },
+      select: sessionUserSelect,
+    });
+  }
+
+  const byEmail = bits.email
+    ? await prisma.user.findUnique({ where: { email: bits.email } })
+    : null;
+  if (byEmail) {
+    await linkGoogleAccount({ userId: byEmail.id, ...tokens });
+    return prisma.user.update({
+      where: { id: byEmail.id },
+      data: {
+        name: byEmail.name ?? name,
+        image: image ?? byEmail.image,
+      },
+      select: sessionUserSelect,
+    });
+  }
+
+  try {
+    const created = await prisma.user.create({
+      data: {
+        email,
+        name,
+        image,
+      },
+      select: sessionUserSelect,
+    });
+    await linkGoogleAccount({ userId: created.id, ...tokens });
+    return created;
+  } catch (e) {
+    if (!isUniqueConflict(e)) throw e;
+    const raced = await findUserByGoogle(googleId);
+    if (raced) return raced;
+    const again = await prisma.user.findUnique({ where: { email } });
+    if (again) {
+      await linkGoogleAccount({ userId: again.id, ...tokens });
+      return prisma.user.update({
+        where: { id: again.id },
+        data: {
+          name: again.name ?? name,
+          image: image ?? again.image,
+        },
+        select: sessionUserSelect,
+      });
+    }
+    throw e;
+  }
+}
+
 function applySessionDefaults(session: { user?: { wakeGoal?: string; sleepGoal?: string; timezone?: string } }) {
   if (!session.user) return;
   session.user.wakeGoal = session.user.wakeGoal || "06:00";
@@ -262,6 +408,15 @@ export const authOptions: NextAuthOptions = {
   // No PrismaAdapter — Credentials + JWT is more reliable for demo login.
   // Discord users are upserted in the signIn callback.
   providers: [
+    ...(googleConfigured
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     ...(discordConfigured
       ? [
           DiscordProvider({
@@ -309,6 +464,28 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        const googleId = String(account.providerAccountId || "");
+        if (!googleId) return true;
+        try {
+          const dbUser = await ensureGoogleUser({
+            googleId,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            id_token: account.id_token,
+            token_type: account.token_type,
+            scope: account.scope,
+          });
+          user.id = dbUser.id;
+        } catch (e) {
+          console.error("Google signIn ensure failed", e);
+        }
+        return true;
+      }
       if (account?.provider === "discord" && profile && "id" in profile) {
         const discordId = String((profile as { id: string }).id);
         try {
@@ -331,7 +508,30 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account, profile }) {
-      if (account?.provider === "discord" && profile && "id" in profile) {
+      if (account?.provider === "google") {
+        const googleId = String(account.providerAccountId || "");
+        if (googleId) {
+          try {
+            const dbUser = await ensureGoogleUser({
+              googleId,
+              email: user?.email,
+              name: user?.name,
+              image: user?.image,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              id_token: account.id_token,
+              token_type: account.token_type,
+              scope: account.scope,
+            });
+            if (dbUser) token.sub = dbUser.id;
+          } catch (e) {
+            console.error("Google jwt ensure failed", e);
+            const raced = await findUserByGoogle(googleId);
+            if (raced) token.sub = raced.id;
+          }
+        }
+      } else if (account?.provider === "discord" && profile && "id" in profile) {
         const discordId = String((profile as { id: string }).id);
         token.discordId = discordId;
         // NextAuth ignores `user.id` set in signIn (no adapter). Create/find here

@@ -78,6 +78,8 @@ Do **not** commit `.env`.
 NEXTAUTH_URL=https://YOUR-PROJECT.vercel.app
 NEXTAUTH_SECRET=paste-a-long-random-string
 DATABASE_URL=same-neon-url-as-above
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
@@ -95,7 +97,10 @@ AI_PROVIDER=gemini
 
 ```
 https://YOUR-PROJECT.vercel.app/api/auth/callback/discord
+https://YOUR-PROJECT.vercel.app/api/auth/callback/google
 ```
+
+Google Cloud → OAuth client → add the Google callback too.
 
 Also set `NEXTAUTH_URL` to that exact URL (no trailing slash).
 
@@ -171,8 +176,8 @@ Keep that terminal open. Study hours and slash commands work only while it runs.
 - [ ] `provider = "postgresql"` committed  
 - [ ] Neon `DATABASE_URL` + `npx prisma db push`  
 - [ ] GitHub repo pushed  
-- [ ] Vercel live + Discord OAuth redirect updated  
+- [ ] Vercel live + Discord **and Google** OAuth redirects updated  
+- [ ] Google / Discord login works on the Vercel URL  
 - [ ] Northflank bot online (logs show logged in)  
-- [ ] Discord login works on the Vercel URL  
 - [ ] Bot slash command works in your server  
 - [ ] Railway service deleted (optional)  

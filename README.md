@@ -13,7 +13,7 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 
 ## Features
 
-- Discord login  
+- Google or Discord login  
 - Daily check-in + “I woke up” timestamp  
 - Per-habit & perfect-day streaks  
 - Wake-time chart, completion bars, 6-week heatmap  
@@ -71,6 +71,18 @@ Generate `NEXTAUTH_SECRET`:
 openssl rand -base64 32
 ```
 
+### 2b. Google login (optional, recommended)
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Create credentials → OAuth client ID** → **Web application**
+2. Authorized JavaScript origins: `http://127.0.0.1:3066` (and your live URL)
+3. Authorized redirect URIs:
+   - `http://127.0.0.1:3066/api/auth/callback/google`
+   - `https://YOUR-PROJECT.vercel.app/api/auth/callback/google`
+4. Copy Client ID → `GOOGLE_CLIENT_ID`  
+   Copy Client secret → `GOOGLE_CLIENT_SECRET`
+
+Same Google email as Discord will land on the same Dawn account.
+
 ### 3. Run web + bot (both needed for Discord)
 
 ```bash
@@ -82,7 +94,7 @@ npm run build && npm run start
 npm run bot
 ```
 
-Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Continue with Discord** (same Discord account you use in the server).
+Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Sign up / Sign in** with Google or Discord.
 
 ### How channel vs DM works
 
