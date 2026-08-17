@@ -26,6 +26,8 @@ type Props = {
   sleepGoal: string;
   wakeGoal: string;
   bedtimeLogged?: boolean;
+  inSleepWindow?: boolean;
+  sleepWindowLabel?: string;
   onSleepNow: () => void | Promise<void>;
   onSaved?: () => void;
 };
@@ -60,6 +62,8 @@ export function NightCloseFlow({
   sleepGoal,
   wakeGoal,
   bedtimeLogged,
+  inSleepWindow = true,
+  sleepWindowLabel,
   onSleepNow,
   onSaved,
 }: Props) {
@@ -264,12 +268,30 @@ export function NightCloseFlow({
       setMsg({ tone: "error", text: "Could not save tomorrow’s plan." });
       return;
     }
-    if (!bedtimeLogged) {
-      await onSleepNow();
-      return;
+    if (inSleepWindow && !bedtimeLogged) {
+      try {
+        await onSleepNow();
+        return;
+      } catch (err) {
+        setBusy(false);
+        setMsg({
+          tone: "error",
+          text:
+            err instanceof Error
+              ? err.message
+              : "Couldn’t log sleep. Tomorrow’s plan is saved.",
+        });
+        return;
+      }
     }
     onSaved?.();
     setBusy(false);
+    setMsg({
+      tone: "success",
+      text: sleepWindowLabel
+        ? `Tomorrow is set. Sleep check-in opens ${sleepWindowLabel}.`
+        : "Tomorrow is set.",
+    });
   }
 
   const hello = name ? `${name}, do you have to remember anything?` : "Do you have to remember anything?";
@@ -578,10 +600,17 @@ export function NightCloseFlow({
       {step === "sleep" ? (
         <>
           <div>
-            <h1 className="ui-title">Ready to sleep?</h1>
+            <h1 className="ui-title">
+              {inSleepWindow ? "Ready to sleep?" : "Tomorrow is set — almost"}
+            </h1>
             <p className="ui-sub mt-3">
               You need at least {MIN_SLEEP_HOURS}h. This plan is {hours}h (
-              {sleepGoal} → {wake}). Phone down after you confirm.
+              {sleepGoal} → {wake}).
+              {inSleepWindow
+                ? " Phone down after you confirm."
+                : sleepWindowLabel
+                  ? ` Sleep check-in opens ${sleepWindowLabel}.`
+                  : ""}
             </p>
           </div>
 
@@ -631,7 +660,9 @@ export function NightCloseFlow({
               onClick={() => void finish()}
               className="ui-btn ui-btn-primary flex-1"
             >
-              {bedtimeLogged ? "Save tomorrow’s plan" : "Save & going to sleep"}
+              {bedtimeLogged || !inSleepWindow
+                ? "Save tomorrow’s plan"
+                : "Save & going to sleep"}
             </button>
             <button
               type="button"
