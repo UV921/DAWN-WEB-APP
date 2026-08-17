@@ -41,6 +41,12 @@ export function LandingNav() {
         </a>
         <nav className="ml-auto flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <a
+            href="#new"
+            className="rounded-full px-2 py-1.5 text-[12px] text-[#c5ced6] transition hover:bg-white/5 hover:text-white sm:px-2.5"
+          >
+            New
+          </a>
+          <a
             href="#tasks"
             className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[12px] text-[#c5ced6] transition hover:bg-white/5 hover:text-white sm:px-2.5"
           >

@@ -11,6 +11,7 @@ import { LandingHeroFilm } from "@/components/LandingHeroFilm";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import { LandingLifecycleFilm } from "@/components/LandingLifecycleFilm";
 import { LandingNav } from "@/components/LandingNav";
+import { LandingNewFeatures } from "@/components/LandingNewFeatures";
 import { LandingPhilosophyFilm } from "@/components/LandingPhilosophyFilm";
 import { LandingStudyFilm } from "@/components/LandingStudyFilm";
 import { NightClosed } from "@/components/NightClosed";
@@ -122,6 +123,8 @@ export function LandingPage({ snap }: Props) {
           </ContainerScroll>
         </div>
       </section>
+
+      <LandingNewFeatures />
 
       {live ? (
         <section className="border-t border-white/[0.08] px-5 py-10 sm:px-10">
