@@ -89,7 +89,7 @@ export function ProfileSettings() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="How Dawn should call you"
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -101,7 +101,7 @@ export function ProfileSettings() {
           value={identityLine}
           onChange={(e) => setIdentityLine(e.target.value)}
           placeholder="wakes early and owns the first hour"
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -112,7 +112,7 @@ export function ProfileSettings() {
           onChange={(e) => setWhyLine(e.target.value)}
           rows={2}
           placeholder="Your real reason — shown on Today"
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -125,7 +125,7 @@ export function ProfileSettings() {
           onChange={(e) => setPledgeText(e.target.value)}
           rows={2}
           placeholder="I wake by 6 because…"
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -133,7 +133,7 @@ export function ProfileSettings() {
         type="button"
         disabled={busy}
         onClick={() => void save()}
-        className="rounded-full bg-[var(--color-dawn)] px-7 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-60"
+        className="ui-btn ui-btn-primary"
       >
         {busy ? "Saving…" : "Save profile"}
       </button>

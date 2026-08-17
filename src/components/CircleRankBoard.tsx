@@ -292,7 +292,7 @@ export function CircleRankBoard({
                     type="button"
                     disabled={busy}
                     onClick={() => onNudge(row.user.id, row.user.name)}
-                    className="rounded-full bg-[var(--color-dawn)] px-4 py-1.5 text-xs font-semibold text-[var(--color-night)] disabled:opacity-50"
+                    className="ui-btn ui-btn-primary ui-btn-sm"
                   >
                     Nudge on Discord
                   </button>

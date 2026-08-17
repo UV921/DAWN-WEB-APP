@@ -220,7 +220,7 @@ export function MissionSetup({
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="mt-4 rounded-full bg-[var(--color-dawn)] px-5 py-2.5 text-sm font-semibold text-[var(--color-night)]"
+          className="ui-btn ui-btn-primary mt-4"
         >
           Start a mission
         </button>
@@ -275,7 +275,7 @@ export function MissionSetup({
               Math.min(90, Math.max(3, Math.round(Number(e.target.value) || 7)))
             )
           }
-          className="mt-3 w-28 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-3 w-28 text-sm !px-3 !py-2"
         />
       </div>
 
@@ -284,7 +284,7 @@ export function MissionSetup({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -315,7 +315,7 @@ export function MissionSetup({
             value={customLabel}
             onChange={(e) => setCustomLabel(e.target.value)}
             placeholder="Custom habit name"
-            className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1 text-sm !py-2"
           />
           <button
             type="button"
@@ -360,7 +360,7 @@ export function MissionSetup({
               }
             }}
             placeholder="e.g. Drink water, Make bed"
-            className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1 text-sm !py-2"
           />
           <button
             type="button"
@@ -395,7 +395,7 @@ export function MissionSetup({
           type="button"
           disabled={busy}
           onClick={() => void startMission()}
-          className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+          className="ui-btn ui-btn-primary"
         >
           {busy ? "Starting…" : `Start ${days}-day mission`}
         </button>

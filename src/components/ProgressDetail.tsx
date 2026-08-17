@@ -406,11 +406,7 @@ export function ProgressDetail({
                 key={r.key}
                 type="button"
                 onClick={() => onRange(r.key)}
-                className={`rounded-full px-3.5 py-1.5 text-sm ${
-                  range === r.key
-                    ? "bg-[var(--color-dawn)] font-semibold text-[var(--color-night)]"
-                    : "border border-white/12 text-[var(--color-mist)] hover:text-white"
-                }`}
+                className={`ui-chip ${range === r.key ? "is-on" : ""}`}
               >
                 {r.label}
               </button>

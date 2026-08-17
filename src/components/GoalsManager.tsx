@@ -128,7 +128,7 @@ export function GoalsManager({
                   onChange={(e) =>
                     void patchGoal(g.id, { targetTime: e.target.value || null })
                   }
-                  className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white"
+                  className="ui-field mt-1 text-sm !py-2"
                 />
               </label>
             </div>
@@ -219,13 +219,13 @@ export function GoalsManager({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Deep work before 8"
             autoFocus
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field"
           />
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Why this matters to you"
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field"
           />
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-[var(--color-mist)]">
@@ -234,7 +234,7 @@ export function GoalsManager({
                 type="time"
                 value={targetTime}
                 onChange={(e) => setTargetTime(e.target.value)}
-                className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white"
+                className="ui-field !px-3 !py-2"
               />
             </label>
             <label className="flex items-center gap-2 text-sm text-white">
@@ -258,14 +258,14 @@ export function GoalsManager({
             <button
               type="submit"
               disabled={busy || !title.trim()}
-              className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+              className="ui-btn ui-btn-primary"
             >
               Save goal
             </button>
             <button
               type="button"
               onClick={() => setAdding(false)}
-              className="rounded-full border border-white/15 px-5 py-2.5 text-sm text-[var(--color-mist)]"
+              className="ui-btn ui-btn-ghost ui-btn-sm"
             >
               Cancel
             </button>

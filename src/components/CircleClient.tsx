@@ -63,7 +63,7 @@ export function CircleClient() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [showHow, setShowHow] = useState(true);
+  const [showHow, setShowHow] = useState(false);
   const [myHabits, setMyHabits] = useState<HabitDef[]>([...DEFAULT_HABITS]);
   const [boardSort, setBoardSort] = useState<CircleBoardSort>("combined");
   const [addTargetId, setAddTargetId] = useState("");
@@ -202,7 +202,9 @@ export function CircleClient() {
       <main className="dawn-bg min-h-screen">
         <div className="app-shell mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="circle" />
-          <p className="mt-10 text-sm text-[var(--color-mist)]">Loading friends…</p>
+          <p className="app-page mt-10 text-sm text-[var(--color-mist)]">
+            Loading friends…
+          </p>
         </div>
       </main>
     );
@@ -211,10 +213,10 @@ export function CircleClient() {
   const empty = !loading && circles.length === 0;
 
   return (
-    <main className="dawn-bg noise relative min-h-screen">
+    <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="circle" />
-        <div className="mt-6 animate-rise sm:mt-10">
+        <div className="app-page-wide mt-6 animate-rise sm:mt-10">
           <p className="ui-kicker">Accountability</p>
           <h1 className="ui-title mt-2">Friend circle</h1>
           <p className="ui-sub mt-3">
@@ -231,7 +233,7 @@ export function CircleClient() {
             </p>
           )}
 
-          <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5">
+          <section className="mt-8 rounded-2xl border border-white/10 bg-[#0d131a] px-4 py-4 sm:px-5">
             <button
               type="button"
               onClick={() => setShowHow((v) => !v)}
@@ -488,7 +490,7 @@ export function CircleClient() {
                                 }
                               }
                             }}
-                            className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-[var(--color-dawn)]"
+                            className="ui-field mt-1 !py-2"
                           />
                         </label>
                         <label className="block text-sm text-[var(--color-mist)]">
@@ -511,7 +513,7 @@ export function CircleClient() {
                                 });
                               }
                             }}
-                            className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+                            className="ui-field mt-1 font-mono text-sm !py-2"
                           />
                         </label>
                       </div>

@@ -78,7 +78,7 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+    <div className="ui-card ui-card-compact !text-left">
       <p className="text-xs text-[var(--color-mist)]">{label}</p>
       <p className="font-display mt-1 text-xl text-white">{value}</p>
       {hint ? (
@@ -135,7 +135,7 @@ export function DayReportClient({ date }: { date: string }) {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="tasks" />
-        <div className="mt-4 space-y-5 sm:mt-8">{inner}</div>
+        <div className="app-page mt-4 space-y-5 sm:mt-8">{inner}</div>
       </div>
     </main>
   );
@@ -185,12 +185,12 @@ export function DayReportClient({ date }: { date: string }) {
       </nav>
 
       <header>
-        <p className="text-sm text-[var(--color-mist)]">{data.date}</p>
-        <h1 className="font-display mt-1 text-3xl text-white">
+        <p className="ui-kicker">{data.date}</p>
+        <h1 className="ui-title mt-2">
           {friendlyDay(data.date, data.today)}
         </h1>
         {plan?.goalText ? (
-          <p className="mt-2 text-sm text-[var(--color-cloud)]">
+          <p className="ui-sub mt-2">
             {plan.goalText}
           </p>
         ) : null}

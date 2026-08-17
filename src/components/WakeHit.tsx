@@ -68,17 +68,15 @@ export function WakeHit({
           />
         ))}
       <div
-        className="animate-rise relative w-full max-w-sm rounded-3xl border border-[var(--color-dawn)]/40 bg-[#0d1b2a] p-6 text-center shadow-2xl"
+        className="animate-rise relative w-full max-w-sm rounded-3xl border border-[var(--color-dawn)]/40 bg-[#0d131a] p-6 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-dawn)]">
-          Dopamine hit
-        </p>
-        <h2 className="font-display mt-3 text-3xl text-white">{title}</h2>
+        <p className="ui-kicker">Dopamine hit</p>
+        <h2 className="ui-title mt-3 text-[1.85rem]">{title}</h2>
         {subtitle && (
           <p className="mt-2 text-sm text-[var(--color-mist)]">{subtitle}</p>
         )}
-        <p className="font-display mt-6 text-5xl text-[var(--color-dawn)]">
+        <p className="font-display mt-6 text-4xl text-[var(--color-dawn)]">
           +{xpGained} XP
         </p>
         <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -111,7 +109,7 @@ export function WakeHit({
         <button
           type="button"
           onClick={onClose}
-          className="mt-6 rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)]"
+          className="ui-btn ui-btn-primary mt-6"
         >
           Keep going
         </button>

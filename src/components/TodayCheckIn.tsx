@@ -546,8 +546,69 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         : "Morning habits done."
     : null;
 
+  const loop = (
+    <DailyLoop
+      steps={[
+        {
+          key: "wake",
+          label: "Wake up",
+          detail: wakeTime || `by ${wakeGoal}`,
+          done: Boolean(wakeTime),
+        },
+        {
+          key: "habits",
+          label: "Habits",
+          detail: `${done}/${liveHabits.length || 1} done`,
+          done: liveHabits.length > 0 && done >= liveHabits.length,
+        },
+        {
+          key: "tasks",
+          label: "Tasks",
+          detail: todayTodos.length
+            ? `${tasksDone}/${todayTodos.length} done`
+            : "none yet",
+          done: todayTodos.length > 0 && tasksDone === todayTodos.length,
+          href: "/tasks",
+        },
+        {
+          key: "night",
+          label: "Sleep",
+          detail: bedtime || `by ${sleepGoal}`,
+          done: Boolean(bedtime),
+          href: "/sleep",
+        },
+      ]}
+    />
+  );
+
+  const action = !wakeTime ? (
+    <MorningRitual
+      pledge={profile?.pledgeText}
+      planWake={todayPlan?.wakeGoal || wakeGoal}
+      disabled={saving || !wakeWindowOpen}
+      alreadyUp={false}
+      windowOpen={wakeWindowOpen}
+      windowStart={wakeHabit?.windowStart}
+      windowEnd={wakeHabit?.windowEnd}
+      opensInMin={wakeHabit?.opensInMin}
+      onRise={() => void wokeUp()}
+    />
+  ) : morningFlow !== "done" ? (
+    <MorningAfterWake
+      open
+      date={today}
+      initialStep={morningFlow === "todos" ? "todos" : "reminders"}
+      onDone={() => {
+        setMorningFlow("done");
+        void load();
+      }}
+    />
+  ) : nextLine ? (
+    <p className="text-sm text-[var(--color-mist)]">{nextLine}</p>
+  ) : null;
+
   return (
-    <div className="space-y-5">
+    <>
       <WakeHit
         open={Boolean(hit)}
         title={hit?.title || ""}
@@ -561,231 +622,174 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         onClose={() => setHit(null)}
       />
 
-      <header>
-        <p className="text-sm text-[var(--color-mist)]">
-          {friendlyDate(today) || "Today"}
-          {wakeTime ? ` · up at ${wakeTime}` : ` · wake by ${wakeGoal}`}
-        </p>
-        <h1 className="font-display mt-1 text-3xl text-white">
-          {hello ? `${timeWish()}, ${hello}` : timeWish()}
-        </h1>
-        {todayPlan?.goalText ? (
-          <p className="mt-2 text-sm text-[var(--color-cloud)]">
-            {todayPlan.goalText}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-10">
+        <div className="space-y-6">
+        <header>
+          <p className="ui-kicker">
+            {friendlyDate(today) || "Today"}
+            {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
           </p>
-        ) : (
-          <p className="mt-2 text-sm text-[var(--color-mist)]">
-            Wake up, do your habits, finish your tasks.
-          </p>
-        )}
-      </header>
-
-      {pulse ? <MorningPulseCard pulse={pulse} /> : null}
-
-      <StudyHoursCard />
-
-      <TodayOverview
-        earlyStreak={profile?.earlyStreak || 0}
-        habitsDone={done}
-        habitsTotal={liveHabits.length || 1}
-        xp={profile?.xp || 0}
-        level={profile?.level || 1}
-        intoLevel={profile?.intoLevel || 0}
-        need={profile?.need || 80}
-        challenge={challenge}
-        onStartChallenge={(days) => void startChallenge(days)}
-      />
-
-      <DailyLoop
-        steps={[
-          {
-            key: "wake",
-            label: "Wake up",
-            detail: wakeTime || `by ${wakeGoal}`,
-            done: Boolean(wakeTime),
-          },
-          {
-            key: "habits",
-            label: "Habits",
-            detail: `${done}/${liveHabits.length || 1} done`,
-            done: liveHabits.length > 0 && done >= liveHabits.length,
-          },
-          {
-            key: "tasks",
-            label: "Tasks",
-            detail: todayTodos.length
-              ? `${tasksDone}/${todayTodos.length} done`
-              : "none yet",
-            done: todayTodos.length > 0 && tasksDone === todayTodos.length,
-            href: "/tasks",
-          },
-          {
-            key: "night",
-            label: "Sleep",
-            detail: bedtime || `by ${sleepGoal}`,
-            done: Boolean(bedtime),
-            href: "/sleep",
-          },
-        ]}
-      />
-
-      {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
-
-      {!wakeTime ? (
-        <MorningRitual
-          pledge={profile?.pledgeText}
-          planWake={todayPlan?.wakeGoal || wakeGoal}
-          disabled={saving || !wakeWindowOpen}
-          alreadyUp={false}
-          windowOpen={wakeWindowOpen}
-          windowStart={wakeHabit?.windowStart}
-          windowEnd={wakeHabit?.windowEnd}
-          opensInMin={wakeHabit?.opensInMin}
-          onRise={() => void wokeUp()}
-        />
-      ) : morningFlow !== "done" ? (
-        <MorningAfterWake
-          open
-          date={today}
-          initialStep={morningFlow === "todos" ? "todos" : "reminders"}
-          onDone={() => {
-            setMorningFlow("done");
-            void load();
-          }}
-        />
-      ) : nextLine ? (
-        <p className="text-sm text-[var(--color-mist)]">{nextLine}</p>
-      ) : null}
-
-      <section>
-        <div className="mb-3 flex items-baseline justify-between">
-          <div>
-            <h2 className="text-[15px] font-medium text-white">Habits</h2>
-            <p className="mt-0.5 text-xs text-[var(--color-mist)]">
-              Tap each one when you finish it.
+          <h1 className="ui-title mt-2">
+            {hello ? `${timeWish()}, ${hello}` : timeWish()}
+          </h1>
+          {todayPlan?.goalText ? (
+            <p className="ui-sub mt-2">{todayPlan.goalText}</p>
+          ) : (
+            <p className="ui-sub mt-2">
+              Wake up, do your habits, finish your tasks.
             </p>
-          </div>
-          <Link href="/settings?tab=habits" className="text-xs text-[var(--color-mist)]">
-            Edit
-          </Link>
-        </div>
-        <ul className="space-y-2">
-          {sortedHabits.map((h) => {
-            const isDone = Boolean(checks[h.key]);
-            const locked = !isDone && !h.canSubmit;
-            return (
-              <li key={h.key}>
-                <button
-                  type="button"
-                  onClick={() => void toggleHabit(h)}
-                  disabled={saving}
-                  className={`ui-row ${isDone ? "is-done" : ""} ${locked ? "is-locked" : ""}`}
-                >
-                  <span className={`ui-check ${isDone ? "is-on" : ""}`}>
-                    ✓
-                  </span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block font-medium text-white">
-                      {h.label}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
-                      {isDone
-                        ? "Done"
-                        : locked
-                          ? h.opensInMin
-                            ? `Opens in ${formatDuration(h.opensInMin)}`
-                            : `From ${h.windowStart || "—"}`
-                          : `Tap · until ${h.windowEnd}`}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+          )}
+        </header>
 
-      {reminders.length ? (
+        {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
+        {action}
+        {loop}
+
         <section>
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="ui-section-head">
             <div>
-              <h2 className="text-[15px] font-medium text-white">Reminders</h2>
-              <p className="mt-0.5 text-xs text-[var(--color-mist)]">
-                Alerts you set for today.
-              </p>
+              <h2 className="ui-section-title text-[1.15rem]">Habits</h2>
+              <p className="ui-section-help">Tap each one when you finish it.</p>
             </div>
-            <Link href="/settings?tab=reminders" className="text-xs text-[var(--color-mist)]">
+            <Link
+              href="/settings?tab=habits"
+              className="shrink-0 text-xs text-[var(--color-mist)] hover:text-white"
+            >
               Edit
             </Link>
           </div>
-          <ul className="space-y-1.5">
-            {reminders.map((r) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm"
-              >
-                <span className="text-white">{r.title}</span>
-                <span className="tabular-nums text-[var(--color-dawn)]">{r.time}</span>
-              </li>
-            ))}
+          <ul className="space-y-2">
+            {sortedHabits.map((h) => {
+              const isDone = Boolean(checks[h.key]);
+              const locked = !isDone && !h.canSubmit;
+              return (
+                <li key={h.key}>
+                  <button
+                    type="button"
+                    onClick={() => void toggleHabit(h)}
+                    disabled={saving}
+                    className={`ui-row ${isDone ? "is-done" : ""} ${locked ? "is-locked" : ""}`}
+                  >
+                    <span className={`ui-check ${isDone ? "is-on" : ""}`}>
+                      ✓
+                    </span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block font-medium text-white">
+                        {h.label}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
+                        {isDone
+                          ? "Done"
+                          : locked
+                            ? h.opensInMin
+                              ? `Opens in ${formatDuration(h.opensInMin)}`
+                              : `From ${h.windowStart || "—"}`
+                            : `Tap · until ${h.windowEnd}`}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
-      ) : null}
 
-      <TodayTasks
-        date={today}
-        todos={todayTodos}
-        onChange={setTodayTodos}
-        onError={(text) => setBanner({ tone: "error", text })}
-        title="Today's tasks"
-        hint="Add what you need to finish on the Tasks page. Come back here to check them off."
-        allowAdd={false}
-        addHref="/tasks"
-        addLabel="Add a task"
-      />
-
-      <p className="text-xs text-[var(--color-mist)]">
-        Finish wake, habits, tasks, and sleep for extra XP.
-      </p>
-
-      {inSleepWindow ? (
-        <CloseDayPanel
-          sleepGoal={sleepGoal}
-          wakeGoal={wakeGoal}
-          bedtimeLogged={Boolean(bedtime)}
-          onSleepNow={() => void goingToSleep()}
-          onSaved={() => void load()}
+        <TodayTasks
+          date={today}
+          todos={todayTodos}
+          onChange={setTodayTodos}
+          onError={(text) => setBanner({ tone: "error", text })}
+          title="Today's tasks"
+          hint="Add what you need to finish on the Tasks page. Come back here to check them off."
+          allowAdd={false}
+          addHref="/tasks"
+          addLabel="Add a task"
         />
-      ) : null}
 
-      {!notifyReady ? (
-        <button
-          type="button"
-          onClick={() => void enableNotifications()}
-          className="ui-btn-text text-sm"
-        >
-          Turn on notifications
-        </button>
-      ) : null}
+        {inSleepWindow ? (
+          <CloseDayPanel
+            sleepGoal={sleepGoal}
+            wakeGoal={wakeGoal}
+            bedtimeLogged={Boolean(bedtime)}
+            onSleepNow={() => void goingToSleep()}
+            onSaved={() => void load()}
+          />
+        ) : null}
 
-      {(saving || status === "saved" || status === "error") && (
-        <p
-          className={`text-sm ${
-            status === "error"
-              ? "text-red-300"
+        {!notifyReady ? (
+          <button
+            type="button"
+            onClick={() => void enableNotifications()}
+            className="ui-btn-text text-sm"
+          >
+            Turn on notifications
+          </button>
+        ) : null}
+
+        {(saving || status === "saved" || status === "error") && (
+          <p
+            className={`text-sm ${
+              status === "error"
+                ? "text-red-300"
+                : status === "saved"
+                  ? "text-[var(--color-leaf)]"
+                  : "text-[var(--color-mist)]"
+            }`}
+            aria-live="polite"
+          >
+            {saving
+              ? "Saving…"
               : status === "saved"
-                ? "text-[var(--color-leaf)]"
-                : "text-[var(--color-mist)]"
-          }`}
-          aria-live="polite"
-        >
-          {saving
-            ? "Saving…"
-            : status === "saved"
-              ? "Saved"
-              : "Couldn’t save — try again"}
-        </p>
-      )}
+                ? "Saved"
+                : "Couldn’t save — try again"}
+          </p>
+        )}
+      </div>
+
+      <aside className="mt-6 space-y-4 lg:mt-0 lg:sticky lg:top-6">
+        {pulse ? <MorningPulseCard pulse={pulse} /> : null}
+        <TodayOverview
+          earlyStreak={profile?.earlyStreak || 0}
+          habitsDone={done}
+          habitsTotal={liveHabits.length || 1}
+          xp={profile?.xp || 0}
+          level={profile?.level || 1}
+          intoLevel={profile?.intoLevel || 0}
+          need={profile?.need || 80}
+          challenge={challenge}
+          onStartChallenge={(days) => void startChallenge(days)}
+        />
+        <StudyHoursCard />
+        {reminders.length ? (
+          <section>
+            <div className="ui-section-head">
+              <div>
+                <h2 className="ui-section-title text-[1.15rem]">Reminders</h2>
+                <p className="ui-section-help">Alerts you set for today.</p>
+              </div>
+              <Link
+                href="/settings?tab=reminders"
+                className="shrink-0 text-xs text-[var(--color-mist)] hover:text-white"
+              >
+                Edit
+              </Link>
+            </div>
+            <ul className="space-y-1.5">
+              {reminders.map((r) => (
+                <li key={r.id} className="ui-row !min-h-0 !py-2.5">
+                  <span className="min-w-0 flex-1 text-sm text-white">
+                    {r.title}
+                  </span>
+                  <span className="tabular-nums text-[13px] text-[var(--color-dawn)]">
+                    {r.time}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </aside>
     </div>
+    </>
   );
 }

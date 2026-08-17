@@ -52,10 +52,10 @@ export function SettingsClient() {
   }, [session?.user?.wakeGoal, session?.user?.sleepGoal]);
 
   return (
-    <main className="dawn-bg noise relative min-h-screen">
+    <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="settings" />
-        <div className="mt-8 animate-rise sm:mt-10">
+        <div className="app-page-wide mt-8 animate-rise sm:mt-10">
           <p className="ui-kicker">Settings</p>
           <h1 className="ui-title mt-3">Make Dawn fit you</h1>
           <p className="ui-sub mt-3">
@@ -66,7 +66,7 @@ export function SettingsClient() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Link
               href="/circle"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className="ui-card px-4 py-4"
             >
               <p className="text-sm font-medium text-white">Friends</p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -76,7 +76,7 @@ export function SettingsClient() {
             </Link>
             <Link
               href="/leaderboard"
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className="ui-card px-4 py-4"
             >
               <p className="text-sm font-medium text-white">Board</p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">
@@ -88,7 +88,7 @@ export function SettingsClient() {
           <div className="mt-8 md:mt-10 md:grid md:grid-cols-[13.75rem_minmax(0,1fr)] md:items-start md:gap-8 lg:gap-10">
             <div
               role="tablist"
-              className="flex gap-1 overflow-x-auto md:sticky md:top-6 md:flex-col md:gap-0.5 md:overflow-visible"
+              className="flex flex-wrap gap-1.5 md:sticky md:top-6 md:flex-col md:flex-nowrap md:gap-0.5"
             >
               {TABS.map((t) => (
                 <button
@@ -102,10 +102,10 @@ export function SettingsClient() {
                     url.searchParams.set("tab", t.id);
                     window.history.replaceState({}, "", url.toString());
                   }}
-                  className={`shrink-0 rounded-full px-3 py-2 text-left text-sm transition md:rounded-xl md:px-3.5 ${
+                  className={`ui-chip shrink-0 md:w-full md:justify-start md:rounded-xl ${
                     tab === t.id
-                      ? "bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
-                      : "text-[var(--color-mist)] hover:bg-white/[0.04] hover:text-white"
+                      ? "is-on md:!border-transparent md:!bg-[var(--color-dawn)]/15 md:!text-[var(--color-dawn)]"
+                      : ""
                   }`}
                 >
                   {t.label}
@@ -113,7 +113,7 @@ export function SettingsClient() {
               ))}
             </div>
 
-            <div className="mt-8 min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
+            <div className="mt-8 min-w-0 rounded-2xl border border-white/[0.1] bg-[#0d131a] px-4 py-5 sm:px-6 sm:py-6 md:mt-0 md:px-8 md:py-8">
               {tab === "morning" ? <MorningClockSettings /> : null}
 
               {tab === "you" ? <ProfileSettings /> : null}

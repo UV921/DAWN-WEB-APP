@@ -155,7 +155,7 @@ export function PwaRegister() {
   if (!ready || installed || dismissed) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d1b2a]/95 p-4 shadow-2xl backdrop-blur md:left-auto">
+    <div className="fixed z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d131a]/95 p-4 shadow-2xl backdrop-blur left-4 right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-4 md:bottom-4">
       <p className="font-display text-lg text-white">Install Dawn</p>
       <p className="mt-1 text-sm text-[var(--color-mist)]">
         {ios
@@ -167,7 +167,7 @@ export function PwaRegister() {
           <button
             type="button"
             onClick={() => void install()}
-            className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-sm font-semibold text-[var(--color-night)]"
+            className="ui-btn ui-btn-primary min-h-9 px-4 py-2 text-sm"
           >
             Install
           </button>
@@ -175,7 +175,7 @@ export function PwaRegister() {
         <button
           type="button"
           onClick={dismiss}
-          className="rounded-full border border-white/20 px-4 py-2 text-sm text-[var(--color-mist)]"
+          className="ui-btn ui-btn-ghost min-h-9 px-4 py-2 text-sm"
         >
           Not now
         </button>

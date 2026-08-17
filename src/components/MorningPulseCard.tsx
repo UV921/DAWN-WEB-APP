@@ -31,10 +31,8 @@ const TONE: Record<
 export function MorningPulseCard({ pulse }: { pulse: MorningPulse }) {
   const t = TONE[pulse.tone] ?? TONE.start;
   return (
-    <section className={`relative overflow-hidden rounded-2xl border px-5 py-5 ${t.border} ${t.bg}`}>
-      <p className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-        {t.kicker}
-      </p>
+    <section className={`relative overflow-hidden rounded-[1.1rem] border px-5 py-5 ${t.border} ${t.bg}`}>
+      <p className="ui-kicker">{t.kicker}</p>
       <h2 className="font-display mt-2 text-[1.85rem] leading-[1.15] text-white">
         {pulse.headline}
       </h2>
