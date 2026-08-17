@@ -110,20 +110,23 @@ Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Sign up / Sign in** wi
 
 ### 4. Friend / study circle flow
 
-1. Everyone signs in with **Discord** on Dawn  
-2. Add friends the easy way:
-   - **Invite code / link** — paste a code or a `/circle?join=CODE` link (auto-joins)
-   - **Same Discord server** — people already on Dawn in your study server show as one-tap Add
-   - **On Discord** — search a Discord name or ID and add them
-   - **Server group** — tap **Join Discord server group** to share one board with the whole guild
-3. Owner can paste a **study channel ID** and **Post to Discord** so the invite lands in the channel  
-4. The circle **rank board** sorts by:
-   - Habits + study (combined)
-   - Habit consistency (7-day %)
-   - Study hours this week (voice rooms)
-   - On-time wakes
-   - Today’s check-in
-5. In Discord you can use:
+**Google friends (code only)**
+
+1. You both sign in with **Google** (Discord is optional)
+2. Open **Friends** — your friend code is already there
+3. Copy the code or share the link
+4. They open Friends, paste your code, tap **Add friend**
+5. You’re on the same rank board (habits + study hours)
+
+**Discord extras**
+
+- Same-server people already on Dawn show as one-tap **Add**
+- **Join Discord server group** shares one board with the guild
+- Owner can paste a study channel ID and **Post to Discord**
+
+The circle **rank board** sorts by habits + study, 7-day habit %, study hours, on-time wakes, or today.
+
+In Discord you can use:
    - `/setup` — button onboarding (why, wake, sleep, focus…)
    - `/track ping_time:06:00 board_time:08:00` — morning board channel
    - `/join` — join board · `/ping` — DM everyone “are you awake?”

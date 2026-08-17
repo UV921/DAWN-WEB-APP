@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
 import { DEFAULT_HABITS, type HabitDef } from "@/lib/habits";
 import { parseInviteInput } from "@/lib/circle-invite";
@@ -54,6 +53,10 @@ export function CircleClient() {
     null
   );
   const [hasDiscord, setHasDiscord] = useState(false);
+  const [hasGoogle, setHasGoogle] = useState(false);
+  const [friendCode, setFriendCode] = useState("");
+  const [friendLink, setFriendLink] = useState("");
+  const [codeSteps, setCodeSteps] = useState<string[]>([]);
   const [inviteCode, setInviteCode] = useState("");
   const [circleName, setCircleName] = useState("Morning Circle");
   const [message, setMessage] = useState("");
@@ -88,6 +91,10 @@ export function CircleClient() {
     setSuggestions(data.suggestions || []);
     setDiscordGroup(data.discordGroup || null);
     setHasDiscord(Boolean(data.hasDiscord));
+    setHasGoogle(Boolean(data.hasGoogle));
+    setFriendCode(data.friendCode || "");
+    setFriendLink(data.friendLink || "");
+    setCodeSteps(data.codeSteps || data.howTo || []);
     setAddTargetId((current) => current || data.circles?.[0]?.id || "");
     setLoading(false);
   }, []);
@@ -132,9 +139,9 @@ export function CircleClient() {
       setError("Paste an invite code or link");
       return;
     }
-    const data = await api("join", { inviteCode: parsed });
+    const data = await api("addFriend", { inviteCode: parsed });
     if (!data) return;
-    setMessage("You’re in. Check the board below.");
+    setMessage(data.message || "You’re in. Check the board below.");
     setInviteCode("");
     await load();
   }
@@ -175,9 +182,11 @@ export function CircleClient() {
     const parsed = parseInviteInput(join);
     setInviteCode(parsed);
     void (async () => {
-      const data = await api("join", { inviteCode: parsed });
+      const data = await api("addFriend", { inviteCode: parsed });
       if (data) {
-        setMessage("You’re in from the invite link. Check the board below.");
+        setMessage(
+          data.message || "You’re in from the invite link. Check the board below."
+        );
         const url = new URL(window.location.href);
         url.searchParams.delete("join");
         window.history.replaceState({}, "", url.toString());
@@ -209,8 +218,9 @@ export function CircleClient() {
           <p className="ui-kicker">Accountability</p>
           <h1 className="ui-title mt-2">Friend circle</h1>
           <p className="ui-sub mt-3">
-            Add friends with an invite code, from Discord, or from the same
-            server — then rank each other on habit consistency and study hours.
+            Google friends add each other with a code — copy yours, send it,
+            they paste it. Discord same-server add still works too. Then rank
+            habit consistency and study hours.
           </p>
 
           {(message || error) && (
@@ -251,16 +261,16 @@ export function CircleClient() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     {
-                      t: "Invite code",
-                      d: "Share a code or link. Friends can paste either — even a full URL.",
+                      t: "Google · code",
+                      d: "Copy your code, send it, they paste it. That’s the whole add-friend flow.",
                     },
                     {
                       t: "Discord add",
-                      d: "One tap for people already on Dawn with Discord, or in your server.",
+                      d: "One tap if they’re already on Dawn in your server.",
                     },
                     {
                       t: "Rank board",
-                      d: "Habits · 7 days, study hours this week, on-time wakes, or combined.",
+                      d: "Habits · 7 days, study hours this week, or combined.",
                     },
                   ].map((c) => (
                     <div
@@ -275,14 +285,8 @@ export function CircleClient() {
                   ))}
                 </div>
                 <p className="text-xs text-[var(--color-mist)]">
-                  Tip: friends should also open{" "}
-                  <Link
-                    href="/settings?tab=discord"
-                    className="text-[var(--color-dawn)] underline-offset-2 hover:underline"
-                  >
-                    Settings → Discord
-                  </Link>{" "}
-                  so nudges, study hours, and DMs work.
+                  Google friends: copy your code and send it. Discord is
+                  optional — only needed for nudges and study-voice hours.
                 </p>
               </div>
             ) : null}
@@ -297,6 +301,12 @@ export function CircleClient() {
             onCreate={() => void createCircle()}
             busy={busy}
             hasDiscord={hasDiscord}
+            hasGoogle={hasGoogle}
+            friendCode={friendCode}
+            friendLink={friendLink}
+            codeSteps={codeSteps}
+            onCopyCode={() => void copyInvite(friendCode)}
+            onShareCode={() => void copyInviteLink(friendCode)}
             discordGroup={discordGroup}
             onJoinDiscordGroup={async () => {
               const data = await api("joinDiscordGroup");

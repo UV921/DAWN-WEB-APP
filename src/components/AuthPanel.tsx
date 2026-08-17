@@ -107,7 +107,7 @@ export function AuthPanel({ onClose, mode = "signin" }: Props) {
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-[var(--color-mist)]">
         {signup
-          ? "Google in one tap — or Discord if that’s how your study circle already lives."
+          ? "Google in one tap — or Discord if that’s how your study circle already lives. Then add friends with a code on Friends."
           : "Same Google or Discord you used before. Your habits and board come with you."}
       </p>
 

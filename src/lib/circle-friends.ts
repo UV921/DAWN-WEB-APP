@@ -1,12 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { discordFriendsInviteCode } from "@/lib/circle-invite";
+import { randomInviteCode } from "@/lib/habits";
+
+export const GOOGLE_FRIEND_STEPS = [
+  "You and your friend both sign in with Google (Discord works too — the code is the same).",
+  "Open Friends. Your friend code is waiting — copy it or share the link.",
+  "Send that code on WhatsApp, text, or anywhere.",
+  "They open Friends, paste your code, tap Add friend.",
+  "You’re on the same board: habit consistency and study hours.",
+];
 
 export type FriendSuggestion = {
   id: string;
   name: string | null;
   image: string | null;
   discordId: string | null;
-  reason: "same-server" | "on-discord";
+  reason: "same-server" | "on-discord" | "on-dawn";
   reasonLabel: string;
 };
 
@@ -25,6 +34,55 @@ const SUGGEST_SELECT = {
   image: true,
   discordId: true,
 } as const;
+
+export async function uniqueCircleInviteCode() {
+  let inviteCode = randomInviteCode();
+  for (let i = 0; i < 8; i++) {
+    const exists = await prisma.accountabilityCircle.findUnique({
+      where: { inviteCode },
+    });
+    if (!exists) return inviteCode;
+    inviteCode = randomInviteCode();
+  }
+  return randomInviteCode(10);
+}
+
+/** Every user gets a home circle so Google friends can share a code with no extra setup. */
+export async function ensureHomeCircle(userId: string, name?: string | null) {
+  const owned = await prisma.accountabilityCircle.findFirst({
+    where: { ownerId: userId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (owned) return owned;
+
+  const member = await prisma.circleMember.findFirst({
+    where: { userId },
+    include: { circle: true },
+    orderBy: { joinedAt: "asc" },
+  });
+  if (member?.circle) return member.circle;
+
+  const label = String(name || "")
+    .trim()
+    .split(/\s+/)[0]
+    .slice(0, 24);
+  return prisma.accountabilityCircle.create({
+    data: {
+      name: label ? `${label}’s friends` : "Friends",
+      inviteCode: await uniqueCircleInviteCode(),
+      ownerId: userId,
+      members: { create: { userId } },
+    },
+  });
+}
+
+export async function userHasGoogle(userId: string) {
+  const row = await prisma.account.findFirst({
+    where: { userId, provider: "google" },
+    select: { id: true },
+  });
+  return Boolean(row);
+}
 
 export async function getDiscordGroupInfo(
   userId: string
@@ -172,7 +230,6 @@ export async function searchDiscordFriends(opts: {
   const matches = await prisma.user.findMany({
     where: {
       id: { notIn: [...exclude] },
-      discordId: { not: null },
       OR: [
         ...(snowflake ? [{ discordId: snowflake }] : []),
         { name: { contains: q, mode: "insensitive" as const } },
@@ -185,8 +242,12 @@ export async function searchDiscordFriends(opts: {
 
   return matches.map((u) => ({
     ...u,
-    reason: "on-discord" as const,
-    reasonLabel: snowflake ? "Discord ID match" : "On Discord · Dawn",
+    reason: u.discordId ? ("on-discord" as const) : ("on-dawn" as const),
+    reasonLabel: snowflake
+      ? "Discord ID match"
+      : u.discordId
+        ? "On Discord · Dawn"
+        : "On Dawn · Google or email",
   }));
 }
 
@@ -225,12 +286,5 @@ export async function canAddFriendToCircle(opts: {
     select: { id: true, discordId: true, name: true },
   });
   if (!target) return { ok: false, error: "Person not found on Dawn." };
-  if (opts.isOwner) return { ok: true };
-  if (target.discordId) return { ok: true };
-  if (await sharesDiscordServer(opts.meId, target.id)) return { ok: true };
-  return {
-    ok: false,
-    error:
-      "You can add people who are on Discord or in your Dawn server. Otherwise share the invite code.",
-  };
+  return { ok: true };
 }
