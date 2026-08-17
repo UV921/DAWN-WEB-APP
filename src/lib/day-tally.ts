@@ -49,6 +49,34 @@ export function emptyDayTally(
   };
 }
 
+export function buildDayTally(opts: {
+  wakeTime?: string | null;
+  wakeGoal: string;
+  bedtime?: string | null;
+  sleepGoal: string;
+  habits?: { key: string }[];
+  checks?: Record<string, boolean>;
+  todos?: { done?: boolean; parentId?: string | null }[];
+  studyMinutes?: number;
+  streak?: number;
+}): DayTally {
+  const habits = opts.habits || [];
+  const checks = opts.checks || {};
+  const todos = (opts.todos || []).filter((t) => !t.parentId);
+  return {
+    wakeTime: opts.wakeTime || null,
+    wakeGoal: opts.wakeGoal,
+    bedtime: opts.bedtime || null,
+    sleepGoal: opts.sleepGoal,
+    habitsDone: habits.filter((h) => Boolean(checks[h.key])).length,
+    habitsTotal: habits.length,
+    tasksDone: todos.filter((t) => t.done).length,
+    tasksTotal: todos.length,
+    studyMinutes: opts.studyMinutes || 0,
+    streak: opts.streak || 0,
+  };
+}
+
 export function formatStudyMinutes(minutes: number): string {
   if (minutes <= 0) return "—";
   return formatStudyDuration(minutes);

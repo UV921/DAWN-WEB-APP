@@ -7,6 +7,9 @@ import { SleepReport } from "@/components/SleepReport";
 import { NightCloseFlow } from "@/components/NightCloseFlow";
 import { NightClosed } from "@/components/NightClosed";
 import { NightTally } from "@/components/NightTally";
+import { SleepHabitButton } from "@/components/SleepHabitButton";
+import { DayTallyCard } from "@/components/DayTallyCard";
+import { UiMessage } from "@/components/UiMessage";
 import type { HabitLogLike } from "@/lib/habits";
 import {
   defaultWindowForKey,
@@ -14,6 +17,7 @@ import {
   nowMins,
 } from "@/lib/habit-windows";
 import {
+  buildDayTally,
   emptyDayTally,
   type DayTally,
   type TallyHit,
@@ -43,12 +47,14 @@ export function SleepClient({
   const [sleepWin, setSleepWin] = useState(() =>
     defaultWindowForKey("sleepEarly", wakeGoal, sleepGoal)
   );
+  const [sleepLabel, setSleepLabel] = useState("Sleep early");
   const [tally, setTally] = useState<DayTally>(() =>
     emptyDayTally(wakeGoal, sleepGoal)
   );
   const [hit, setHit] = useState<TallyHit | null>(null);
   const [showTally, setShowTally] = useState(false);
   const [celebrate, setCelebrate] = useState<"big" | "chill">("big");
+  const [sleepErr, setSleepErr] = useState("");
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
@@ -65,20 +71,19 @@ export function SleepClient({
       studyMinutes: number
     ) => {
       const habits = d.habits || [];
-      const checks = d.todayLog?.checks || {};
-      const todos = (d.todayTodos || []).filter((t) => !t.parentId);
-      setTally({
-        wakeTime: d.todayLog?.wakeTime || null,
-        wakeGoal: d.wakeGoal || wakeGoal,
-        bedtime: d.todayLog?.bedtime || null,
-        sleepGoal: d.sleepGoal || sleepGoal,
-        habitsDone: habits.filter((h) => Boolean(checks[h.key])).length,
-        habitsTotal: habits.length,
-        tasksDone: todos.filter((t) => t.done).length,
-        tasksTotal: todos.length,
-        studyMinutes,
-        streak: d.profile?.earlyStreak || 0,
-      });
+      setTally(
+        buildDayTally({
+          wakeTime: d.todayLog?.wakeTime,
+          wakeGoal: d.wakeGoal || wakeGoal,
+          bedtime: d.todayLog?.bedtime,
+          sleepGoal: d.sleepGoal || sleepGoal,
+          habits,
+          checks: d.todayLog?.checks || {},
+          todos: d.todayTodos,
+          studyMinutes,
+          streak: d.profile?.earlyStreak,
+        })
+      );
       if (d.profile?.celebrate === "chill" || d.profile?.celebrate === "big") {
         setCelebrate(d.profile.celebrate);
       }
@@ -102,8 +107,9 @@ export function SleepClient({
     if (plan.tomorrowPlan?.wakeGoal) setPlanWake(plan.tomorrowPlan.wakeGoal);
     else if (d.wakeGoal) setPlanWake(d.wakeGoal);
     const sleepHabit = (d.habits || []).find(
-      (h: { key?: string }) => h.key === "sleepEarly"
+      (h: { key?: string; label?: string }) => h.key === "sleepEarly"
     );
+    if (sleepHabit?.label) setSleepLabel(sleepHabit.label);
     if (sleepHabit?.windowStart && sleepHabit?.windowEnd) {
       setSleepWin({
         start: sleepHabit.windowStart,
@@ -132,6 +138,7 @@ export function SleepClient({
   }, []);
 
   async function goingToSleep() {
+    setSleepErr("");
     const now = new Date();
     const t = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes()
@@ -147,10 +154,11 @@ export function SleepClient({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.rejected?.length) {
-      throw new Error(
+      const msg =
         (data.rejected as { reason: string }[] | undefined)?.[0]?.reason ||
-          "Couldn’t log sleep."
-      );
+        "Couldn’t log sleep.";
+      setSleepErr(msg);
+      throw new Error(msg);
     }
     setBedtime(t);
     setTally((prev) => ({ ...prev, bedtime: t }));
@@ -196,17 +204,38 @@ export function SleepClient({
               ) : null}
             </>
           ) : (
-            <NightCloseFlow
-              name={hello}
-              sleepGoal={sleepGoal}
-              wakeGoal={wakeGoal}
-              bedtimeLogged={false}
-              inSleepWindow={inSleepWindow}
-              sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
-              tally={tally}
-              onSleepNow={goingToSleep}
-              onSaved={() => void refresh()}
-            />
+            <>
+              <header>
+                <p className="ui-kicker">Close the night</p>
+                <h1 className="ui-title mt-2">
+                  {hello ? `${hello}, tap Sleep` : "Tap Sleep"}
+                </h1>
+                <p className="ui-sub mt-3">
+                  The sleep habit closes tonight automatically. Tomorrow’s plan
+                  can wait underneath.
+                </p>
+              </header>
+              <DayTallyCard tally={tally} />
+              <SleepHabitButton
+                label={sleepLabel}
+                inWindow={inSleepWindow}
+                windowLabel={`${sleepWin.start}–${sleepWin.end}`}
+                onSleep={goingToSleep}
+              />
+              {sleepErr ? (
+                <UiMessage tone="error">{sleepErr}</UiMessage>
+              ) : null}
+              <NightCloseFlow
+                name={hello}
+                sleepGoal={sleepGoal}
+                wakeGoal={wakeGoal}
+                bedtimeLogged={false}
+                inSleepWindow={inSleepWindow}
+                sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
+                onSleepNow={goingToSleep}
+                onSaved={() => void refresh()}
+              />
+            </>
           )}
         </div>
       </div>
