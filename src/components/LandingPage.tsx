@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
-import { AuthOverlay } from "@/components/AuthOverlay";
+import Link from "next/link";
 import { DawnMark } from "@/components/DawnMark";
 import { LandingCharts } from "@/components/LandingCharts";
 import { LandingDayClock } from "@/components/LandingDayClock";
@@ -75,9 +75,6 @@ type Props = { snap: LandingSnapshot };
 
 export function LandingPage({ snap }: Props) {
   const reduce = useReducedMotion();
-  const [authOpen, setAuthOpen] = useState(false);
-  const openAuth = useCallback(() => setAuthOpen(true), []);
-  const closeAuth = useCallback(() => setAuthOpen(false), []);
   const live = snap.people > 0 || snap.mornings > 0 || snap.tasksTotal > 0;
   const taskPct =
     snap.tasksTotal > 0
@@ -95,8 +92,7 @@ export function LandingPage({ snap }: Props) {
 
   return (
     <main className="bg-[#0a0e12] text-[#e8e4dc]">
-      <AuthOverlay open={authOpen} onClose={closeAuth} />
-      <LandingNav onSignIn={openAuth} />
+      <LandingNav />
 
       <section
         id="top"
@@ -116,13 +112,9 @@ export function LandingPage({ snap }: Props) {
                 <p className="mx-auto mt-4 max-w-[28ch] text-[1.05rem] leading-snug text-[#9aa6b2] sm:text-lg">
                   One screen for the day. Wake, lists, study, then close the night.
                 </p>
-                <button
-                  type="button"
-                  onClick={openAuth}
-                  className="dawn-btn relative z-30 mt-8"
-                >
+                <Link href="/signup" className="dawn-btn relative z-30 mt-8">
                   Open Dawn
-                </button>
+                </Link>
               </>
             }
           >
@@ -672,9 +664,9 @@ export function LandingPage({ snap }: Props) {
               ))}
             </ol>
             <div className="mt-10">
-              <button type="button" onClick={openAuth} className="dawn-btn">
+              <Link href="/signup" className="dawn-btn">
                 Open Dawn
-              </button>
+              </Link>
             </div>
           </Fade>
         </div>

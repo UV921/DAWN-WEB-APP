@@ -4,32 +4,34 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DawnMark } from "@/components/DawnMark";
-import { IconX } from "@/components/icons";
+import { IconGoogle, IconX } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
 
 type Props = {
   onClose?: () => void;
+  mode?: "signin" | "signup";
 };
 
 function oauthErrorMessage(code: string) {
   if (code === "OAuthCallback" || code === "Callback") {
-    return "Discord sign-in didn’t finish. Tap Continue with Discord once more.";
+    return "Sign-in didn’t finish. Tap Google or Discord once more.";
   }
   if (code === "OAuthAccountNotLinked") {
-    return "That email is already on another Dawn account. Use the same Discord you used before.";
+    return "That email is already on another Dawn account. Use the same Google or Discord you used before.";
   }
   if (code === "AccessDenied") {
-    return "Discord sign-in was denied.";
+    return "Sign-in was denied.";
   }
   if (code === "Configuration") {
-    return "Discord login isn’t configured on this server.";
+    return "That login method isn’t configured on this server yet.";
   }
-  return "Sign-in didn’t work. Try Continue with Discord again.";
+  return "Sign-in didn’t work. Try Google or Discord again.";
 }
 
-export function AuthPanel({ onClose }: Props) {
+export function AuthPanel({ onClose, mode = "signin" }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const signup = mode === "signup";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -66,6 +68,15 @@ export function AuthPanel({ onClose }: Props) {
     }
   }
 
+  function oauth(provider: "google" | "discord") {
+    setBusy(provider);
+    setError("");
+    void signIn(provider, { callbackUrl: "/dashboard" }).catch(() => {
+      setError("Check your connection and try again.");
+      setBusy(null);
+    });
+  }
+
   const mark = (
     <span className="text-[var(--color-dawn)]">
       <DawnMark size={28} />
@@ -87,7 +98,18 @@ export function AuthPanel({ onClose }: Props) {
           </button>
         ) : null}
       </div>
-      <h1 className="font-display mt-8 text-4xl text-white">Sign in</h1>
+
+      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-dawn)]">
+        {signup ? "Create account" : "Welcome back"}
+      </p>
+      <h1 className="font-display mt-2 text-4xl text-white sm:text-[2.6rem]">
+        {signup ? "Start your Dawn" : "Sign in"}
+      </h1>
+      <p className="mt-3 text-sm leading-relaxed text-[var(--color-mist)]">
+        {signup
+          ? "Google in one tap — or Discord if that’s how your study circle already lives."
+          : "Same Google or Discord you used before. Your habits and board come with you."}
+      </p>
 
       {error ? (
         <div className="mt-5">
@@ -99,8 +121,42 @@ export function AuthPanel({ onClose }: Props) {
         <button
           type="button"
           disabled={busy !== null}
+          onClick={() => oauth("google")}
+          className="dawn-btn dawn-btn-google w-full"
+        >
+          <IconGoogle size={18} />
+          {busy === "google"
+            ? "Opening Google…"
+            : signup
+              ? "Sign up with Google"
+              : "Continue with Google"}
+        </button>
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => oauth("discord")}
+          className="dawn-btn dawn-btn-discord w-full"
+        >
+          {busy === "discord"
+            ? "Opening Discord…"
+            : signup
+              ? "Sign up with Discord"
+              : "Continue with Discord"}
+        </button>
+      </div>
+
+      <div className="mt-6 flex items-center gap-3 text-[11px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
+        <span className="h-px flex-1 bg-white/10" />
+        or a demo
+        <span className="h-px flex-1 bg-white/10" />
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          disabled={busy !== null}
           onClick={() => void demoLogin("you")}
-          className="dawn-btn w-full"
+          className="dawn-btn dawn-btn-ghost w-full"
         >
           {busy === "you" ? "Signing in…" : "Try demo"}
         </button>
@@ -112,22 +168,31 @@ export function AuthPanel({ onClose }: Props) {
         >
           {busy === "friend" ? "Signing in…" : "Demo as a friend"}
         </button>
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => {
-            setBusy("discord");
-            setError("");
-            void signIn("discord", { callbackUrl: "/dashboard" }).catch(() => {
-              setError("Check your connection and try again.");
-              setBusy(null);
-            });
-          }}
-          className="dawn-btn dawn-btn-discord w-full"
-        >
-          {busy === "discord" ? "Opening Discord…" : "Continue with Discord"}
-        </button>
       </div>
+
+      <p className="mt-8 text-sm text-[var(--color-mist)]">
+        {signup ? (
+          <>
+            Already have Dawn?{" "}
+            <Link
+              href="/login"
+              className="text-[var(--color-dawn)] underline-offset-2 hover:underline"
+            >
+              Sign in
+            </Link>
+          </>
+        ) : (
+          <>
+            New here?{" "}
+            <Link
+              href="/signup"
+              className="text-[var(--color-dawn)] underline-offset-2 hover:underline"
+            >
+              Create an account
+            </Link>
+          </>
+        )}
+      </p>
     </div>
   );
 }

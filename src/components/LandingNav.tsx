@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChartColumnIcon } from "@/components/animated-icons/chart-column";
 import { ListTodoIcon } from "@/components/animated-icons/list-todo";
 import { DawnMark } from "@/components/DawnMark";
 import { cn } from "@/lib/utils";
 
-export function LandingNav({ onSignIn }: { onSignIn: () => void }) {
+export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -65,13 +66,12 @@ export function LandingNav({ onSignIn }: { onSignIn: () => void }) {
             <ChartColumnIcon size={16} />
             <span className="hidden sm:inline">Stats</span>
           </a>
-          <button
-            type="button"
-            onClick={onSignIn}
+          <Link
+            href="/login"
             className="dawn-btn dawn-btn-nav ml-1 shrink-0"
           >
             Sign in
-          </button>
+          </Link>
         </nav>
       </div>
     </header>
