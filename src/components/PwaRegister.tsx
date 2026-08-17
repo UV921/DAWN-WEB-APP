@@ -81,6 +81,47 @@ if (typeof window !== "undefined") {
   });
 }
 
+export function useDawnInstall() {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
+    cachedPrompt
+  );
+  const [installed, setInstalled] = useState(false);
+  const [ios, setIos] = useState(false);
+
+  useEffect(() => {
+    if (isStandaloneWindow()) {
+      setInstalled(true);
+      return;
+    }
+    setIos(isIosDevice());
+    setDeferred(cachedPrompt);
+    const onPrompt = (event: BeforeInstallPromptEvent | null) => {
+      setDeferred(event);
+      if (!event) setInstalled(true);
+    };
+    promptSubs.add(onPrompt);
+    return () => {
+      promptSubs.delete(onPrompt);
+    };
+  }, []);
+
+  async function install() {
+    if (!deferred) return;
+    await deferred.prompt();
+    const choice = await deferred.userChoice;
+    setDeferred(null);
+    cachedPrompt = null;
+    if (choice.outcome === "accepted") setInstalled(true);
+  }
+
+  return {
+    canInstall: Boolean(deferred) && !installed,
+    ios: ios && !installed,
+    installed,
+    install,
+  };
+}
+
 export function PwaRegister() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     cachedPrompt
@@ -89,6 +130,7 @@ export function PwaRegister() {
   const [dismissed, setDismissed] = useState(false);
   const [ios, setIos] = useState(false);
   const [ready, setReady] = useState(false);
+  const [onLanding, setOnLanding] = useState(false);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -123,6 +165,7 @@ export function PwaRegister() {
     setIos(isIosDevice());
     setDismissed(isDismissed());
     setDeferred(cachedPrompt);
+    setOnLanding(window.location.pathname === "/");
 
     const onPrompt = (event: BeforeInstallPromptEvent | null) => {
       setDeferred(event);
@@ -152,7 +195,7 @@ export function PwaRegister() {
     localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_MS));
   }
 
-  if (!ready || installed || dismissed) return null;
+  if (!ready || installed || dismissed || onLanding) return null;
 
   return (
     <div className="fixed z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d131a]/95 p-4 shadow-2xl backdrop-blur left-4 right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-4 md:bottom-4">

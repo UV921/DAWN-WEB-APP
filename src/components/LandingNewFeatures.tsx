@@ -80,29 +80,9 @@ export function LandingNewFeatures() {
           transition={{ duration: 0.85, ease: EASE }}
         >
           <div
-            className={cn(
-              "hero-photo relative h-52 sm:h-64 lg:absolute lg:inset-0 lg:h-full",
-              still && "hero-photo-still"
-            )}
-          >
-            <img
-              className="hero-photo-img"
-              src="/images/landing-hero.png"
-              alt=""
-              width={1680}
-              height={1050}
-              decoding="async"
-            />
-            <img
-              className="hero-photo-img hero-photo-blur"
-              src="/images/landing-hero.png"
-              alt=""
-              width={1680}
-              height={1050}
-              decoding="async"
-            />
-            <div aria-hidden className="feature-film-vignette" />
-          </div>
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_78%_42%,rgba(240,180,90,0.07),transparent_58%)]"
+            aria-hidden
+          />
 
           <div className="relative z-10 flex flex-col justify-between gap-6 p-5 sm:p-6 lg:min-h-[32rem] lg:flex-row lg:items-end lg:p-8">
             <div className="max-w-md">
