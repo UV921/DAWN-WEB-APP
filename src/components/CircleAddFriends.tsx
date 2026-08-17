@@ -7,7 +7,7 @@ export type FriendSuggestion = {
   name: string | null;
   image: string | null;
   discordId: string | null;
-  reason: "same-server" | "on-discord";
+  reason: "same-server" | "on-discord" | "on-dawn";
   reasonLabel: string;
 };
 
@@ -65,6 +65,12 @@ export function CircleAddFriends({
   onCreate,
   busy,
   hasDiscord,
+  hasGoogle,
+  friendCode,
+  friendLink,
+  codeSteps,
+  onCopyCode,
+  onShareCode,
   discordGroup,
   onJoinDiscordGroup,
   suggestions,
@@ -85,6 +91,12 @@ export function CircleAddFriends({
   onCreate: () => void;
   busy: boolean;
   hasDiscord: boolean;
+  hasGoogle?: boolean;
+  friendCode: string;
+  friendLink: string;
+  codeSteps: string[];
+  onCopyCode: () => void;
+  onShareCode: () => void;
   discordGroup: DiscordGroupInfo | null;
   onJoinDiscordGroup: () => void;
   suggestions: FriendSuggestion[];
@@ -107,14 +119,72 @@ export function CircleAddFriends({
 
   return (
     <div className="mt-8 space-y-4">
+      <div className="rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
+          {hasGoogle && !hasDiscord
+            ? "Google friends · just a code"
+            : "Add a friend · just a code"}
+        </p>
+        <p className="mt-2 text-sm text-[var(--color-mist)]">
+          Works if you both signed in with Google — or one Google and one
+          Discord. No server needed.
+        </p>
+        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-[var(--color-cloud)]">
+          {(codeSteps.length
+            ? codeSteps
+            : [
+                "Both of you sign in (Google is enough).",
+                "Copy your friend code.",
+                "Send it to them.",
+                "They paste it and tap Add friend.",
+                "You both show on the rank board.",
+              ]
+          ).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+
+        <div className="mt-5 rounded-xl border border-white/10 bg-black/25 px-4 py-4">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
+            Your friend code
+          </p>
+          <p className="mt-2 font-mono text-2xl tracking-[0.2em] text-[var(--color-dawn)]">
+            {friendCode || "····"}
+          </p>
+          {friendLink ? (
+            <p className="mt-1 break-all text-[11px] text-[var(--color-mist)]">
+              {friendLink}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy || !friendCode}
+              onClick={onCopyCode}
+              className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-xs font-semibold text-[var(--color-night)] disabled:opacity-40"
+            >
+              Copy code
+            </button>
+            <button
+              type="button"
+              disabled={busy || !friendCode}
+              onClick={onShareCode}
+              className="rounded-full border border-white/20 px-4 py-2 text-xs text-white disabled:opacity-40"
+            >
+              Share link
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
-            Join with a code
+            They sent you a code
           </p>
           <p className="mt-2 text-sm text-[var(--color-mist)]">
-            Paste a code, a Dawn invite link, or even a messy message — we’ll
-            read the code.
+            Paste their friend code or a Dawn invite link. Google users add
+            each other this way.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
@@ -123,7 +193,7 @@ export function CircleAddFriends({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && inviteCode.trim()) onJoin();
               }}
-              placeholder="CODE or invite link"
+              placeholder="THEIR CODE"
               className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono tracking-widest text-white outline-none focus:border-[var(--color-dawn)]"
             />
             <button
@@ -132,17 +202,18 @@ export function CircleAddFriends({
               onClick={onJoin}
               className="rounded-full bg-[var(--color-dawn)] px-6 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-40"
             >
-              Join
+              Add friend
             </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.06] px-5 py-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-            Start a circle
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-mist)]">
+            Extra circle
           </p>
           <p className="mt-2 text-sm text-[var(--color-mist)]">
-            You’re the owner. Share a code, or add Discord friends below.
+            Your friend code already starts a circle. Make another only if you
+            want a second board.
           </p>
           <input
             value={circleName}
@@ -156,7 +227,7 @@ export function CircleAddFriends({
             onClick={onCreate}
             className="mt-3 rounded-full border border-white/20 px-6 py-3 text-sm text-white disabled:opacity-50"
           >
-            Create circle
+            Create another circle
           </button>
         </div>
       </div>
@@ -226,7 +297,7 @@ export function CircleAddFriends({
           <input
             value={searchQ}
             onChange={(e) => onSearchQ(e.target.value)}
-            placeholder="Search a Discord name or ID"
+            placeholder="Search a name on Dawn"
             className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
           />
           <button

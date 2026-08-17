@@ -7,7 +7,6 @@ import {
   computeStreak,
   isHabitDone,
   mergeLogChecks,
-  randomInviteCode,
 } from "@/lib/habits";
 import { formatDateInZone } from "@/lib/clock";
 import { discordSendChannelMessage, discordSendDm } from "@/lib/discord-notify";
@@ -18,9 +17,13 @@ import { assignRanks, combinedScore } from "@/lib/circle-board";
 import { studyMinutesByUser } from "@/lib/study-stats";
 import {
   canAddFriendToCircle,
+  ensureHomeCircle,
   getDiscordGroupInfo,
+  GOOGLE_FRIEND_STEPS,
   listFriendSuggestions,
   searchDiscordFriends,
+  uniqueCircleInviteCode,
+  userHasGoogle,
 } from "@/lib/circle-friends";
 
 function toClientLog(l: {
@@ -42,18 +45,6 @@ function toClientLog(l: {
   };
 }
 
-async function uniqueInviteCode() {
-  let inviteCode = randomInviteCode();
-  for (let i = 0; i < 5; i++) {
-    const exists = await prisma.accountabilityCircle.findUnique({
-      where: { inviteCode },
-    });
-    if (!exists) break;
-    inviteCode = randomInviteCode();
-  }
-  return inviteCode;
-}
-
 function siteOrigin() {
   return (process.env.NEXTAUTH_URL || "").replace(/\/$/, "");
 }
@@ -68,12 +59,14 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const searchQ = (searchParams.get("q") || "").trim();
 
-  const [me, memberships, suggestions, discordGroup, searchHits] =
+  const me = await prisma.user.findUnique({
+    where: { id: meId },
+    select: { discordId: true, name: true },
+  });
+  const home = await ensureHomeCircle(meId, me?.name);
+
+  const [memberships, suggestions, discordGroup, searchHits, hasGoogle] =
     await Promise.all([
-      prisma.user.findUnique({
-        where: { id: meId },
-        select: { discordId: true, name: true },
-      }),
       prisma.circleMember.findMany({
         where: { userId: meId },
         include: {
@@ -108,6 +101,7 @@ export async function GET(req: Request) {
       searchQ.length >= 1
         ? searchDiscordFriends({ meId, query: searchQ })
         : Promise.resolve([]),
+      userHasGoogle(meId),
     ]);
 
   const circles = memberships.map((m) => m.circle);
@@ -256,14 +250,14 @@ export async function GET(req: Request) {
     discordGroup,
     me: meId,
     hasDiscord: Boolean(me?.discordId),
-    howTo: [
-      "Create a circle, or join with an invite code / link — paste either, it just works.",
-      "Easier: add anyone already on Dawn with Discord, or anyone in your same Discord server — one tap, no code.",
-      "Or join the Discord server group so the whole study server shares one board.",
-      "The board ranks habit consistency (7-day %) and study hours (voice rooms), plus a combined score.",
-      "Owner can paste a Discord channel so the invite and check-ins post there.",
-      "Tap Nudge if someone isn’t up yet (needs Discord linked + bot running).",
-    ],
+    hasGoogle,
+    friendCode: home.inviteCode,
+    friendLink: inviteLink(siteOrigin(), home.inviteCode),
+    codeSteps: GOOGLE_FRIEND_STEPS,
+    howTo: GOOGLE_FRIEND_STEPS.concat([
+      "Discord friends can also tap Add if they’re already on Dawn in your server — no code needed.",
+      "The board ranks habit consistency (7-day %) and study hours, plus a combined score.",
+    ]),
   });
 }
 
@@ -286,7 +280,7 @@ export async function POST(req: Request) {
     const circle = await prisma.accountabilityCircle.create({
       data: {
         name: name || "Morning Circle",
-        inviteCode: await uniqueInviteCode(),
+        inviteCode: await uniqueCircleInviteCode(),
         ownerId: meId,
         discordChannelId,
         members: {
@@ -299,17 +293,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ circle });
   }
 
-  if (action === "join") {
+  if (action === "join" || action === "addFriend") {
     const code = parseInviteInput(String(body.inviteCode || ""));
     if (!code) {
-      return NextResponse.json({ error: "Paste an invite code or link" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Paste your friend’s code or invite link" },
+        { status: 400 }
+      );
     }
+
+    const myCodes = await prisma.accountabilityCircle.findMany({
+      where: { ownerId: meId },
+      select: { inviteCode: true },
+    });
+    if (myCodes.some((c) => c.inviteCode === code)) {
+      return NextResponse.json(
+        {
+          error:
+            "That’s your friend code. Send it to them — they paste it on Friends and tap Add friend.",
+        },
+        { status: 400 }
+      );
+    }
+
     const circle = await prisma.accountabilityCircle.findUnique({
       where: { inviteCode: code },
+      include: { owner: { select: { name: true } } },
     });
     if (!circle) {
-      return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "That code wasn’t found. Ask your friend to open Friends and copy their code (Google or Discord — same step).",
+        },
+        { status: 404 }
+      );
     }
+
+    const already = await prisma.circleMember.findUnique({
+      where: { circleId_userId: { circleId: circle.id, userId: meId } },
+    });
     await prisma.circleMember.upsert({
       where: {
         circleId_userId: {
@@ -320,7 +343,15 @@ export async function POST(req: Request) {
       create: { circleId: circle.id, userId: meId },
       update: {},
     });
-    return NextResponse.json({ circle });
+    const friendName = circle.owner?.name || "your friend";
+    return NextResponse.json({
+      circle,
+      already: Boolean(already),
+      friendName,
+      message: already
+        ? `You’re already with ${friendName} on this board.`
+        : `You’re friends with ${friendName}. Check the board below.`,
+    });
   }
 
   if (action === "joinDiscordGroup") {
@@ -486,7 +517,7 @@ export async function POST(req: Request) {
     }
     const updated = await prisma.accountabilityCircle.update({
       where: { id: circleId },
-      data: { inviteCode: await uniqueInviteCode() },
+      data: { inviteCode: await uniqueCircleInviteCode() },
     });
     return NextResponse.json({ circle: updated });
   }
