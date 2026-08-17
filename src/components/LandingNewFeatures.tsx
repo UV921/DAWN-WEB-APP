@@ -26,7 +26,7 @@ const FEATURES = [
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
     image: "/images/landing-friends.jpg",
     alt: "Two people watching the sunrise",
-    position: "50% 40%",
+    position: "62% 48%",
   },
   {
     id: "board",

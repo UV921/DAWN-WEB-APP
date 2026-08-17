@@ -508,9 +508,15 @@ button,
   width: 112%;
   height: 112%;
   object-fit: cover;
-  object-position: 32% 48%;
+  object-position: 18% 46%;
   animation: hero-photo-fade 1.2s ease both,
     hero-photo-drift 32s ease-in-out infinite alternate;
+}
+
+@media (max-width: 768px) {
+  .hero-photo-img {
+    object-position: 12% 42%;
+  }
 }
 
 .hero-photo-glow {
@@ -533,17 +539,30 @@ button,
   background:
     linear-gradient(
       180deg,
-      rgba(10, 14, 18, 0.72) 0%,
-      rgba(10, 14, 18, 0.28) 22%,
+      rgba(10, 14, 18, 0.78) 0%,
+      rgba(10, 14, 18, 0.32) 22%,
       rgba(10, 14, 18, 0.12) 48%,
       #0a0e12 100%
     ),
     linear-gradient(
       90deg,
-      rgba(10, 14, 18, 0.38) 0%,
-      transparent 42%,
+      rgba(10, 14, 18, 0.28) 0%,
+      transparent 45%,
       rgba(10, 14, 18, 0.22) 100%
     );
+}
+
+@media (max-width: 768px) {
+  .hero-photo-vignette {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 14, 18, 0.82) 0%,
+        rgba(10, 14, 18, 0.48) 26%,
+        rgba(10, 14, 18, 0.18) 52%,
+        #0a0e12 100%
+      );
+  }
 }
 
 .hero-photo-grain {
@@ -619,15 +638,15 @@ button,
     background:
       linear-gradient(
         90deg,
-        rgba(7, 16, 24, 0.58) 0%,
-        rgba(7, 16, 24, 0.16) 48%,
-        rgba(7, 16, 24, 0.28) 100%
+        rgba(7, 16, 24, 0.78) 0%,
+        rgba(7, 16, 24, 0.28) 38%,
+        rgba(7, 16, 24, 0.18) 100%
       ),
       linear-gradient(
         180deg,
-        rgba(7, 16, 24, 0.18) 0%,
+        rgba(7, 16, 24, 0.22) 0%,
         transparent 30%,
-        rgba(7, 16, 24, 0.58) 100%
+        rgba(7, 16, 24, 0.62) 100%
       );
   }
 }
