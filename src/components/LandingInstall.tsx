@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useDawnInstall } from "@/components/PwaRegister";
 
 export function LandingInstall() {
-  const { canInstall, ios, install } = useDawnInstall();
+  const { canInstall, ios, install, installed } = useDawnInstall();
   const [hint, setHint] = useState(false);
 
-  if (!canInstall && !ios) return null;
+  if (installed) return null;
 
   return (
     <div className="landing-install">
@@ -15,18 +15,24 @@ export function LandingInstall() {
         type="button"
         className="landing-install-btn"
         onClick={() => {
-          if (ios) {
-            setHint((v) => !v);
+          if (canInstall) {
+            void install();
             return;
           }
-          void install();
+          setHint((v) => !v);
         }}
       >
         Install
       </button>
       {hint ? (
-        <p className="landing-install-hint">Share, then Add to Home Screen.</p>
-      ) : null}
+        <p className="landing-install-hint">
+          {ios
+            ? "Share, then Add to Home Screen."
+            : "Add Dawn from the browser menu."}
+        </p>
+      ) : (
+        <p className="landing-install-copy">On your phone</p>
+      )}
     </div>
   );
 }
