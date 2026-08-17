@@ -28,7 +28,7 @@ const TONE: Record<
     border: "border-red-400/30",
     bg: "bg-red-500/10",
     text: "text-red-200",
-    label: "Couldn’t save",
+    label: "Couldn’t do that",
   },
   tip: {
     border: "border-white/12",
