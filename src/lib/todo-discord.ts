@@ -124,6 +124,16 @@ export async function postTodosToDiscord(opts: {
     });
     if (sent.ok) return { ok: true };
     lastError = sent.error || lastError;
+    if (opts.image) {
+      const fallback = await discordSendChannelMessage(channelId, {
+        title,
+        body: listBody,
+        content: content || title,
+        mentionUserId: opts.mentionUserId,
+      });
+      if (fallback.ok) return { ok: true };
+      lastError = fallback.error || lastError;
+    }
   }
   return { ok: false, error: lastError };
 }

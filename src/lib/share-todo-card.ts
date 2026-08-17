@@ -87,7 +87,10 @@ export async function renderTodoListCardPng(opts: {
   if (typeof document === "undefined") {
     throw new Error("PNG cards only work in the browser.");
   }
-  await document.fonts.ready.catch(() => undefined);
+  await Promise.race([
+    document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve(),
+    new Promise((resolve) => window.setTimeout(resolve, 600)),
+  ]);
 
   const canvas = document.createElement("canvas");
   canvas.width = SHARE_W;

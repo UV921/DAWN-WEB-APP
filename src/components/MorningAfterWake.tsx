@@ -139,14 +139,24 @@ export function MorningAfterWake({
   async function finish(sendToDiscord: boolean) {
     setBusy(true);
     if (sendToDiscord && tasks.length) {
+      let image: string | undefined;
       try {
         const { blob, filename } = await renderTodoListCardPng({
           listTitle: "Today",
           date,
           items: tasks.map((t) => ({ text: t.text, done: false })),
         });
-        downloadPngBlob(blob, filename);
-        const image = await blobToBase64Png(blob);
+        try {
+          downloadPngBlob(blob, filename);
+        } catch {
+          /* iOS may block download */
+        }
+        const b64 = await blobToBase64Png(blob);
+        if (b64.length > 0 && b64.length < 1_200_000) image = b64;
+      } catch {
+        /* post text list anyway */
+      }
+      try {
         const res = await fetch("/api/discord/send-todos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -165,8 +175,10 @@ export function MorningAfterWake({
         setBusy(false);
         setMsg({
           tone: "error",
-          text: "Couldn’t make the PNG or reach Discord.",
+          text: "Couldn’t reach Dawn to post. Your tasks are still saved — try Send from Today.",
         });
+        await setFlow("done");
+        onDone();
         return;
       }
     }

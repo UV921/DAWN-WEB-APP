@@ -167,21 +167,39 @@ async function postToChannel(
         }
       : payload;
 
-    let body: BodyInit;
+    let body: BodyInit = JSON.stringify(wrapped);
     const headers: HeadersInit = {};
     if (file) {
-      const form = new FormData();
-      form.append("payload_json", JSON.stringify(wrapped));
-      const copy = new ArrayBuffer(file.bytes.byteLength);
-      new Uint8Array(copy).set(file.bytes);
-      form.append(
-        "files[0]",
-        new Blob([copy], { type: file.contentType || "image/png" }),
-        file.filename
-      );
-      body = form;
-    } else {
-      body = JSON.stringify(wrapped);
+      try {
+        const form = new FormData();
+        form.append("payload_json", JSON.stringify(wrapped));
+        const copy = new ArrayBuffer(file.bytes.byteLength);
+        new Uint8Array(copy).set(file.bytes);
+        form.append(
+          "files[0]",
+          new Blob([copy], { type: file.contentType || "image/png" }),
+          file.filename
+        );
+        body = form;
+      } catch {
+        body = JSON.stringify(
+          asForumPost
+            ? {
+                name: opts.title.slice(0, 100) || "Dawn tasks",
+                auto_archive_duration: 1440,
+                message: {
+                  content: [content, opts.body].filter(Boolean).join("\n").slice(0, 2000),
+                  allowed_mentions: allowedMentions(opts.mentionUserId),
+                  embeds: attempt.embeds ? [embedPayload(opts)] : undefined,
+                },
+              }
+            : {
+                content: [content, opts.body].filter(Boolean).join("\n").slice(0, 2000),
+                allowed_mentions: allowedMentions(opts.mentionUserId),
+                embeds: attempt.embeds ? [embedPayload(opts)] : undefined,
+              }
+        );
+      }
     }
 
     const res = await discordFetch(

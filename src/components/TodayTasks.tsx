@@ -413,10 +413,20 @@ export function TodayTasks({
     if (sendingDiscord || !todos.length) return;
     setSendingDiscord(true);
     setDiscordNote(null);
+    let image: string | undefined;
     try {
       const { blob, filename } = await pngForTodos();
-      downloadPngBlob(blob, filename);
-      const image = await blobToBase64Png(blob);
+      try {
+        downloadPngBlob(blob, filename);
+      } catch {
+        /* iOS often blocks programmatic download after await */
+      }
+      const b64 = await blobToBase64Png(blob);
+      if (b64.length > 0 && b64.length < 1_200_000) image = b64;
+    } catch {
+      /* Still post the text list if the card can’t be drawn. */
+    }
+    try {
       const res = await fetch("/api/discord/send-todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -431,9 +441,15 @@ export function TodayTasks({
         onError?.(data.error || "Couldn’t post to Discord.");
         return;
       }
-      setDiscordNote("PNG downloaded, and posted in your Discord channel.");
+      setDiscordNote(
+        image
+          ? "Posted in your Discord channel."
+          : "Posted in your Discord channel (text list — PNG skipped)."
+      );
     } catch {
-      onError?.("Couldn’t reach Discord. Try again.");
+      onError?.(
+        "Couldn’t reach Dawn to post. Check your connection and try Send now again."
+      );
     } finally {
       setSendingDiscord(false);
     }
