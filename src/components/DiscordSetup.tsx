@@ -294,7 +294,7 @@ export function DiscordSetup() {
             href={data.config.inviteUrl}
             target="_blank"
             rel="noreferrer"
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--color-dawn)] px-5 py-2.5 text-sm font-semibold text-[var(--color-night)]"
+            className="ui-btn ui-btn-primary mt-4"
           >
             Invite Dawn bot
             <IconChevronRight size={16} />
@@ -334,7 +334,7 @@ export function DiscordSetup() {
             value={channelId}
             onChange={(e) => setChannelId(channelIdFromInput(e.target.value))}
             placeholder="Channel ID or discord.com/channels/… link"
-            className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1 font-mono text-sm"
           />
           <button
             type="button"
@@ -426,7 +426,7 @@ export function DiscordSetup() {
             value={studyIds}
             onChange={(e) => setStudyIds(e.target.value)}
             placeholder="Voice channel IDs, comma-separated"
-            className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1 font-mono text-sm"
           />
           <button
             type="button"
@@ -455,7 +455,7 @@ export function DiscordSetup() {
             type="button"
             disabled={busy || !linked}
             onClick={() => void test("test-dm")}
-            className="rounded-full bg-[var(--color-dawn)] px-5 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-40"
+            className="ui-btn ui-btn-primary"
           >
             Send test DM
           </button>

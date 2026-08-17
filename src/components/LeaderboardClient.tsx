@@ -127,7 +127,9 @@ export function LeaderboardClient() {
       <main className="dawn-bg min-h-screen">
         <div className="app-shell mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="leaderboard" />
-          <p className="mt-10 text-sm text-[var(--color-mist)]">Loading board…</p>
+          <p className="app-page mt-10 text-sm text-[var(--color-mist)]">
+            Loading board…
+          </p>
         </div>
       </main>
     );
@@ -140,7 +142,7 @@ export function LeaderboardClient() {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="leaderboard" />
-        <div className="mt-6 animate-rise sm:mt-10">
+        <div className="app-page-wide mt-6 animate-rise sm:mt-10">
           <p className="ui-kicker">Compete</p>
           <h1 className="ui-title mt-2">Who showed up</h1>
           <p className="ui-sub mt-3">
@@ -385,10 +387,8 @@ export function LeaderboardClient() {
                 {rows.map((r) => (
                   <li
                     key={r.userId}
-                    className={`flex items-center gap-3 rounded-2xl border px-3 py-3 sm:px-4 ${
-                      r.isMe
-                        ? "border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/10"
-                        : "border-white/10 bg-white/[0.03]"
+                    className={`ui-row !min-h-0 ${
+                      r.isMe ? "is-done" : ""
                     }`}
                   >
                     <span

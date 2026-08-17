@@ -233,7 +233,7 @@ export function RemindersManager() {
               }
             }}
             placeholder="e.g. 123456789012345678"
-            className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 font-mono text-sm text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field mt-2 font-mono text-sm"
           />
         </label>
       </div>
@@ -247,7 +247,7 @@ export function RemindersManager() {
             <button
               type="button"
               onClick={() => void enableBrowser()}
-              className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-sm font-semibold text-[var(--color-night)]"
+              className="ui-btn ui-btn-primary ui-btn-sm"
             >
               Allow notifications
             </button>
@@ -383,20 +383,20 @@ export function RemindersManager() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title"
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field"
         />
         <input
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Notification text"
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field"
         />
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white"
+            className="ui-field !px-3 !py-2"
           />
           <label className="flex items-center gap-2 text-sm text-white">
             <input
@@ -418,7 +418,7 @@ export function RemindersManager() {
             <select
               value={discordTarget}
               onChange={(e) => setDiscordTarget(e.target.value)}
-              className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white"
+              className="ui-field text-sm !px-3 !py-2"
             >
               <option value="channel">Channel</option>
               <option value="dm">DM</option>
@@ -429,7 +429,7 @@ export function RemindersManager() {
         <button
           type="submit"
           disabled={busy || !title.trim()}
-          className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+          className="ui-btn ui-btn-primary"
         >
           Add reminder
         </button>

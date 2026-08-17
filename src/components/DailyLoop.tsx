@@ -15,17 +15,12 @@ export function DailyLoop({ steps }: { steps: Step[] }) {
   return (
     <section>
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-[15px] font-medium text-white">The day</h2>
+        <h2 className="ui-section-title text-[1.15rem]">The day</h2>
         <span className="text-xs tabular-nums text-[var(--color-mist)]">
           {done}/{steps.length} done
         </span>
       </div>
-      <ol
-        className="grid gap-1 sm:gap-1.5"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(steps.length, 1)}, minmax(0, 1fr))`,
-        }}
-      >
+      <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {steps.map((s, i) => {
           const inner = (
             <>

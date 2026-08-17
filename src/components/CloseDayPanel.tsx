@@ -167,7 +167,7 @@ export function CloseDayPanel({
           type="button"
           disabled={aiBusy}
           onClick={() => void suggestFromHistory()}
-          className="mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-dawn)]/40 bg-[var(--color-dawn)]/10 px-4 py-2.5 text-sm text-[var(--color-dawn)] disabled:opacity-50"
+          className="ui-btn ui-btn-ghost mt-4 text-[var(--color-dawn)]"
         >
           <IconSparkles size={16} />
           {aiBusy ? "Reading your week…" : "Suggest from my wake history"}
@@ -186,7 +186,7 @@ export function CloseDayPanel({
           type="time"
           value={wake}
           onChange={(e) => setWake(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -196,7 +196,7 @@ export function CloseDayPanel({
           value={goalText}
           onChange={(e) => setGoalText(e.target.value)}
           placeholder="e.g. Out of bed, water, no phone for 30 min"
-          className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field mt-2"
         />
       </label>
 
@@ -213,12 +213,12 @@ export function CloseDayPanel({
               }
             }}
             placeholder="Add one…"
-            className="flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1 !py-2.5"
           />
           <button
             type="button"
             onClick={addTodo}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-4 text-sm text-white"
+            className="ui-btn ui-btn-ghost ui-btn-sm"
           >
             <IconPlus size={14} />
             Add
@@ -260,7 +260,7 @@ export function CloseDayPanel({
           type="button"
           disabled={busy}
           onClick={() => void savePlan()}
-          className="rounded-full border border-white/20 px-5 py-3 text-sm text-white disabled:opacity-50"
+          className="ui-btn ui-btn-ghost"
         >
           Save plan only
         </button>

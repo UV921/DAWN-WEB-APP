@@ -999,6 +999,16 @@ button,
     opacity 0.2s ease;
 }
 
+.ui-btn-sm {
+  min-height: 2.15rem;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.8125rem;
+}
+
+.ui-btn-block {
+  width: 100%;
+}
+
 .ui-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1143,6 +1153,16 @@ button,
   color: #fff;
 }
 
+.app-page {
+  width: 100%;
+  max-width: 42rem;
+}
+
+.app-page-wide {
+  width: 100%;
+  max-width: 68rem;
+}
+
 .ui-scroll {
   overflow-x: auto;
   scrollbar-width: none;
@@ -1178,6 +1198,14 @@ button,
   font-size: 1.25rem;
   color: #fff;
   line-height: 1.2;
+}
+
+.ui-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .ui-section-help {

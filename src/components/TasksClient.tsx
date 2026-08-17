@@ -57,7 +57,7 @@ export function TasksClient() {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="tasks" />
-        <div className="mt-4 space-y-6 animate-rise sm:mt-8">
+        <div className="app-page mt-4 space-y-6 animate-rise sm:mt-8">
           <header>
             <p className="ui-kicker">Tasks</p>
             <h1 className="ui-title mt-2">What to finish</h1>
@@ -106,7 +106,7 @@ export function TasksClient() {
                   hint="Three concrete tasks. That’s enough."
                 />
               ) : (
-                <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-[var(--color-mist)]">
+                <p className="ui-card px-4 py-3 text-sm text-[var(--color-mist)]">
                   {tomorrowTodos.length
                     ? `Tomorrow is set (${tomorrowTodos.length} task${
                         tomorrowTodos.length === 1 ? "" : "s"

@@ -43,7 +43,7 @@ export function TodayOverview({
 
   return (
     <section className="space-y-2">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2">
         <div className="ui-card ui-card-compact !text-left">
           <p className="ui-card-label">Early streak</p>
           <p className="font-display mt-1 text-[1.65rem] leading-none text-[var(--color-leaf)] sm:text-3xl">

@@ -161,7 +161,7 @@ export function CircleAddFriends({
               type="button"
               disabled={busy || !friendCode}
               onClick={onCopyCode}
-              className="rounded-full bg-[var(--color-dawn)] px-4 py-2 text-xs font-semibold text-[var(--color-night)] disabled:opacity-40"
+              className="ui-btn ui-btn-primary ui-btn-sm"
             >
               Copy code
             </button>
@@ -169,7 +169,7 @@ export function CircleAddFriends({
               type="button"
               disabled={busy || !friendCode}
               onClick={onShareCode}
-              className="rounded-full border border-white/20 px-4 py-2 text-xs text-white disabled:opacity-40"
+              className="ui-btn ui-btn-ghost ui-btn-sm"
             >
               Share link
             </button>
@@ -194,13 +194,13 @@ export function CircleAddFriends({
                 if (e.key === "Enter" && inviteCode.trim()) onJoin();
               }}
               placeholder="THEIR CODE"
-              className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono tracking-widest text-white outline-none focus:border-[var(--color-dawn)]"
+              className="ui-field flex-1 font-mono tracking-widest"
             />
             <button
               type="button"
               disabled={busy || !inviteCode.trim()}
               onClick={onJoin}
-              className="rounded-full bg-[var(--color-dawn)] px-6 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-40"
+              className="ui-btn ui-btn-primary"
             >
               Add friend
             </button>
@@ -219,13 +219,13 @@ export function CircleAddFriends({
             value={circleName}
             onChange={(e) => onCircleName(e.target.value)}
             placeholder="Circle name"
-            className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field mt-4"
           />
           <button
             type="button"
             disabled={busy}
             onClick={onCreate}
-            className="mt-3 rounded-full border border-white/20 px-6 py-3 text-sm text-white disabled:opacity-50"
+            className="ui-btn ui-btn-ghost mt-3"
           >
             Create another circle
           </button>
@@ -253,7 +253,7 @@ export function CircleAddFriends({
             type="button"
             disabled={busy}
             onClick={onJoinDiscordGroup}
-            className="mt-4 rounded-full bg-[var(--color-dawn)] px-5 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+            className="ui-btn ui-btn-primary mt-4"
           >
             Join Discord server group
             {discordGroup.memberCount > 0
@@ -276,7 +276,7 @@ export function CircleAddFriends({
             <select
               value={defaultCircleId}
               onChange={(e) => onAddTarget(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+              className="ui-field mt-1 text-sm !py-2 outline-none"
             >
               {circles.map((c) => (
                 <option key={c.id} value={c.id} className="bg-[var(--color-night)]">
@@ -298,7 +298,7 @@ export function CircleAddFriends({
             value={searchQ}
             onChange={(e) => onSearchQ(e.target.value)}
             placeholder="Search a name on Dawn"
-            className="w-full flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field flex-1"
           />
           <button
             type="submit"
@@ -396,7 +396,7 @@ function SuggestList({
               type="button"
               disabled={busy || !canAdd}
               onClick={() => onAdd(p.id)}
-              className="shrink-0 rounded-full bg-[var(--color-dawn)] px-3 py-1.5 text-xs font-semibold text-[var(--color-night)] disabled:opacity-40"
+              className="ui-btn ui-btn-primary ui-btn-sm shrink-0"
             >
               Add
             </button>

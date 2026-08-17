@@ -272,7 +272,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
               setSuggestions([]);
               setLockedHabits([]);
             }}
-            className="mt-5 rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)]"
+            className="ui-btn ui-btn-primary mt-5"
           >
             {hasProfile ? "Update personal answers" : "Tell Dawn your life"}
           </button>
@@ -315,7 +315,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                 placeholder={
                   currentQ.placeholder || "Write the real answer…"
                 }
-                className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+                className="ui-field"
               />
             ) : null}
 
@@ -324,7 +324,7 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
                 type="button"
                 disabled={!picked && !draftText.trim()}
                 onClick={() => continueQuestion()}
-                className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-40"
+                className="ui-btn ui-btn-primary"
               >
                 {step + 1 >= questions.length ? "Lock my habits" : "Continue"}
               </button>
@@ -503,18 +503,18 @@ export function HabitStudio({ onChanged }: { onChanged?: () => void }) {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. Cold shower"
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field"
         />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Short description (optional)"
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+          className="ui-field"
         />
         <button
           type="submit"
           disabled={busy || !label.trim()}
-          className="rounded-full bg-[var(--color-dawn)] px-6 py-2.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-50"
+          className="ui-btn ui-btn-primary"
         >
           Add habit
         </button>

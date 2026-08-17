@@ -145,7 +145,7 @@ export function TodoDetailClient({ id }: { id: string }) {
       <main className="dawn-bg relative min-h-screen">
         <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="tasks" />
-          <div className="mt-8 h-48 rounded-2xl bg-white/[0.04]" />
+          <div className="app-page mt-8 h-48 rounded-2xl bg-white/[0.04]" />
         </div>
       </main>
     );
@@ -156,7 +156,7 @@ export function TodoDetailClient({ id }: { id: string }) {
       <main className="dawn-bg relative min-h-screen">
         <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
           <AppNav active="tasks" />
-          <div className="mt-8">
+          <div className="app-page mt-8">
             <UiEmpty
               kicker="Task"
               title="Not here"
@@ -183,7 +183,7 @@ export function TodoDetailClient({ id }: { id: string }) {
     <main className="dawn-bg relative min-h-screen">
       <div className="app-shell relative z-10 mx-auto w-full max-w-xl md:mx-0 md:max-w-none">
         <AppNav active="tasks" />
-        <div className="mt-4 space-y-5 sm:mt-8">
+        <div className="app-page mt-4 space-y-5 sm:mt-8">
           <nav className="flex items-center gap-1 text-xs text-[var(--color-mist)]">
             <Link href="/tasks" className="hover:text-white">
               Tasks

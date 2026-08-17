@@ -80,9 +80,7 @@ export function StudyHoursCard() {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p
-            className={`text-[0.65rem] font-medium uppercase tracking-[0.18em] ${kicker}`}
-          >
+          <p className={`ui-kicker ${kicker}`}>
             Study · today
             {live ? " · live" : ""}
           </p>

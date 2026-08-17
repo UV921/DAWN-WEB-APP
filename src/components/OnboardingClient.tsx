@@ -217,7 +217,7 @@ export function OnboardingClient() {
             type="button"
             disabled={busy}
             onClick={skipRest}
-            className="rounded-full border border-[var(--color-dawn)]/50 bg-[var(--color-dawn)]/15 px-3.5 py-1.5 text-sm font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/25 disabled:opacity-40"
+            className="ui-chip"
           >
             {busy ? "Saving…" : "Skip setup"}
           </button>
@@ -228,12 +228,11 @@ export function OnboardingClient() {
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[var(--color-mist)]">
-          Setup · {step + 1}/{visibleSteps.length}
+        <p className="ui-kicker mt-3">
         </p>
 
         <div className="mt-10 animate-rise">
-          <h1 className="font-display text-3xl text-white md:text-4xl">
+          <h1 className="ui-title mt-2 text-[1.85rem] md:text-4xl">
             {current.prompt}
           </h1>
           {"hint" in current && current.hint && (
@@ -287,7 +286,7 @@ export function OnboardingClient() {
                 onChange={(e) =>
                   setField({ [current.id]: e.target.value } as Partial<OnboardingAnswers>)
                 }
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-4 text-2xl text-white outline-none focus:border-[var(--color-dawn)]"
+              className="ui-field text-2xl !py-4"
               />
               <button
                 type="button"
@@ -299,7 +298,7 @@ export function OnboardingClient() {
                     ("default" in current ? current.default : "06:00");
                   nextAfterPatch({ [key]: val });
                 }}
-                className="rounded-full bg-[var(--color-dawn)] px-8 py-3 text-sm font-semibold text-[var(--color-night)]"
+                className="ui-btn ui-btn-primary"
               >
                 Continue
               </button>
@@ -316,7 +315,7 @@ export function OnboardingClient() {
                     ? current.placeholder
                     : "Type here…"
                 }
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-4 text-white outline-none focus:border-[var(--color-dawn)]"
+                className="ui-field !py-4"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submitText();
                 }}
@@ -325,7 +324,7 @@ export function OnboardingClient() {
                 type="button"
                 disabled={busy}
                 onClick={submitText}
-                className="rounded-full bg-[var(--color-dawn)] px-8 py-3 text-sm font-semibold text-[var(--color-night)]"
+                className="ui-btn ui-btn-primary"
               >
                 Continue
               </button>
@@ -360,7 +359,7 @@ export function OnboardingClient() {
                 type="button"
                 disabled={busy}
                 onClick={skip}
-                className="rounded-full border border-white/15 px-3 py-1.5 text-sm text-[var(--color-cloud)] hover:bg-white/5 hover:text-white"
+                className="ui-chip"
               >
                 Skip this
               </button>
@@ -369,7 +368,7 @@ export function OnboardingClient() {
                 type="button"
                 disabled={busy}
                 onClick={skipRest}
-                className="rounded-full border border-[var(--color-dawn)]/40 px-3 py-1.5 text-sm text-[var(--color-dawn)]"
+                className="ui-chip"
               >
                 Skip setup
               </button>
@@ -463,7 +462,7 @@ function AnalysisPanel({
         type="button"
         disabled={busy}
         onClick={onStart}
-        className="w-full rounded-full bg-[var(--color-dawn)] px-8 py-3.5 text-sm font-semibold text-[var(--color-night)] disabled:opacity-60"
+        className="ui-btn ui-btn-primary ui-btn-block"
       >
         {busy ? "Saving…" : "Start Dawn"}
       </button>
@@ -471,7 +470,7 @@ function AnalysisPanel({
         type="button"
         disabled={busy}
         onClick={onStart}
-        className="w-full text-sm text-[var(--color-dawn)] underline-offset-2 hover:underline disabled:opacity-40"
+        className="ui-btn-text w-full text-sm"
       >
         Skip — go to Today
       </button>

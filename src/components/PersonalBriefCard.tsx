@@ -24,7 +24,7 @@ export function PersonalBriefCard({
         </p>
         <a
           href="/settings?tab=habits"
-          className="mt-4 inline-block rounded-full bg-[var(--color-dawn)] px-5 py-2.5 text-sm font-semibold text-[var(--color-night)]"
+          className="ui-btn ui-btn-primary mt-4"
         >
           Answer personal questions
         </a>

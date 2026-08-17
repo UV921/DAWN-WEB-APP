@@ -98,7 +98,7 @@ export function MorningClockSettings() {
             type="time"
             value={sleepGoal}
             onChange={(e) => setSleepGoal(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field mt-2"
           />
         </label>
         <label className="block">
@@ -106,7 +106,7 @@ export function MorningClockSettings() {
           <select
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[var(--color-dawn)]"
+            className="ui-field mt-2"
           >
             {[
               "Asia/Kolkata",
@@ -131,7 +131,7 @@ export function MorningClockSettings() {
         type="button"
         disabled={busy}
         onClick={() => void save()}
-        className="rounded-full bg-[var(--color-dawn)] px-7 py-3 text-sm font-semibold text-[var(--color-night)] disabled:opacity-60"
+        className="ui-btn ui-btn-primary"
       >
         {busy ? "Saving…" : "Save morning time"}
       </button>
