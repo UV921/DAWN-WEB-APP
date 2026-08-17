@@ -502,12 +502,65 @@ button,
   background: #071018;
 }
 
+.hero-photo-img {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  object-fit: cover;
+  object-position: 18% 46%;
+  animation:
+    hero-photo-fade 1.2s ease both,
+    hero-photo-drift 32s ease-in-out infinite alternate;
+}
+
+@media (max-width: 768px) {
+  .hero-photo-img {
+    object-position: 12% 42%;
+  }
+}
+
+.hero-photo-still .hero-photo-img {
+  animation: none;
+}
+
+@keyframes hero-photo-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-photo-drift {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.05) translate3d(-1.6%, 0.6%, 0);
+  }
+}
+
 .dawn-scene {
   position: absolute;
   inset: 0;
   overflow: hidden;
   perspective: 1100px;
   background: #071018;
+}
+
+.dawn-scene.is-hero {
+  background: transparent;
+}
+
+.dawn-scene.is-hero .dawn-scene-sun {
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+.dawn-scene.is-hero .dawn-scene-glow {
+  mix-blend-mode: screen;
 }
 
 .dawn-scene-stage {
