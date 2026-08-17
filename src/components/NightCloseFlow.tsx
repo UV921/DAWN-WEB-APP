@@ -7,8 +7,10 @@ import {
   IconPlus,
   IconX,
 } from "@/components/icons";
+import { DayTallyCard } from "@/components/DayTallyCard";
 import { UiMessage } from "@/components/UiMessage";
 import { nextCalendarDate } from "@/lib/daily-loop";
+import type { DayTally } from "@/lib/day-tally";
 import { formatLocalDate } from "@/lib/habits";
 import {
   MIN_SLEEP_HOURS,
@@ -28,6 +30,7 @@ type Props = {
   bedtimeLogged?: boolean;
   inSleepWindow?: boolean;
   sleepWindowLabel?: string;
+  tally?: DayTally | null;
   onSleepNow: () => void | Promise<void>;
   onSaved?: () => void;
 };
@@ -64,6 +67,7 @@ export function NightCloseFlow({
   bedtimeLogged,
   inSleepWindow = true,
   sleepWindowLabel,
+  tally,
   onSleepNow,
   onSaved,
 }: Props) {
@@ -313,6 +317,8 @@ export function NightCloseFlow({
           ))}
         </div>
       </header>
+
+      {tally ? <DayTallyCard tally={tally} compact /> : null}
 
       {step === "remember" ? (
         <>
