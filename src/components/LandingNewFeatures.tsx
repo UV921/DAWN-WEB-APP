@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 const EASE = [0.22, 1, 0.36, 1] as const;
 const SCENE_MS = 4800;
 
-// Real Unsplash photos — not generated stills.
 const FEATURES = [
   {
     id: "google",
@@ -17,7 +16,7 @@ const FEATURES = [
     title: "Google in one tap",
     body: "Start Dawn with Google. Discord still works. Same email, same account.",
     image: "/images/landing-phone.jpg",
-    alt: "Checking a phone in bed in the morning",
+    alt: "A phone in a stripe of dawn light",
   },
   {
     id: "code",
@@ -25,7 +24,7 @@ const FEATURES = [
     title: "Add anyone with a code",
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
     image: "/images/landing-friends.jpg",
-    alt: "Friends working together at a cafe table",
+    alt: "Two chairs and a path of morning light",
   },
   {
     id: "board",
@@ -33,7 +32,7 @@ const FEATURES = [
     title: "Rank habits and study",
     body: "Who stayed consistent. Who sat in the room. Combined score.",
     image: "/images/landing-board.jpg",
-    alt: "Checking a handwritten list in a notebook",
+    alt: "Steps rising into a shaft of sunlight",
   },
   {
     id: "study",
@@ -41,7 +40,7 @@ const FEATURES = [
     title: "Study time that counts",
     body: "Sit in a marked voice room. Dawn counts the hours for the board.",
     image: "/images/landing-study.jpg",
-    alt: "Student with headphones focused at a laptop",
+    alt: "Clock, headphones, and a desk at dawn",
   },
 ] as const;
 
