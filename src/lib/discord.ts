@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { normChannelId } from "@/lib/bot-messages";
+import { formatDiscordApiError } from "@/lib/discord-notify";
 
 type HabitPayload = {
   userName: string;
@@ -18,7 +20,8 @@ export async function postCheckInToDiscord(
   if (!token) {
     return { ok: false, error: "DISCORD_BOT_TOKEN not set" };
   }
-  if (!channelId) {
+  const id = normChannelId(channelId);
+  if (!id) {
     return { ok: false, error: "No channel configured" };
   }
 
@@ -52,7 +55,7 @@ export async function postCheckInToDiscord(
 
   try {
     const res = await fetch(
-      `https://discord.com/api/v10/channels/${channelId}/messages`,
+      `https://discord.com/api/v10/channels/${id}/messages`,
       {
         method: "POST",
         headers: {
@@ -64,7 +67,7 @@ export async function postCheckInToDiscord(
     );
     if (!res.ok) {
       const text = await res.text();
-      return { ok: false, error: text };
+      return { ok: false, error: formatDiscordApiError(text) };
     }
     return { ok: true };
   } catch (e) {
@@ -85,9 +88,9 @@ export async function notifyCircleCheckIn(
 
   for (const m of memberships) {
     const channelId =
-      m.circle.discordChannelId ||
-      user?.discordChannelId ||
-      process.env.DISCORD_CHANNEL_ID;
+      normChannelId(m.circle.discordChannelId) ||
+      normChannelId(user?.discordChannelId) ||
+      normChannelId(process.env.DISCORD_CHANNEL_ID);
     if (!channelId) continue;
     await postCheckInToDiscord(channelId, {
       ...payload,

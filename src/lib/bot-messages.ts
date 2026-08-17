@@ -85,11 +85,77 @@ function normTime(raw: unknown): string {
   return /^\d{2}:\d{2}$/.test(s) ? s : "";
 }
 
-/** Discord snowflakes are digits only; anything else is treated as unset. */
+const SNOWFLAKE = /^\d{17,20}$/;
+
+/** True for a real Discord snowflake (channel / guild / user / message id). */
+export function isDiscordSnowflake(raw: unknown): boolean {
+  return SNOWFLAKE.test(String(raw ?? "").trim());
+}
+
+/**
+ * Pull a channel id out of a snowflake, <#id> mention, or discord.com/channels/... link.
+ *
+ * Stripping every non-digit used to concatenate guild+channel ids when someone
+ * pasted a channel URL, which Discord then rejected with 50001 Missing Access.
+ */
 export function normChannelId(raw: unknown): string {
-  return String(raw ?? "")
-    .replace(/\D/g, "")
-    .slice(0, 32);
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+
+  const fromUrl = s.match(
+    /(?:https?:\/\/)?(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/(?:@me|\d{17,20})\/(\d{17,20})/i
+  );
+  if (fromUrl) return fromUrl[1];
+
+  const fromDesktop = s.match(
+    /discord:\/\/-\/channels\/(?:@me|\d{17,20})\/(\d{17,20})/i
+  );
+  if (fromDesktop) return fromDesktop[1];
+
+  const mention = s.match(/<#(\d{17,20})>/);
+  if (mention) return mention[1];
+
+  if (SNOWFLAKE.test(s)) return s;
+
+  const digits = s.replace(/\D/g, "");
+  if (SNOWFLAKE.test(digits)) return digits;
+
+  // URL that was digit-stripped: guildId + channelId (and maybe messageId).
+  for (const n of [19, 18, 17, 20]) {
+    if (digits.length === n * 2 && SNOWFLAKE.test(digits.slice(n))) {
+      return digits.slice(n);
+    }
+    if (digits.length === n * 3) {
+      const channel = digits.slice(n, n * 2);
+      if (SNOWFLAKE.test(channel)) return channel;
+    }
+  }
+
+  return "";
+}
+
+/** Live input helper: snap a pasted link/mention to the id, otherwise keep digits. */
+export function channelIdFromInput(raw: unknown): string {
+  const s = String(raw ?? "");
+  const parsed = normChannelId(s);
+  if (parsed) return parsed;
+  return s.replace(/\D/g, "").slice(0, 20);
+}
+
+/** Unique valid channel ids, first-seen order. */
+export function collectChannelIds(
+  ...candidates: (string | null | undefined)[]
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of candidates) {
+    const id = normChannelId(raw);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
 }
 
 /** First non-empty of: per-message override, the user's channel, the env default. */
@@ -98,9 +164,11 @@ export function resolveChannelId(
   userChannelId: string | null | undefined
 ): string {
   return (
-    normChannelId(override) ||
-    normChannelId(userChannelId) ||
-    normChannelId(process.env.DISCORD_CHANNEL_ID)
+    collectChannelIds(
+      override,
+      userChannelId,
+      process.env.DISCORD_CHANNEL_ID
+    )[0] || ""
   );
 }
 

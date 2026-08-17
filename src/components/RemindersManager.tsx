@@ -222,7 +222,7 @@ export function RemindersManager() {
           ))}
         </div>
         <label className="block text-sm text-[var(--color-mist)]">
-          Channel ID (right‑click channel → Copy Channel ID)
+          Channel ID (right‑click channel → Copy Channel ID, or paste a channel link)
           <input
             defaultValue={prefs?.discordChannelId || ""}
             key={prefs?.discordChannelId || "ch"}

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   parseBotMessages,
   serializeBotMessages,
+  normChannelId,
   type BotMessages,
 } from "@/lib/bot-messages";
 
@@ -84,7 +85,7 @@ export async function PATCH(req: Request) {
   }
   if (body.discordChannelId !== undefined) {
     data.discordChannelId = body.discordChannelId
-      ? String(body.discordChannelId).replace(/\D/g, "").slice(0, 32)
+      ? normChannelId(body.discordChannelId) || null
       : null;
   }
   if (typeof body.onboardingDone === "boolean") {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { normChannelId } from "@/lib/bot-messages";
 
 /** Put a Discord-logged Dawn user on the server board + Discord friends circle. */
 export async function enrollDiscordFriend(opts: {
@@ -6,7 +7,7 @@ export async function enrollDiscordFriend(opts: {
   discordId: string | null;
 }) {
   const guildId = process.env.DISCORD_GUILD_ID?.trim() || "";
-  const channelId = process.env.DISCORD_CHANNEL_ID?.trim() || "";
+  const channelId = normChannelId(process.env.DISCORD_CHANNEL_ID);
   if (!opts.discordId) return;
 
   if (guildId && channelId) {

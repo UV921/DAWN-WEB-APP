@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normChannelId } from "@/lib/bot-messages";
 
 const TARGETS = new Set(["channel", "dm", "both"]);
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
       notifyDiscord: Boolean(body.notifyDiscord),
       discordTarget,
       discordChannelId: body.discordChannelId
-        ? String(body.discordChannelId).trim()
+        ? normChannelId(body.discordChannelId) || null
         : null,
     },
   });
@@ -117,7 +118,7 @@ export async function PATCH(req: Request) {
   if (TARGETS.has(body.discordTarget)) data.discordTarget = body.discordTarget;
   if (body.discordChannelId !== undefined) {
     data.discordChannelId = body.discordChannelId
-      ? String(body.discordChannelId).trim()
+      ? normChannelId(body.discordChannelId) || null
       : null;
   }
   if (body.goalId !== undefined) {

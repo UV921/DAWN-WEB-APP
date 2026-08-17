@@ -1,4 +1,5 @@
 import type { PrismaClient, Reminder, User } from "@prisma/client";
+import { normChannelId } from "./bot-messages";
 
 export type ReminderFireResult = {
   reminderId: string;
@@ -70,16 +71,17 @@ async function resolveChannelId(
   user: User,
   reminder: Reminder
 ): Promise<string | null> {
-  if (reminder.discordChannelId) return reminder.discordChannelId;
-  if (user.discordChannelId) return user.discordChannelId;
+  const fromReminder = normChannelId(reminder.discordChannelId);
+  if (fromReminder) return fromReminder;
+  const fromUser = normChannelId(user.discordChannelId);
+  if (fromUser) return fromUser;
   const membership = await prisma.circleMember.findFirst({
     where: { userId: user.id },
     include: { circle: true },
   });
-  if (membership?.circle.discordChannelId) {
-    return membership.circle.discordChannelId;
-  }
-  return process.env.DISCORD_CHANNEL_ID || null;
+  const fromCircle = normChannelId(membership?.circle.discordChannelId);
+  if (fromCircle) return fromCircle;
+  return normChannelId(process.env.DISCORD_CHANNEL_ID) || null;
 }
 
 async function resolveDiscordId(

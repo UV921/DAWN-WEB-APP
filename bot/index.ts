@@ -64,6 +64,7 @@ import {
   todosModal,
   tomorrowWakeRows,
 } from "./wind-down";
+import { normChannelId } from "../src/lib/bot-messages";
 import {
   addTodosForDate,
   buildTodoEmbed,
@@ -424,6 +425,16 @@ async function enrollInChannel(
     create: { trackedChannelId: tracked.id, userId },
     update: {},
   });
+  const stored = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { discordChannelId: true },
+  });
+  if (!normChannelId(stored?.discordChannelId)) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { discordChannelId: channelId },
+    });
+  }
   return tracked;
 }
 
