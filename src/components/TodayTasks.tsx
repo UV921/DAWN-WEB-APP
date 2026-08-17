@@ -393,8 +393,13 @@ export function TodayTasks({
           },
         }),
       });
+      const saved = await save.json().catch(() => ({}));
       if (!save.ok) {
-        onError?.("Couldn’t save that send time.");
+        onError?.(
+          save.status === 401
+            ? "Sign in again, then save the send time."
+            : saved.error || "Couldn’t save that send time."
+        );
         return;
       }
       setDiscordNote(
@@ -438,7 +443,11 @@ export function TodayTasks({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        onError?.(data.error || "Couldn’t post to Discord.");
+        onError?.(
+          res.status === 401
+            ? "Sign in again, then try Send now."
+            : data.error || "Couldn’t post to Discord."
+        );
         return;
       }
       setDiscordNote(

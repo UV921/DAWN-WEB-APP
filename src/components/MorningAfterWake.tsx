@@ -167,7 +167,10 @@ export function MorningAfterWake({
           setBusy(false);
           setMsg({
             tone: "error",
-            text: err.error || "Couldn’t post to Discord.",
+            text:
+              res.status === 401
+                ? "Sign in again, then try Send from Today."
+                : err.error || "Couldn’t post to Discord.",
           });
           return;
         }

@@ -1,0 +1,7 @@
+# Northflank bot service only. The Next.js website stays on Vercel.
+# If this file is missing, a default `npm start` would boot the website again.
+[phases.build]
+cmds = ["npx prisma generate"]
+
+[start]
+cmd = "npx tsx bot/index.ts"

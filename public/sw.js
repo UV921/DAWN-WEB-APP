@@ -1,5 +1,6 @@
-/* Dawn PWA service worker — cache shell for offline open */
-const CACHE = "dawn-v1";
+/* Dawn PWA service worker — cache shell for offline open.
+   Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
+const CACHE = "dawn-v2";
 const PRECACHE = ["/", "/login", "/dashboard", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -16,6 +17,13 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function isNetworkFirst(req, url) {
+  if (req.mode === "navigate") return true;
+  if (url.pathname.startsWith("/api/")) return true;
+  if (url.pathname.startsWith("/_next/")) return true;
+  return url.pathname.endsWith(".js") || url.pathname.endsWith(".css");
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -23,15 +31,21 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for API / auth
-  if (url.pathname.startsWith("/api/")) {
+  if (isNetworkFirst(req, url)) {
     event.respondWith(
-      fetch(req).catch(() => caches.match(req))
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok && req.mode === "navigate") {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
     );
     return;
   }
 
-  // Stale-while-revalidate for pages/assets
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
