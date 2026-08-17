@@ -10,7 +10,8 @@ type BeforeInstallPromptEvent = Event & {
 const DISMISS_KEY = "dawn-pwa-dismiss-until";
 const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
 /** Bump with public/sw.js CACHE so Home Screen apps pick up a new worker. */
-const SW_VERSION = "5";
+const SW_VERSION = "6";
+const CHUNK_RELOAD_KEY = "dawn-chunk-reloaded";
 
 let cachedPrompt: BeforeInstallPromptEvent | null = null;
 const promptSubs = new Set<(event: BeforeInstallPromptEvent | null) => void>();
@@ -33,6 +34,24 @@ function isDismissed() {
   return until > Date.now();
 }
 
+function isStaleChunkMessage(message: string) {
+  return /Loading chunk|ChunkLoadError|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(
+    message
+  );
+}
+
+function reloadOnce(storageKey: string, value: string) {
+  if (reloadingForSw) return;
+  try {
+    if (sessionStorage.getItem(storageKey) === value) return;
+    sessionStorage.setItem(storageKey, value);
+  } catch {
+    /* private mode */
+  }
+  reloadingForSw = true;
+  window.location.reload();
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -42,6 +61,23 @@ if (typeof window !== "undefined") {
   window.addEventListener("appinstalled", () => {
     cachedPrompt = null;
     promptSubs.forEach((fn) => fn(null));
+  });
+  window.addEventListener("error", (event) => {
+    if (isStaleChunkMessage(event.message || "")) {
+      reloadOnce(CHUNK_RELOAD_KEY, SW_VERSION);
+    }
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    const message =
+      typeof reason === "string"
+        ? reason
+        : reason instanceof Error
+          ? `${reason.name} ${reason.message}`
+          : "";
+    if (isStaleChunkMessage(message)) {
+      reloadOnce(CHUNK_RELOAD_KEY, SW_VERSION);
+    }
   });
 }
 
@@ -57,23 +93,17 @@ export function PwaRegister() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       const onControllerChange = () => {
-        if (reloadingForSw) return;
-        try {
-          if (sessionStorage.getItem("dawn-sw-reloaded") === SW_VERSION) return;
-          sessionStorage.setItem("dawn-sw-reloaded", SW_VERSION);
-        } catch {
-          /* private mode */
-        }
-        reloadingForSw = true;
-        window.location.reload();
+        reloadOnce("dawn-sw-reloaded", SW_VERSION);
       };
       navigator.serviceWorker.addEventListener(
         "controllerchange",
         onControllerChange
       );
-      navigator.serviceWorker.register(`/sw.js?v=${SW_VERSION}`).catch(() => {
-        /* ignore */
-      });
+      navigator.serviceWorker
+        .register("/sw.js", { updateViaCache: "none" })
+        .catch(() => {
+          /* ignore */
+        });
       return () => {
         navigator.serviceWorker.removeEventListener(
           "controllerchange",
