@@ -15,7 +15,6 @@ import {
 import { WakeHit } from "@/components/WakeHit";
 import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
-import { CloseDayPanel } from "@/components/CloseDayPanel";
 import { TodayOverview } from "@/components/TodayOverview";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
 import { MorningPulseCard } from "@/components/MorningPulseCard";
@@ -418,23 +417,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     }
   }
 
-  async function goingToSleep() {
-    if (bedRef.current) return;
-    const t = nowHHMM();
-    const prevChecks = checksRef.current;
-    const next = { ...prevChecks, sleepEarly: true };
-    setBedtime(t);
-    setChecks(next);
-    const ok = await persist(next, wakeRef.current, t, {
-      bed: true,
-      checkKeys: ["sleepEarly"],
-    });
-    if (!ok) {
-      setBedtime("");
-      setChecks(prevChecks);
-    }
-  }
-
   async function startChallenge(days: number) {
     const res = await fetch("/api/challenge", {
       method: "POST",
@@ -642,11 +624,21 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
         {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
 
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-10">
-          <div className="space-y-6">
-            {pulse ? <MorningPulseCard pulse={pulse} /> : null}
-            {action}
-            {loop}
+        {pulse ? <MorningPulseCard pulse={pulse} /> : null}
+        {action}
+        <StudyHoursCard />
+        <TodayOverview
+          earlyStreak={profile?.earlyStreak || 0}
+          habitsDone={done}
+          habitsTotal={liveHabits.length || 1}
+          xp={profile?.xp || 0}
+          level={profile?.level || 1}
+          intoLevel={profile?.intoLevel || 0}
+          need={profile?.need || 80}
+          challenge={challenge}
+          onStartChallenge={(days) => void startChallenge(days)}
+        />
+        {loop}
 
         <section>
           <div className="ui-section-head">
@@ -709,15 +701,53 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           addLabel="Add a task"
         />
 
-        {inSleepWindow ? (
-          <CloseDayPanel
-            sleepGoal={sleepGoal}
-            wakeGoal={wakeGoal}
-            bedtimeLogged={Boolean(bedtime)}
-            onSleepNow={() => void goingToSleep()}
-            onSaved={() => void load()}
-          />
+        {inSleepWindow && !bedtime ? (
+          <Link
+            href="/sleep"
+            className="block rounded-[1.1rem] border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5"
+          >
+            <p className="ui-kicker">Night</p>
+            <p className="font-display mt-2 text-2xl text-white">
+              Close the day
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-mist)]">
+              Remember anything, set tomorrow’s tasks, then sleep.
+            </p>
+          </Link>
         ) : null}
+
+        <section>
+          <div className="ui-section-head">
+            <div>
+              <h2 className="ui-section-title text-[1.15rem]">Reminders</h2>
+              <p className="ui-section-help">Alerts you set for today.</p>
+            </div>
+            <Link
+              href="/settings?tab=reminders"
+              className="shrink-0 text-xs text-[var(--color-mist)] hover:text-white"
+            >
+              Edit
+            </Link>
+          </div>
+          {reminders.length ? (
+            <ul className="space-y-1.5">
+              {reminders.map((r) => (
+                <li key={r.id} className="ui-row !min-h-0 !py-2.5">
+                  <span className="min-w-0 flex-1 text-sm text-white">
+                    {r.title}
+                  </span>
+                  <span className="tabular-nums text-[13px] text-[var(--color-dawn)]">
+                    {r.time}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-[var(--color-mist)]">
+              None yet. Add some from Settings, or when you close the night.
+            </p>
+          )}
+        </section>
 
         {!notifyReady ? (
           <button
@@ -747,51 +777,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
                 : "Couldn’t save — try again"}
           </p>
         )}
-          </div>
-
-          <aside className="mt-6 space-y-4 lg:mt-0 lg:sticky lg:top-6">
-        <TodayOverview
-          earlyStreak={profile?.earlyStreak || 0}
-          habitsDone={done}
-          habitsTotal={liveHabits.length || 1}
-          xp={profile?.xp || 0}
-          level={profile?.level || 1}
-          intoLevel={profile?.intoLevel || 0}
-          need={profile?.need || 80}
-          challenge={challenge}
-          onStartChallenge={(days) => void startChallenge(days)}
-        />
-        <StudyHoursCard />
-        {reminders.length ? (
-          <section>
-            <div className="ui-section-head">
-              <div>
-                <h2 className="ui-section-title text-[1.15rem]">Reminders</h2>
-                <p className="ui-section-help">Alerts you set for today.</p>
-              </div>
-              <Link
-                href="/settings?tab=reminders"
-                className="shrink-0 text-xs text-[var(--color-mist)] hover:text-white"
-              >
-                Edit
-              </Link>
-            </div>
-            <ul className="space-y-1.5">
-              {reminders.map((r) => (
-                <li key={r.id} className="ui-row !min-h-0 !py-2.5">
-                  <span className="min-w-0 flex-1 text-sm text-white">
-                    {r.title}
-                  </span>
-                  <span className="tabular-nums text-[13px] text-[var(--color-dawn)]">
-                    {r.time}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-          </aside>
-        </div>
       </div>
     </>
   );
