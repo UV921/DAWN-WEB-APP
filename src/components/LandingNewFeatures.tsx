@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { IconGoogle } from "@/components/icons";
+import { DawnScene3D, type DawnSceneTone } from "@/components/DawnScene3D";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -15,36 +16,28 @@ const FEATURES = [
     kicker: "Sign in",
     title: "Google in one tap",
     body: "Start Dawn with Google. Discord still works. Same email, same account.",
-    image: "/images/landing-phone.jpg",
-    alt: "Sunrise over dark water",
-    position: "68% 42%",
+    scene: "google" as DawnSceneTone,
   },
   {
     id: "code",
     kicker: "Friends",
     title: "Add anyone with a code",
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
-    image: "/images/landing-friends.jpg",
-    alt: "Two people watching the sunrise",
-    position: "62% 48%",
+    scene: "code" as DawnSceneTone,
   },
   {
     id: "board",
     kicker: "Board",
     title: "Rank habits and study",
     body: "Who stayed consistent. Who sat in the room. Combined score.",
-    image: "/images/landing-board.jpg",
-    alt: "Mountain peaks above the clouds at dawn",
-    position: "58% 46%",
+    scene: "board" as DawnSceneTone,
   },
   {
     id: "study",
     kicker: "Hours",
     title: "Study time that counts",
     body: "Sit in a marked voice room. Dawn counts the hours for the board.",
-    image: "/images/landing-study.jpg",
-    alt: "A library aisle lit by warm lamps",
-    position: "36% 38%",
+    scene: "study" as DawnSceneTone,
   },
 ] as const;
 
@@ -92,20 +85,7 @@ export function LandingNewFeatures() {
           transition={{ duration: 0.85, ease: EASE }}
         >
           <div className="relative h-52 overflow-hidden sm:h-64 lg:absolute lg:inset-0 lg:h-full">
-            <img
-              key={feature.image}
-              src={feature.image}
-              alt={feature.alt}
-              width={1600}
-              height={1000}
-              loading="lazy"
-              decoding="async"
-              style={{ objectPosition: feature.position }}
-              className={cn(
-                "feature-film-img h-full w-full object-cover lg:absolute lg:inset-0",
-                still && "is-still"
-              )}
-            />
+            <DawnScene3D key={feature.id} tone={feature.scene} still={still} />
             <div aria-hidden className="feature-film-vignette" />
             <div aria-hidden className="feature-film-grain" />
           </div>
@@ -185,11 +165,15 @@ function FeatureOverlay({
   return (
     <motion.div
       key={id}
-      initial={reduce ? false : { opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: EASE }}
-      className="w-full max-w-none shrink-0 rounded-2xl border border-white/15 bg-[#0a121a]/90 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md sm:max-w-[18.5rem]"
+      initial={reduce ? false : { opacity: 0, y: 22, rotateX: 18 }}
+      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+      transition={{ duration: 0.7, ease: EASE }}
+      style={{ transformPerspective: 1000, transformStyle: "preserve-3d" }}
+      className="w-full max-w-none shrink-0 sm:max-w-[18.5rem]"
     >
+      <div className="mac-chassis p-1.5 sm:p-2">
+        <div className="mac-bezel">
+          <div className="mac-glass rounded-[15px] bg-[#0a121a]/95 p-4">
       {id === "google" ? (
         <>
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
@@ -276,6 +260,9 @@ function FeatureOverlay({
           </div>
         </>
       ) : null}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }
