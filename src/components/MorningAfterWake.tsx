@@ -9,6 +9,10 @@ import {
 } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
 import { postTodosFromBrowser } from "@/lib/post-todos-client";
+import {
+  fileForDiscordCard,
+  renderTodoListCardPng,
+} from "@/lib/share-todo-card";
 
 type Step = "reminders" | "todos";
 
@@ -135,7 +139,18 @@ export function MorningAfterWake({
   async function finish(sendToDiscord: boolean) {
     setBusy(true);
     if (sendToDiscord && tasks.length) {
-      const result = await postTodosFromBrowser({ date });
+      let image: File | undefined;
+      try {
+        const { blob } = await renderTodoListCardPng({
+          listTitle: "Today",
+          date,
+          items: tasks.map((t) => ({ text: t.text, done: false })),
+        });
+        image = await fileForDiscordCard(blob);
+      } catch {
+        /* text list still posts */
+      }
+      const result = await postTodosFromBrowser({ date, image });
       if (!result.ok) {
         setBusy(false);
         setMsg({

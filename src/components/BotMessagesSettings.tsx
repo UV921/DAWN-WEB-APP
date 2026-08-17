@@ -347,8 +347,7 @@ export function BotMessagesSettings() {
         />
         <p className="mt-4 text-sm text-[var(--color-mist)]">
           Optional ping when the list goes out. Dawn @’s you in the channel
-          with this, and Send now posts the text list (PNG is the Download
-          button — iPhone cannot attach it in the same tap).
+          with this, and Send now uploads the same card as Download PNG.
         </p>
         <textarea
           value={settings.todosPingText}

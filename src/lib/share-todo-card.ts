@@ -108,6 +108,49 @@ export async function renderTodoListCardPng(opts: {
   return { blob, filename: todoCardFilename(opts.listTitle) };
 }
 
+/** Keep the Discord upload small enough that iPhone Safari will finish the POST. */
+const DISCORD_UPLOAD_MAX = 380_000;
+
+export async function fileForDiscordCard(
+  blob: Blob,
+  pngName = "dawn-tasks.png"
+): Promise<File> {
+  if (blob.size <= DISCORD_UPLOAD_MAX) {
+    const type = blob.type || "image/png";
+    const name = type.includes("jpeg") ? "dawn-tasks.jpg" : pngName;
+    return blob instanceof File ? blob : new File([blob], name, { type });
+  }
+
+  try {
+    const bmp = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bmp.close();
+      return new File([blob], pngName, { type: blob.type || "image/png" });
+    }
+    ctx.drawImage(bmp, 0, 0);
+    bmp.close();
+    for (const quality of [0.86, 0.74, 0.6]) {
+      const jpeg = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", quality)
+      );
+      if (jpeg && jpeg.size <= DISCORD_UPLOAD_MAX) {
+        return new File([jpeg], "dawn-tasks.jpg", { type: "image/jpeg" });
+      }
+    }
+    const last = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.5)
+    );
+    if (last) return new File([last], "dawn-tasks.jpg", { type: "image/jpeg" });
+  } catch {
+    /* keep original */
+  }
+  return new File([blob], pngName, { type: blob.type || "image/png" });
+}
+
 /** Save the PNG locally. Never call this during Send now — iOS treats a blob
  *  download as navigation and aborts the Discord POST. */
 export async function downloadPngBlob(blob: Blob, filename: string) {

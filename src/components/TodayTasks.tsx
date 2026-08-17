@@ -15,13 +15,13 @@ import {
   IconX,
 } from "@/components/icons";
 import {
-  blobToBase64Png,
   downloadPngBlob,
+  fileForDiscordCard,
   renderTodoListCardPng,
   shareTodoListCard,
 } from "@/lib/share-todo-card";
 import { parseBotMessages } from "@/lib/bot-messages";
-import { isIosClient, postTodosFromBrowser } from "@/lib/post-todos-client";
+import { postTodosFromBrowser } from "@/lib/post-todos-client";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
 import {
   normalizePriority,
@@ -415,17 +415,12 @@ export function TodayTasks({
     if (sendingDiscord || !todos.length) return;
     setSendingDiscord(true);
     setDiscordNote(null);
-    let image: string | undefined;
-    // Never auto-download, and never build a PNG on iPhone — Safari treats a
-    // blob download as navigation and aborts the POST with TypeError: Load failed.
-    if (!isIosClient()) {
-      try {
-        const { blob } = await pngForTodos();
-        const b64 = await blobToBase64Png(blob);
-        if (b64.length > 0 && b64.length < 400_000) image = b64;
-      } catch {
-        /* Text list still posts if the card can’t be drawn. */
-      }
+    let image: File | undefined;
+    try {
+      const { blob } = await pngForTodos();
+      image = await fileForDiscordCard(blob);
+    } catch {
+      /* Text list still posts if the card can’t be drawn. */
     }
     try {
       const result = await postTodosFromBrowser({
@@ -438,8 +433,8 @@ export function TodayTasks({
       } else {
         setDiscordNote(
           result.usedImage
-            ? "Posted in your Discord channel."
-            : "Posted in your Discord channel (text list)."
+            ? "Posted the card in your Discord channel."
+            : "Posted the text list in Discord (image didn’t attach)."
         );
       }
     } finally {
@@ -758,9 +753,8 @@ export function TodayTasks({
       {sendOpen && todos.length > 0 ? (
         <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-4">
           <p className="text-xs text-[var(--color-mist)]">
-            Send now posts this list to your Discord channel and @’s you.
-            Use Download PNG if you also want the image (iPhone cannot attach
-            the PNG in the same tap). Set a daily time for an automatic text ping.
+            Send now posts the same card as Download PNG into your Discord
+            channel and @’s you. Daily send time is a text ping only.
           </p>
           <textarea
             value={pingText}
