@@ -2,15 +2,43 @@
 
 import { useState } from "react";
 import { useDawnInstall } from "@/components/PwaRegister";
+import { cn } from "@/lib/utils";
 
-export function LandingInstall() {
-  const { canInstall, ios, install, installed } = useDawnInstall();
+export function LandingInstall({
+  variant = "landing",
+}: {
+  variant?: "landing" | "app";
+}) {
+  const { canInstall, ios, install, installed, dismissed, dismiss } =
+    useDawnInstall();
   const [hint, setHint] = useState(false);
 
-  if (installed) return null;
+  if (installed || dismissed) return null;
 
   return (
-    <div className="landing-install">
+    <div
+      className={cn(
+        "landing-install",
+        variant === "app" && "landing-install-app"
+      )}
+    >
+      <p className="landing-install-copy">
+        {hint
+          ? ios
+            ? "Share, then Add to Home Screen."
+            : "Add Dawn from the browser menu."
+          : variant === "app"
+            ? "Install Dawn"
+            : "On your phone"}
+      </p>
+      <button
+        type="button"
+        className="landing-install-skip"
+        onClick={dismiss}
+        aria-label="Skip install"
+      >
+        Skip
+      </button>
       <button
         type="button"
         className="landing-install-btn"
@@ -24,15 +52,6 @@ export function LandingInstall() {
       >
         Install
       </button>
-      {hint ? (
-        <p className="landing-install-hint">
-          {ios
-            ? "Share, then Add to Home Screen."
-            : "Add Dawn from the browser menu."}
-        </p>
-      ) : (
-        <p className="landing-install-copy">On your phone</p>
-      )}
     </div>
   );
 }

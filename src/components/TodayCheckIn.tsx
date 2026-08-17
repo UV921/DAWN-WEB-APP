@@ -622,8 +622,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         onClose={() => setHit(null)}
       />
 
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-10">
-        <div className="space-y-6">
+      <div className="space-y-6">
         <header>
           <p className="ui-kicker">
             {friendlyDate(today) || "Today"}
@@ -642,8 +641,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         </header>
 
         {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
-        {action}
-        {loop}
+
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-10">
+          <div className="space-y-6">
+            {pulse ? <MorningPulseCard pulse={pulse} /> : null}
+            {action}
+            {loop}
 
         <section>
           <div className="ui-section-head">
@@ -744,10 +747,9 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
                 : "Couldn’t save — try again"}
           </p>
         )}
-      </div>
+          </div>
 
-      <aside className="mt-6 space-y-4 lg:mt-0 lg:sticky lg:top-6">
-        {pulse ? <MorningPulseCard pulse={pulse} /> : null}
+          <aside className="mt-6 space-y-4 lg:mt-0 lg:sticky lg:top-6">
         <TodayOverview
           earlyStreak={profile?.earlyStreak || 0}
           habitsDone={done}
@@ -788,8 +790,9 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
             </ul>
           </section>
         ) : null}
-      </aside>
-    </div>
+          </aside>
+        </div>
+      </div>
     </>
   );
 }

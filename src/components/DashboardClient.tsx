@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNav } from "@/components/AppNav";
+import { LandingInstall } from "@/components/LandingInstall";
 import { TodayCheckIn } from "@/components/TodayCheckIn";
 
 type Props = {
@@ -17,6 +18,7 @@ export function DashboardClient({ wakeGoal, sleepGoal }: Props) {
           <TodayCheckIn wakeGoal={wakeGoal} sleepGoal={sleepGoal} />
         </div>
       </div>
+      <LandingInstall variant="app" />
     </main>
   );
 }

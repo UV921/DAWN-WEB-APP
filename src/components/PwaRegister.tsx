@@ -81,11 +81,23 @@ if (typeof window !== "undefined") {
   });
 }
 
+const dismissSubs = new Set<() => void>();
+
+function dismissInstallPrompt() {
+  try {
+    localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_MS));
+  } catch {
+    /* private mode */
+  }
+  dismissSubs.forEach((fn) => fn());
+}
+
 export function useDawnInstall() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     cachedPrompt
   );
   const [installed, setInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
   const [ios, setIos] = useState(false);
 
   useEffect(() => {
@@ -94,14 +106,18 @@ export function useDawnInstall() {
       return;
     }
     setIos(isIosDevice());
+    setDismissed(isDismissed());
     setDeferred(cachedPrompt);
     const onPrompt = (event: BeforeInstallPromptEvent | null) => {
       setDeferred(event);
       if (!event) setInstalled(true);
     };
+    const onDismiss = () => setDismissed(true);
     promptSubs.add(onPrompt);
+    dismissSubs.add(onDismiss);
     return () => {
       promptSubs.delete(onPrompt);
+      dismissSubs.delete(onDismiss);
     };
   }, []);
 
@@ -114,24 +130,22 @@ export function useDawnInstall() {
     if (choice.outcome === "accepted") setInstalled(true);
   }
 
+  function dismiss() {
+    setDismissed(true);
+    dismissInstallPrompt();
+  }
+
   return {
     canInstall: Boolean(deferred) && !installed,
     ios: ios && !installed,
     installed,
+    dismissed,
     install,
+    dismiss,
   };
 }
 
 export function PwaRegister() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
-    cachedPrompt
-  );
-  const [installed, setInstalled] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [ios, setIos] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [onLanding, setOnLanding] = useState(false);
-
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       const onControllerChange = () => {
@@ -156,73 +170,5 @@ export function PwaRegister() {
     return undefined;
   }, []);
 
-  useEffect(() => {
-    if (isStandaloneWindow()) {
-      setInstalled(true);
-      return;
-    }
-
-    setIos(isIosDevice());
-    setDismissed(isDismissed());
-    setDeferred(cachedPrompt);
-    setOnLanding(window.location.pathname === "/");
-
-    const onPrompt = (event: BeforeInstallPromptEvent | null) => {
-      setDeferred(event);
-      if (!event) setInstalled(true);
-    };
-    promptSubs.add(onPrompt);
-
-    const show = window.setTimeout(() => setReady(true), 900);
-
-    return () => {
-      promptSubs.delete(onPrompt);
-      window.clearTimeout(show);
-    };
-  }, []);
-
-  async function install() {
-    if (!deferred) return;
-    await deferred.prompt();
-    const choice = await deferred.userChoice;
-    setDeferred(null);
-    cachedPrompt = null;
-    if (choice.outcome === "accepted") setInstalled(true);
-  }
-
-  function dismiss() {
-    setDismissed(true);
-    localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_MS));
-  }
-
-  if (!ready || installed || dismissed || onLanding) return null;
-
-  return (
-    <div className="fixed z-50 mx-auto max-w-md rounded-2xl border border-white/15 bg-[#0d131a]/95 p-4 shadow-2xl backdrop-blur left-4 right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-4 md:bottom-4">
-      <p className="font-display text-lg text-white">Install Dawn</p>
-      <p className="mt-1 text-sm text-[var(--color-mist)]">
-        {ios
-          ? "Add it to your Home Screen — tap Share, then Add to Home Screen."
-          : "Open Dawn like an app. Faster morning check-in, works offline."}
-      </p>
-      <div className="mt-3 flex gap-2">
-        {deferred ? (
-          <button
-            type="button"
-            onClick={() => void install()}
-            className="ui-btn ui-btn-primary min-h-9 px-4 py-2 text-sm"
-          >
-            Install
-          </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={dismiss}
-          className="ui-btn ui-btn-ghost min-h-9 px-4 py-2 text-sm"
-        >
-          Not now
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }
