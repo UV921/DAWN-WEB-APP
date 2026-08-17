@@ -8,6 +8,11 @@ import {
   IconPlus,
 } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
+import {
+  blobToBase64Png,
+  downloadPngBlob,
+  renderTodoListCardPng,
+} from "@/lib/share-todo-card";
 
 type Step = "reminders" | "todos";
 
@@ -134,17 +139,33 @@ export function MorningAfterWake({
   async function finish(sendToDiscord: boolean) {
     setBusy(true);
     if (sendToDiscord && tasks.length) {
-      const res = await fetch("/api/discord/send-todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+      try {
+        const { blob, filename } = await renderTodoListCardPng({
+          listTitle: "Today",
+          date,
+          items: tasks.map((t) => ({ text: t.text, done: false })),
+        });
+        downloadPngBlob(blob, filename);
+        const image = await blobToBase64Png(blob);
+        const res = await fetch("/api/discord/send-todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, image }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setBusy(false);
+          setMsg({
+            tone: "error",
+            text: err.error || "Couldn’t post to Discord.",
+          });
+          return;
+        }
+      } catch {
         setBusy(false);
         setMsg({
           tone: "error",
-          text: err.error || "Couldn’t post to Discord.",
+          text: "Couldn’t make the PNG or reach Discord.",
         });
         return;
       }

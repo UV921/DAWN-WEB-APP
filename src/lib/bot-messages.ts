@@ -34,6 +34,12 @@ export type BotMessages = {
   channelPings: ChannelPing[];
   /** Where the task list is posted. Empty = default channel. */
   todosChannelId: string;
+  /** Custom ping text when posting the day's tasks. */
+  todosPingText: string;
+  /** HH:MM local — auto-post the day's tasks. Empty = manual only. */
+  todosSendTime: string;
+  /** Prevents double-send: YYYY-MM-DD-HH:MM */
+  lastTodosSendKey: string;
 };
 
 export const BOT_MESSAGE_META: {
@@ -195,6 +201,9 @@ export function defaultBotMessages(): BotMessages {
     windDown: { enabled: true, text: "" },
     channelPings: [],
     todosChannelId: "",
+    todosPingText: "",
+    todosSendTime: "",
+    lastTodosSendKey: "",
   };
 }
 
@@ -220,6 +229,13 @@ export function parseBotMessages(json: unknown): BotMessages {
           .filter((p): p is ChannelPing => p !== null)
       : [],
     todosChannelId: normChannelId(v.todosChannelId),
+    todosPingText: normText(v.todosPingText, 300),
+    todosSendTime: normTime(v.todosSendTime),
+    lastTodosSendKey: /^\d{4}-\d{2}-\d{2}-\d{2}:\d{2}$/.test(
+      String(v.lastTodosSendKey || "")
+    )
+      ? String(v.lastTodosSendKey)
+      : "",
   };
 }
 
