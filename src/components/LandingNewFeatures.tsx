@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { IconGoogle } from "@/components/icons";
-import { DawnScene3D, type DawnSceneTone } from "@/components/DawnScene3D";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -16,28 +15,24 @@ const FEATURES = [
     kicker: "Sign in",
     title: "Google in one tap",
     body: "Start Dawn with Google. Discord still works. Same email, same account.",
-    scene: "google" as DawnSceneTone,
   },
   {
     id: "code",
     kicker: "Friends",
     title: "Add anyone with a code",
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
-    scene: "code" as DawnSceneTone,
   },
   {
     id: "board",
     kicker: "Board",
     title: "Rank habits and study",
     body: "Who stayed consistent. Who sat in the room. Combined score.",
-    scene: "board" as DawnSceneTone,
   },
   {
     id: "study",
     kicker: "Hours",
     title: "Study time that counts",
     body: "Sit in a marked voice room. Dawn counts the hours for the board.",
-    scene: "study" as DawnSceneTone,
   },
 ] as const;
 
@@ -84,10 +79,21 @@ export function LandingNewFeatures() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.85, ease: EASE }}
         >
-          <div className="relative h-52 overflow-hidden sm:h-64 lg:absolute lg:inset-0 lg:h-full">
-            <DawnScene3D key={feature.id} tone={feature.scene} still={still} />
+          <div
+            className={cn(
+              "hero-photo relative h-52 sm:h-64 lg:absolute lg:inset-0 lg:h-full",
+              still && "hero-photo-still"
+            )}
+          >
+            <img
+              className="hero-photo-img"
+              src="/images/landing-hero.png"
+              alt=""
+              width={1680}
+              height={1050}
+              decoding="async"
+            />
             <div aria-hidden className="feature-film-vignette" />
-            <div aria-hidden className="feature-film-grain" />
           </div>
 
           <div className="relative z-10 flex flex-col justify-between gap-6 p-5 sm:p-6 lg:min-h-[32rem] lg:flex-row lg:items-end lg:p-8">

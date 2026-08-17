@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { useInView, useReducedMotion } from "motion/react";
-import { DawnScene3D } from "@/components/DawnScene3D";
 import { cn } from "@/lib/utils";
 
 export function LandingHeroBackdrop() {
@@ -19,14 +18,13 @@ export function LandingHeroBackdrop() {
     >
       <img
         className="hero-photo-img"
-        src="/images/landing-hero.jpg"
+        src="/images/landing-hero.png"
         alt=""
         width={1680}
         height={1050}
         fetchPriority="high"
         decoding="async"
       />
-      <DawnScene3D tone="hero" still={still} />
       <div className="hero-photo-vignette" />
     </div>
   );
