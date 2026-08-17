@@ -1,4 +1,5 @@
 import { formatDateInZone, zonedClock, DEFAULT_TZ } from "./clock";
+import { collectChannelIds } from "./bot-messages";
 
 /** Ignore join/leave flicker. */
 export const MIN_SESSION_MS = 2 * 60 * 1000;
@@ -7,16 +8,7 @@ export const MAX_SESSION_MS = 6 * 60 * 60 * 1000;
 
 export function parseStudyVoiceIds(raw?: string | null): string[] {
   if (!raw) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(/[,\s]+/)) {
-    const id = part.replace(/\D/g, "");
-    if (id.length >= 16 && !seen.has(id)) {
-      seen.add(id);
-      out.push(id);
-    }
-  }
-  return out;
+  return collectChannelIds(...String(raw).split(/[,;\n]+/));
 }
 
 export function envStudyVoiceIds(): string[] {

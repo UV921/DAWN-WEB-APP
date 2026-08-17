@@ -14,7 +14,7 @@ export function StudyHoursCard() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/study");
+      const res = await fetch("/api/study", { cache: "no-store" });
       if (!res.ok) return;
       setData((await res.json()) as StudyStats);
     } catch {
@@ -24,7 +24,7 @@ export function StudyHoursCard() {
 
   useEffect(() => {
     void load();
-    const id = window.setInterval(() => void load(), 30_000);
+    const id = window.setInterval(() => void load(), 15_000);
     const onVis = () => {
       if (document.visibilityState === "visible") void load();
     };

@@ -70,6 +70,49 @@ async function findDawnUser(prisma: PrismaClient, discordId: string) {
   });
 }
 
+function discordIdsForUser(user: {
+  discordId?: string | null;
+  accounts?: { providerAccountId: string }[];
+}): string[] {
+  const ids: string[] = [];
+  if (user.discordId) ids.push(user.discordId);
+  for (const a of user.accounts || []) {
+    if (a.providerAccountId && !ids.includes(a.providerAccountId)) {
+      ids.push(a.providerAccountId);
+    }
+  }
+  return ids;
+}
+
+/** Who is sitting in a marked study VC right now. */
+async function peopleInStudyRooms(
+  client: Client,
+  rooms: Set<string>
+): Promise<Map<string, { guildId: string; channelId: string }>> {
+  const present = new Map<string, { guildId: string; channelId: string }>();
+  const note = (discordId: string, guildId: string, channelId: string) => {
+    if (!discordId || !rooms.has(channelId)) return;
+    present.set(discordId, { guildId, channelId });
+  };
+
+  for (const guild of client.guilds.cache.values()) {
+    for (const vs of guild.voiceStates.cache.values()) {
+      if (vs.member?.user?.bot) continue;
+      if (vs.channelId) note(vs.id, guild.id, vs.channelId);
+    }
+  }
+
+  for (const channelId of rooms) {
+    const ch = await client.channels.fetch(channelId).catch(() => null);
+    if (!ch || !ch.isVoiceBased() || !ch.guildId) continue;
+    for (const member of ch.members.values()) {
+      if (member.user.bot) continue;
+      note(member.id, ch.guildId, ch.id);
+    }
+  }
+  return present;
+}
+
 async function closeSession(
   prisma: PrismaClient,
   session: { id: string; startedAt: Date; date: string },
@@ -167,7 +210,10 @@ export async function handleVoiceStateUpdate(
 
   const user = await findDawnUser(prisma, discordId);
   if (!user) {
-    if (joinedStudy) await nudgeDawnLogin(client, discordId);
+    if (joinedStudy) {
+      console.log(`[study] join ignored — Discord ${discordId} is not linked in Dawn`);
+      await nudgeDawnLogin(client, discordId);
+    }
     return;
   }
 
@@ -176,62 +222,80 @@ export async function handleVoiceStateUpdate(
       where: { userId: user.id, endedAt: null },
     });
     if (open) await closeSession(prisma, open, new Date());
+    console.log(`[study] left user=${user.id} ch=${oldCh}`);
     return;
   }
 
   const guildId = newState.guild.id;
   if (joinedStudy && newCh) {
     await openSession(prisma, user, guildId, newCh);
+    console.log(`[study] joined user=${user.id} ch=${newCh}`);
   }
 }
 
+/**
+ * Close leftover sessions AND start counting people already sitting in a
+ * study VC. Join events are missed when the bot restarts while you're in the
+ * room — that's why hours showed 0 even though you were in the channel.
+ */
 export async function reconcileOpenSessions(
   client: Client,
   prisma: PrismaClient
 ) {
+  const rooms = await loadStudyRoomIds(prisma);
+  if (!rooms.size) return;
+
+  const present = await peopleInStudyRooms(client, rooms);
   const open = await prisma.studySession.findMany({
     where: { endedAt: null },
     include: {
-      user: { select: { discordId: true, timezone: true } },
+      user: {
+        select: {
+          id: true,
+          discordId: true,
+          timezone: true,
+          accounts: {
+            where: { provider: "discord" },
+            select: { providerAccountId: true },
+          },
+        },
+      },
     },
   });
-  if (!open.length) return;
-
-  const rooms = await loadStudyRoomIds(prisma);
   const now = Date.now();
+  const counted = new Set<string>();
 
   for (const session of open) {
-    const discordId = session.user.discordId;
-    if (!discordId) {
-      await closeSession(prisma, session, new Date(), { ghost: true });
-      continue;
-    }
-
-    let stillIn = false;
-    let currentCh: string | null = null;
-    try {
-      const guild = await client.guilds.fetch(session.guildId);
-      const member = await guild.members.fetch(discordId);
-      currentCh = member.voice.channelId;
-      stillIn = Boolean(currentCh && rooms.has(currentCh));
-    } catch {
-      stillIn = false;
-    }
-
-    if (stillIn && currentCh) {
-      if (currentCh !== session.channelId) {
+    const ids = discordIdsForUser(session.user);
+    const loc = ids.map((id) => present.get(id)).find(Boolean);
+    if (loc) {
+      counted.add(session.user.id);
+      for (const id of ids) present.delete(id);
+      if (loc.channelId !== session.channelId || loc.guildId !== session.guildId) {
         await prisma.studySession.update({
           where: { id: session.id },
-          data: { channelId: currentCh },
+          data: { channelId: loc.channelId, guildId: loc.guildId },
         });
       }
       continue;
     }
-
+    if (!ids.length) {
+      console.log(`[study] open session ${session.id} has no Discord id — leaving it`);
+      counted.add(session.user.id);
+      continue;
+    }
     const elapsed = now - session.startedAt.getTime();
     await closeSession(prisma, session, new Date(), {
       ghost: elapsed > MAX_SESSION_MS,
     });
+  }
+
+  for (const [discordId, loc] of present) {
+    const user = await findDawnUser(prisma, discordId);
+    if (!user || counted.has(user.id)) continue;
+    await openSession(prisma, user, loc.guildId, loc.channelId);
+    counted.add(user.id);
+    console.log(`[study] recovered occupant user=${user.id} ch=${loc.channelId}`);
   }
 }
 
@@ -251,6 +315,7 @@ export function attachStudyVoice(client: Client, prisma: PrismaClient) {
   client.on("ready", () => {
     console.log("Study voice tracking ready");
     sweep();
+    setTimeout(sweep, 8_000);
   });
   setInterval(sweep, 60_000);
 }
