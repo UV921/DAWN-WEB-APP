@@ -8,12 +8,19 @@ import {
   IconChevronRight,
   IconClock,
   IconDiscord,
+  IconDownload,
   IconFlag,
   IconPlus,
   IconShare,
   IconX,
 } from "@/components/icons";
-import { shareTodoListCard } from "@/lib/share-todo-card";
+import {
+  blobToBase64Png,
+  downloadPngBlob,
+  renderTodoListCardPng,
+  shareTodoListCard,
+} from "@/lib/share-todo-card";
+import { parseBotMessages } from "@/lib/bot-messages";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
 import {
   normalizePriority,
@@ -124,6 +131,10 @@ export function TodayTasks({
   } | null>(null);
   const [sendingDiscord, setSendingDiscord] = useState(false);
   const [discordNote, setDiscordNote] = useState<string | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [pingText, setPingText] = useState("");
+  const [sendTime, setSendTime] = useState("");
+  const [savingTime, setSavingTime] = useState(false);
   const [listMenu, setListMenu] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [timeEditId, setTimeEditId] = useState<string | null>(null);
@@ -328,22 +339,99 @@ export function TodayTasks({
     }
   }
 
+  async function loadSendPrefs() {
+    const res = await fetch("/api/settings");
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    const bot = parseBotMessages(data?.botMessages);
+    setPingText(bot.todosPingText);
+    setSendTime(bot.todosSendTime);
+  }
+
+  async function openSendPanel() {
+    setSendOpen((open) => !open);
+    setDiscordNote(null);
+    if (!sendOpen) void loadSendPrefs();
+  }
+
+  async function pngForTodos() {
+    return renderTodoListCardPng({
+      listTitle: title,
+      date,
+      items: todos.filter((t) => !t.parentId).map((t) => ({
+        text: t.text,
+        done: t.done,
+      })),
+    });
+  }
+
+  async function downloadTasksPng() {
+    try {
+      const { blob, filename } = await pngForTodos();
+      downloadPngBlob(blob, filename);
+      setDiscordNote("PNG saved to your downloads.");
+    } catch {
+      onError?.("Couldn’t make the PNG.");
+    }
+  }
+
+  async function saveSendTime() {
+    setSavingTime(true);
+    setDiscordNote(null);
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json().catch(() => null);
+      const bot = parseBotMessages(data?.botMessages);
+      const save = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          botMessages: {
+            ...bot,
+            todosPingText: pingText,
+            todosSendTime: sendTime,
+          },
+        }),
+      });
+      if (!save.ok) {
+        onError?.("Couldn’t save that send time.");
+        return;
+      }
+      setDiscordNote(
+        sendTime
+          ? `Daily ping saved for ${sendTime}. Dawn will @ you with your message.`
+          : "Daily send time cleared — manual only."
+      );
+    } catch {
+      onError?.("Couldn’t save that send time.");
+    } finally {
+      setSavingTime(false);
+    }
+  }
+
   async function sendToDiscord() {
     if (sendingDiscord || !todos.length) return;
     setSendingDiscord(true);
     setDiscordNote(null);
     try {
+      const { blob, filename } = await pngForTodos();
+      downloadPngBlob(blob, filename);
+      const image = await blobToBase64Png(blob);
       const res = await fetch("/api/discord/send-todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date }),
+        body: JSON.stringify({
+          date,
+          message: pingText,
+          image,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         onError?.(data.error || "Couldn’t post to Discord.");
         return;
       }
-      setDiscordNote("Posted in your Discord channel.");
+      setDiscordNote("PNG downloaded, and posted in your Discord channel.");
     } catch {
       onError?.("Couldn’t reach Discord. Try again.");
     } finally {
@@ -622,13 +710,16 @@ export function TodayTasks({
           {todos.length > 0 ? (
             <button
               type="button"
-              onClick={() => void sendToDiscord()}
-              disabled={sendingDiscord}
-              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium text-[var(--color-mist)] hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
-              title="Post this list in your Discord channel"
+              onClick={() => void openSendPanel()}
+              className={`inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium hover:bg-white/[0.06] hover:text-white ${
+                sendOpen
+                  ? "bg-white/[0.08] text-white"
+                  : "text-[var(--color-mist)]"
+              }`}
+              title="Send this list to Discord, schedule a ping, or download a PNG"
             >
               <IconDiscord size={13} />
-              {sendingDiscord ? "Sending…" : "Send"}
+              Send
             </button>
           ) : null}
           {!allowAdd && addHref && todos.length > 0 ? (
@@ -655,6 +746,62 @@ export function TodayTasks({
           )}
         </div>
       </header>
+
+      {sendOpen && todos.length > 0 ? (
+        <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-4">
+          <p className="text-xs text-[var(--color-mist)]">
+            Send now downloads a PNG of this list, then uploads that same file
+            to your Discord channel and @’s you with your message. Set a daily
+            time to ping automatically (text list — PNG is on Send now /
+            Download).
+          </p>
+          <textarea
+            value={pingText}
+            onChange={(e) => setPingText(e.target.value)}
+            rows={2}
+            maxLength={300}
+            placeholder="Ping message — Hey, here's today's work"
+            className="ui-field text-sm"
+          />
+          <label className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-mist)]">
+            <IconClock size={13} />
+            Daily send time
+            <input
+              type="time"
+              value={sendTime}
+              onChange={(e) => setSendTime(e.target.value)}
+              className="ui-field !inline-flex !w-auto !py-1.5"
+            />
+            <button
+              type="button"
+              disabled={savingTime}
+              onClick={() => void saveSendTime()}
+              className="rounded-full px-2.5 py-1 text-[12px] font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/10 disabled:opacity-50"
+            >
+              {savingTime ? "Saving…" : sendTime ? "Save time" : "Clear time"}
+            </button>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={sendingDiscord}
+              onClick={() => void sendToDiscord()}
+              className="ui-btn ui-btn-primary !h-9 !px-4 text-[12px]"
+            >
+              <IconDiscord size={13} />
+              {sendingDiscord ? "Sending…" : "Send now"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void downloadTasksPng()}
+              className="ui-btn ui-btn-ghost !h-9 !px-4 text-[12px]"
+            >
+              <IconDownload size={13} />
+              Download PNG
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {discordNote ? (
         <p className="text-xs text-[var(--color-leaf)]">{discordNote}</p>

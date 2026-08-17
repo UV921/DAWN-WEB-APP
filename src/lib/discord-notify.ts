@@ -72,38 +72,79 @@ export function formatDiscordApiError(raw: string): string {
   return raw.length > 280 ? `${msg.slice(0, 280)}…` : msg || "Discord rejected the message.";
 }
 
+export type DiscordFile = {
+  filename: string;
+  bytes: Uint8Array;
+  contentType?: string;
+};
+
+export type DiscordSendOpts = {
+  title: string;
+  body: string;
+  color?: number;
+  /** Overrides the default title-as-content line. */
+  content?: string;
+  mentionUserId?: string | null;
+  files?: DiscordFile[];
+};
+
 async function discordFetch(path: string, init?: RequestInit) {
   const token = botToken();
-  return fetch(`https://discord.com/api/v10${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bot ${token}`,
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bot ${token}`);
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  if (!isForm && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`https://discord.com/api/v10${path}`, { ...init, headers });
 }
 
-function embedPayload(opts: { title: string; body: string; color?: number }) {
-  return {
+function mentionLine(id?: string | null) {
+  return id && /^\d{17,20}$/.test(id) ? `<@${id}>` : "";
+}
+
+function allowedMentions(id?: string | null) {
+  return id && /^\d{17,20}$/.test(id)
+    ? { parse: [] as string[], users: [id] }
+    : { parse: [] as string[] };
+}
+
+function embedPayload(
+  opts: DiscordSendOpts,
+  file?: DiscordFile
+): Record<string, unknown> {
+  const embed: Record<string, unknown> = {
     title: opts.title.slice(0, 256),
-    description: opts.body.slice(0, 4096),
+    description: (file ? opts.body.slice(0, 800) : opts.body).slice(0, 4096),
     color: opts.color ?? 0xf0b45a,
     footer: { text: "Dawn reminder" },
     timestamp: new Date().toISOString(),
   };
+  if (file) {
+    embed.image = { url: `attachment://${file.filename}` };
+  }
+  return embed;
 }
 
 async function postToChannel(
   channelId: string,
-  opts: { title: string; body: string; color?: number },
+  opts: DiscordSendOpts,
   asForumPost: boolean
 ): Promise<{ ok: boolean; error?: string; status?: number; raw?: string }> {
-  const embed = embedPayload(opts);
-  const message = {
-    content: opts.title.slice(0, 200),
-    embeds: [embed],
+  const files = opts.files?.slice(0, 1) || [];
+  const file = files[0];
+  const ping = mentionLine(opts.mentionUserId);
+  const content = (
+    opts.content ||
+    [ping, opts.title].filter(Boolean).join("\n")
+  ).slice(0, 2000);
+  const embed = embedPayload(opts, file);
+  const attachments = files.map((f, i) => ({ id: i, filename: f.filename }));
+  const message: Record<string, unknown> = {
+    content,
+    allowed_mentions: allowedMentions(opts.mentionUserId),
   };
+  if (attachments.length) message.attachments = attachments;
 
   const attempts: { embeds: boolean }[] = [{ embeds: true }, { embeds: false }];
   let lastRaw = "";
@@ -111,25 +152,43 @@ async function postToChannel(
 
   for (const attempt of attempts) {
     const payload = attempt.embeds
-      ? message
+      ? { ...message, embeds: [embed] }
       : {
-          content: `**${opts.title}**\n${opts.body}`.slice(0, 2000),
+          content: [content, opts.body].filter(Boolean).join("\n").slice(0, 2000),
+          allowed_mentions: allowedMentions(opts.mentionUserId),
+          ...(attachments.length ? { attachments } : {}),
         };
 
+    const wrapped = asForumPost
+      ? {
+          name: opts.title.slice(0, 100) || "Dawn tasks",
+          auto_archive_duration: 1440,
+          message: payload,
+        }
+      : payload;
+
+    let body: BodyInit;
+    const headers: HeadersInit = {};
+    if (file) {
+      const form = new FormData();
+      form.append("payload_json", JSON.stringify(wrapped));
+      const copy = new ArrayBuffer(file.bytes.byteLength);
+      new Uint8Array(copy).set(file.bytes);
+      form.append(
+        "files[0]",
+        new Blob([copy], { type: file.contentType || "image/png" }),
+        file.filename
+      );
+      body = form;
+    } else {
+      body = JSON.stringify(wrapped);
+    }
+
     const res = await discordFetch(
-      asForumPost ? `/channels/${channelId}/threads` : `/channels/${channelId}/messages`,
-      {
-        method: "POST",
-        body: JSON.stringify(
-          asForumPost
-            ? {
-                name: opts.title.slice(0, 100) || "Dawn tasks",
-                auto_archive_duration: 1440,
-                message: payload,
-              }
-            : payload
-        ),
-      }
+      asForumPost
+        ? `/channels/${channelId}/threads`
+        : `/channels/${channelId}/messages`,
+      { method: "POST", headers, body }
     );
 
     if (res.ok) return { ok: true };
@@ -141,7 +200,6 @@ async function postToChannel(
     } catch {
       code = undefined;
     }
-    // Missing embed permission — retry as plain text.
     if (attempt.embeds && code === 50013) continue;
     break;
   }
@@ -156,7 +214,7 @@ async function postToChannel(
 
 export async function discordSendChannelMessage(
   channelId: string,
-  opts: { title: string; body: string; color?: number }
+  opts: DiscordSendOpts
 ): Promise<{ ok: boolean; error?: string }> {
   const token = botToken();
   if (!token) return { ok: false, error: "DISCORD_BOT_TOKEN not set" };
@@ -202,7 +260,7 @@ export async function discordSendChannelMessage(
 /** Open (or reuse) a DM channel with a Discord user, then send. */
 export async function discordSendDm(
   discordUserId: string,
-  opts: { title: string; body: string; color?: number }
+  opts: DiscordSendOpts
 ): Promise<{ ok: boolean; error?: string }> {
   const token = botToken();
   if (!token) return { ok: false, error: "DISCORD_BOT_TOKEN not set" };

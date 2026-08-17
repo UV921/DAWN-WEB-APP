@@ -126,6 +126,16 @@ export function IconTrophy(props: IconProps) {
   );
 }
 
+export function IconDownload(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v12" />
+      <path d="M8 11l4 4 4-4" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
 export function IconShare(props: IconProps) {
   return (
     <svg {...base(props)}>

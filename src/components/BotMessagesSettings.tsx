@@ -329,6 +329,43 @@ export function BotMessagesSettings() {
           placeholder="Channel ID or discord.com/channels/… link"
           className="ui-field mt-3 font-mono text-xs"
         />
+        <p className="mt-4 text-sm text-[var(--color-mist)]">
+          Optional ping when the list goes out. Dawn @’s you in the channel
+          with this, and Send now also downloads a PNG then uploads that same
+          image (the bot does not fetch it).
+        </p>
+        <textarea
+          value={settings.todosPingText}
+          onChange={(e) =>
+            setSettings((prev) => ({
+              ...prev,
+              todosPingText: e.target.value,
+            }))
+          }
+          rows={2}
+          maxLength={300}
+          placeholder="Here's today's list — you've got this."
+          className="ui-field mt-2 text-sm"
+        />
+        <label className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-mist)]">
+          Daily send time
+          <input
+            type="time"
+            value={settings.todosSendTime}
+            onChange={(e) =>
+              setSettings((prev) => ({
+                ...prev,
+                todosSendTime: e.target.value,
+              }))
+            }
+            className="ui-field !w-auto !py-1.5 text-sm"
+          />
+          <span className="text-xs">
+            {settings.todosSendTime
+              ? `Auto-posts at ${settings.todosSendTime} (your timezone)`
+              : "Blank = Send now only"}
+          </span>
+        </label>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

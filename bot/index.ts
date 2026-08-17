@@ -51,6 +51,7 @@ import {
   postConsistencyReports,
 } from "./report";
 import { postChannelPings } from "./channel-pings";
+import { postScheduledTodoSends } from "./todo-send";
 import { resolveDisplayName, resolveManyNames } from "./names";
 import {
   afterWakeChoiceRows,
@@ -867,6 +868,7 @@ client.once("ready", () => {
   runJob("night-review", () => sendNightReviewDms(client, prisma));
   runJob("consistency", () => postConsistencyReports(client, prisma));
   runJob("channel-pings", () => postChannelPings(client, prisma));
+  runJob("todo-sends", () => fireScheduledTodoSends());
   setInterval(() => runJob("reminders", () => fireDueReminders()), 30_000);
   setInterval(() => {
     runJob("morning", () => runMorningScheduler(client, prisma));
@@ -874,8 +876,18 @@ client.once("ready", () => {
     runJob("night-review", () => sendNightReviewDms(client, prisma));
     runJob("consistency", () => postConsistencyReports(client, prisma));
     runJob("channel-pings", () => postChannelPings(client, prisma));
+    runJob("todo-sends", () => fireScheduledTodoSends());
   }, 20_000);
 });
+
+async function fireScheduledTodoSends() {
+  try {
+    const { sent } = await postScheduledTodoSends(prisma);
+    if (sent) console.log(`Posted ${sent} scheduled task list(s)`);
+  } catch (e) {
+    console.error("Scheduled todo send failed", e);
+  }
+}
 
 async function fireDueReminders() {
   try {
