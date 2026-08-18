@@ -610,7 +610,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           Edit
         </Link>
       </div>
-      <ul className="space-y-2">
+      <ul className="flex flex-1 flex-col gap-2">
         {sortedHabits.map((h) => {
           const isDone = Boolean(checks[h.key]);
           const locked = !isDone && !h.canSubmit;
@@ -658,11 +658,13 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         </Link>
       </div>
       {reminders.length ? (
-        <ul className="space-y-1.5">
+        <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {reminders.map((r) => (
             <li key={r.id} className="ui-row !min-h-0 !py-2.5">
-              <span className="min-w-0 flex-1 text-sm text-white">{r.title}</span>
-              <span className="tabular-nums text-[13px] text-[var(--color-dawn)]">
+              <span className="min-w-0 flex-1 truncate text-sm text-white">
+                {r.title}
+              </span>
+              <span className="shrink-0 tabular-nums text-[13px] text-[var(--color-dawn)]">
                 {r.time}
               </span>
             </li>
@@ -706,30 +708,27 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       />
 
       <div className="dash-board">
-        <header className="dash-hero">
-          <div className="min-w-0">
-            <p className="ui-kicker">
-              {friendlyDate(today) || "Today"}
-              {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
+        <header className="dash-hero min-w-0">
+          <p className="ui-kicker">
+            {friendlyDate(today) || "Today"}
+            {wakeTime ? ` · up ${wakeTime}` : ` · wake ${wakeGoal}`}
+          </p>
+          <h1 className="ui-title mt-2">
+            {hello ? `${timeWish()}, ${hello}` : timeWish()}
+          </h1>
+          {todayPlan?.goalText ? (
+            <p className="ui-sub mt-2">{todayPlan.goalText}</p>
+          ) : (
+            <p className="ui-sub mt-2">
+              Wake up, do your habits, finish your tasks.
             </p>
-            <h1 className="ui-title mt-2">
-              {hello ? `${timeWish()}, ${hello}` : timeWish()}
-            </h1>
-            {todayPlan?.goalText ? (
-              <p className="ui-sub mt-2">{todayPlan.goalText}</p>
-            ) : (
-              <p className="ui-sub mt-2">
-                Wake up, do your habits, finish your tasks.
-              </p>
-            )}
-          </div>
-          <div className="hidden min-w-0 lg:block">
-            <DailyLoop steps={loopSteps} />
-          </div>
+          )}
         </header>
 
         {banner ? <UiMessage tone={banner.tone}>{banner.text}</UiMessage> : null}
         {morningSetup}
+
+        <DailyLoop steps={loopSteps} />
 
         <div className="dash-pair">
           <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
@@ -760,29 +759,26 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           onStartChallenge={(days) => void startChallenge(days)}
         />
 
-        <div className="lg:hidden">
-          <DailyLoop steps={loopSteps} />
-        </div>
-
         <div className="dash-work">
           {habitsPanel}
-          <div className="flex min-w-0 flex-col gap-6 lg:gap-5">
-            <div className="dash-panel">
-              <TodayTasks
-                date={today}
-                todos={todayTodos}
-                onChange={setTodayTodos}
-                onError={(text) => setBanner({ tone: "error", text })}
-                title="Today's tasks"
-                hint="Add what you need to finish on the Tasks page. Come back here to check them off."
-                allowAdd={false}
-                addHref="/tasks"
-                addLabel="Add a task"
-              />
-            </div>
-            {remindersPanel}
-            {nightCard}
+          <div className="dash-panel">
+            <TodayTasks
+              date={today}
+              todos={todayTodos}
+              onChange={setTodayTodos}
+              onError={(text) => setBanner({ tone: "error", text })}
+              title="Today's tasks"
+              hint="Add what you need to finish on the Tasks page. Come back here to check them off."
+              allowAdd={false}
+              addHref="/tasks"
+              addLabel="Add a task"
+            />
           </div>
+        </div>
+
+        <div className={`dash-foot${nightCard ? " is-split" : ""}`}>
+          {remindersPanel}
+          {nightCard}
         </div>
 
         {!notifyReady ? (
