@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { SleepTimingChart } from "@/components/SleepTimingChart";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const MIN = 7;
@@ -11,14 +12,63 @@ const TAKE = 6.2;
 const WEEK = 6.8;
 const MAX = 9;
 
-const NIGHTS = [
-  { d: "M", h: 7.1 },
-  { d: "T", h: 6.0 },
-  { d: "W", h: 7.4 },
-  { d: "T", h: 5.8 },
-  { d: "F", h: 6.9 },
-  { d: "S", h: 8.0 },
-  { d: "S", h: 6.2 },
+const DEMO_NIGHTS = [
+  {
+    date: "2026-08-10",
+    weekday: "Mon",
+    bedtime: "22:50",
+    wakeTime: "06:00",
+    hours: 7.2,
+    metMin: true,
+  },
+  {
+    date: "2026-08-11",
+    weekday: "Tue",
+    bedtime: "00:10",
+    wakeTime: "06:10",
+    hours: 6.0,
+    metMin: false,
+  },
+  {
+    date: "2026-08-12",
+    weekday: "Wed",
+    bedtime: "22:40",
+    wakeTime: "06:05",
+    hours: 7.4,
+    metMin: true,
+  },
+  {
+    date: "2026-08-13",
+    weekday: "Thu",
+    bedtime: "00:40",
+    wakeTime: "06:30",
+    hours: 5.8,
+    metMin: false,
+  },
+  {
+    date: "2026-08-14",
+    weekday: "Fri",
+    bedtime: "23:20",
+    wakeTime: "06:15",
+    hours: 6.9,
+    metMin: false,
+  },
+  {
+    date: "2026-08-15",
+    weekday: "Sat",
+    bedtime: "22:30",
+    wakeTime: "06:30",
+    hours: 8.0,
+    metMin: true,
+  },
+  {
+    date: "2026-08-16",
+    weekday: "Sun",
+    bedtime: "00:20",
+    wakeTime: "06:30",
+    hours: 6.2,
+    metMin: false,
+  },
 ];
 
 function pct(n: number) {
@@ -72,29 +122,31 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
           <span
             className="absolute top-0 h-full w-px bg-white/80"
             style={{ left: `${pct(MIN)}%` }}
+            aria-hidden
           />
           <span
             className="absolute top-0 h-full w-px bg-[#f0b45a]"
             style={{ left: `${pct(TARGET)}%` }}
+            aria-hidden
           />
         </div>
-        <div className="relative mt-1 h-4 text-[10px] uppercase tracking-wide text-[#8ba3b8]">
-          <span
-            className="absolute -translate-x-1/2"
-            style={{ left: `${pct(MIN)}%` }}
-          >
-            min {MIN}h
-          </span>
-          <span
-            className="absolute -translate-x-1/2 text-[#f0b45a]"
-            style={{ left: `${pct(TARGET)}%` }}
-          >
-            {TARGET}h
-          </span>
-        </div>
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-wide text-[#8ba3b8]">
+          <li className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#e07a5f]" />
+            Took {TAKE}h
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-px bg-white/80" />
+            Min {MIN}h
+          </li>
+          <li className="inline-flex items-center gap-1.5 text-[#f0b45a]">
+            <span className="h-2 w-px bg-[#f0b45a]" />
+            Target {TARGET}h
+          </li>
+        </ul>
       </div>
 
-      <div className="mx-4 mt-2 rounded-xl border border-[#f0b45a]/25 bg-[#f0b45a]/[0.06] px-4 py-3">
+      <div className="mx-4 mt-3 rounded-xl border border-[#f0b45a]/25 bg-[#f0b45a]/[0.06] px-4 py-3">
         <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
           Suggestion
         </p>
@@ -104,25 +156,13 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
         </p>
       </div>
 
-      <div className="px-5 pb-4 pt-4">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#8ba3b8]">
-          Report · last 7 nights
-        </p>
-        <ul className="mt-2 grid grid-cols-7 gap-1.5">
-          {NIGHTS.map((n, i) => (
-            <li key={`${n.d}-${i}`} className="text-center">
-              <div className="flex h-12 items-end justify-center rounded-md bg-white/[0.04] px-1 py-1">
-                <div
-                  className={`w-full rounded-sm ${
-                    n.h >= MIN ? "bg-[#f0b45a]" : "bg-[#e07a5f]"
-                  }`}
-                  style={{ height: `${Math.max(18, pct(n.h))}%` }}
-                />
-              </div>
-              <p className="mt-1 text-[10px] text-[#8ba3b8]">{n.d}</p>
-            </li>
-          ))}
-        </ul>
+      <div className="px-4 pb-4 pt-4">
+        <SleepTimingChart
+          compact
+          nights={DEMO_NIGHTS}
+          sleepGoal={sleepGoal}
+          wakeGoal={wakeGoal}
+        />
       </div>
 
       <div className="mt-auto grid grid-cols-3 gap-px border-t border-white/[0.08] bg-white/[0.04] text-center">
