@@ -30,6 +30,7 @@ type Props = {
   sleepWindowLabel?: string;
   onSleepNow: () => void | Promise<void>;
   onSaved?: () => void;
+  onCancel?: () => void;
 };
 
 const STEPS: Step[] = ["remember", "tasks", "sleep"];
@@ -54,8 +55,8 @@ function rememberChips(wakeGoal: string, sleepGoal: string) {
 }
 
 /**
- * Full-page night close: remember anything → tomorrow’s tasks → sleep.
- * Same idea as the morning after-wake flow, but it takes the whole Sleep page.
+ * Night close after tapping the sleep habit: any reminder → tomorrow’s
+ * tasks → take at least the minimum sleep.
  */
 export function NightCloseFlow({
   name,
@@ -66,9 +67,9 @@ export function NightCloseFlow({
   sleepWindowLabel,
   onSleepNow,
   onSaved,
+  onCancel,
 }: Props) {
   const [step, setStep] = useState<Step>("remember");
-  const [wantReminders, setWantReminders] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{
     tone: "success" | "error" | "tip";
@@ -129,10 +130,10 @@ export function NightCloseFlow({
   }, []);
 
   useEffect(() => {
-    if (wantReminders === true || step === "tasks") {
+    if (step === "remember" || step === "tasks") {
       inputRef.current?.focus();
     }
-  }, [wantReminders, step]);
+  }, [step]);
 
   async function addReminder(title: string, time: string) {
     const text = title.trim();
@@ -271,6 +272,7 @@ export function NightCloseFlow({
     if (inSleepWindow && !bedtimeLogged) {
       try {
         await onSleepNow();
+        onSaved?.();
         return;
       } catch (err) {
         setBusy(false);
@@ -294,12 +296,26 @@ export function NightCloseFlow({
     });
   }
 
-  const hello = name ? `${name}, do you have to remember anything?` : "Do you have to remember anything?";
+  const hello = name
+    ? `Hey ${name}, any reminder?`
+    : "Any reminder?";
 
   return (
     <section className="space-y-6">
       <header>
-        <p className="ui-kicker">Close the night · {stepIndex + 1} of 3</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="ui-kicker">Going to sleep · {stepIndex + 1} of 3</p>
+          {onCancel ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onCancel}
+              className="shrink-0 text-[13px] text-[var(--color-mist)] hover:text-white disabled:opacity-50"
+            >
+              Not yet
+            </button>
+          ) : null}
+        </div>
         <div className="mt-3 flex gap-1.5" aria-hidden>
           {STEPS.map((s, i) => (
             <span
@@ -319,163 +335,138 @@ export function NightCloseFlow({
           <div>
             <h1 className="ui-title">{hello}</h1>
             <p className="ui-sub mt-3">
-              Dawn can nudge you. Pick a few, add your own, or skip.
+              Pick a few, add your own, or skip. Dawn will nudge you.
             </p>
           </div>
 
-          {wantReminders === null ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setWantReminders(true)}
-                className="ui-btn ui-btn-primary min-h-[3.25rem]"
-              >
-                Yes — remind me
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWantReminders(false);
-                  goTasks();
-                }}
-                className="ui-btn ui-btn-ghost min-h-[3.25rem]"
-              >
-                Nothing tonight
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {chips.map((c) => {
-                  const on = reminders.some(
-                    (r) => r.text.toLowerCase() === c.title.toLowerCase()
-                  );
-                  return (
-                    <button
-                      key={c.title}
-                      type="button"
-                      disabled={busy}
-                      onClick={() =>
-                        void (on
-                          ? removeReminder(
-                              reminders.find(
-                                (r) =>
-                                  r.text.toLowerCase() === c.title.toLowerCase()
-                              )?.id || ""
-                            )
-                          : addReminder(c.title, c.time))
-                      }
-                      className={`ui-chip ${on ? "is-on" : ""}`}
-                    >
-                      {c.title}
-                      <span className="ml-1.5 tabular-nums opacity-70">
-                        {c.time}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="flex flex-wrap gap-2">
+            {chips.map((c) => {
+              const on = reminders.some(
+                (r) => r.text.toLowerCase() === c.title.toLowerCase()
+              );
+              return (
+                <button
+                  key={c.title}
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void (on
+                      ? removeReminder(
+                          reminders.find(
+                            (r) =>
+                              r.text.toLowerCase() === c.title.toLowerCase()
+                          )?.id || ""
+                        )
+                      : addReminder(c.title, c.time))
+                  }
+                  className={`ui-chip ${on ? "is-on" : ""}`}
+                >
+                  {c.title}
+                  <span className="ml-1.5 tabular-nums opacity-70">
+                    {c.time}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-              <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] py-1 pl-3 pr-1.5">
-                <input
-                  ref={inputRef}
-                  value={remText}
-                  onChange={(e) => setRemText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    void addReminder(remText, remTime);
-                  }}
-                  placeholder="Remind me to…"
-                  maxLength={80}
-                  autoComplete="off"
-                  className="min-w-0 flex-1 border-0 bg-transparent py-2 text-[15px] text-white outline-none placeholder:text-[var(--color-mist)]"
-                />
-                <label className="flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-[13px] text-[var(--color-mist)]">
-                  <IconClock size={13} />
-                  <input
-                    type="time"
-                    value={remTime}
-                    onChange={(e) => setRemTime(e.target.value)}
-                    className="border-0 bg-transparent text-[13px] text-white outline-none"
-                    aria-label="Reminder time"
+          <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] py-1 pl-3 pr-1.5">
+            <input
+              ref={inputRef}
+              value={remText}
+              onChange={(e) => setRemText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                void addReminder(remText, remTime);
+              }}
+              placeholder="Remind me to…"
+              maxLength={80}
+              autoComplete="off"
+              className="min-w-0 flex-1 border-0 bg-transparent py-2 text-[15px] text-white outline-none placeholder:text-[var(--color-mist)]"
+            />
+            <label className="flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-[13px] text-[var(--color-mist)]">
+              <IconClock size={13} />
+              <input
+                type="time"
+                value={remTime}
+                onChange={(e) => setRemTime(e.target.value)}
+                className="border-0 bg-transparent text-[13px] text-white outline-none"
+                aria-label="Reminder time"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void addReminder(remText, remTime)}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--color-dawn)] text-[var(--color-night)] disabled:opacity-40"
+              aria-label="Add reminder"
+            >
+              <IconPlus size={16} />
+            </button>
+          </div>
+
+          {reminders.length ? (
+            <ul className="space-y-1">
+              {reminders.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center gap-2 text-sm text-[var(--color-cloud)]"
+                >
+                  <IconCheck
+                    size={13}
+                    className="text-[var(--color-leaf)]"
                   />
-                </label>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void addReminder(remText, remTime)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--color-dawn)] text-[var(--color-night)] disabled:opacity-40"
-                  aria-label="Add reminder"
-                >
-                  <IconPlus size={16} />
-                </button>
-              </div>
-
-              {reminders.length ? (
-                <ul className="space-y-1">
-                  {reminders.map((d) => (
-                    <li
-                      key={d.id}
-                      className="flex items-center gap-2 text-sm text-[var(--color-cloud)]"
-                    >
-                      <IconCheck
-                        size={13}
-                        className="text-[var(--color-leaf)]"
-                      />
-                      <span className="min-w-0 flex-1 truncate">{d.text}</span>
-                      {d.time ? (
-                        <span className="shrink-0 tabular-nums text-xs text-[var(--color-mist)]">
-                          {d.time}
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => void removeReminder(d.id)}
-                        className="text-[var(--color-mist)] hover:text-white"
-                        aria-label={`Remove ${d.text}`}
-                      >
-                        <IconX size={14} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-[var(--color-mist)]">
-                  Add as many as you need. Dawn will ping you at those times.
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={goTasks}
-                  className="ui-btn ui-btn-primary flex-1"
-                >
-                  Next · tomorrow’s tasks
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={goTasks}
-                  className="ui-btn ui-btn-ghost"
-                >
-                  Skip
-                </button>
-              </div>
-            </>
+                  <span className="min-w-0 flex-1 truncate">{d.text}</span>
+                  {d.time ? (
+                    <span className="shrink-0 tabular-nums text-xs text-[var(--color-mist)]">
+                      {d.time}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void removeReminder(d.id)}
+                    className="text-[var(--color-mist)] hover:text-white"
+                    aria-label={`Remove ${d.text}`}
+                  >
+                    <IconX size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-[var(--color-mist)]">
+              Add as many as you need.
+            </p>
           )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={goTasks}
+              className="ui-btn ui-btn-primary flex-1"
+            >
+              Next · tomorrow’s tasks
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={goTasks}
+              className="ui-btn ui-btn-ghost"
+            >
+              Skip
+            </button>
+          </div>
         </>
       ) : null}
 
       {step === "tasks" ? (
         <>
           <div>
-            <h1 className="ui-title">What are tomorrow’s tasks?</h1>
+            <h1 className="ui-title">Any task for tomorrow?</h1>
             <p className="ui-sub mt-3">
-              They land on Today when you wake. Add many, or bring leftovers
-              from today.
+              They land on Today when you wake. Add many, or skip.
             </p>
           </div>
 
@@ -600,17 +591,13 @@ export function NightCloseFlow({
       {step === "sleep" ? (
         <>
           <div>
-            <h1 className="ui-title">
-              {inSleepWindow ? "Ready to sleep?" : "Tomorrow is set — almost"}
-            </h1>
+            <h1 className="ui-title">Take at least {MIN_SLEEP_HOURS}h sleep</h1>
             <p className="ui-sub mt-3">
-              You need at least {MIN_SLEEP_HOURS}h. This plan is {hours}h (
-              {sleepGoal} → {wake}).
-              {inSleepWindow
-                ? " Phone down after you confirm."
-                : sleepWindowLabel
-                  ? ` Sleep check-in opens ${sleepWindowLabel}.`
-                  : ""}
+              Your plan is {hours}h ({sleepGoal} → {wake}). That’s the
+              minimum floor — then go to sleep.
+              {!inSleepWindow && sleepWindowLabel
+                ? ` Sleep check-in opens ${sleepWindowLabel}.`
+                : ""}
             </p>
           </div>
 
@@ -662,7 +649,7 @@ export function NightCloseFlow({
             >
               {bedtimeLogged || !inSleepWindow
                 ? "Save tomorrow’s plan"
-                : "Save & going to sleep"}
+                : "I’m going to sleep"}
             </button>
             <button
               type="button"
