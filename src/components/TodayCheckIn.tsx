@@ -15,6 +15,7 @@ import {
 import { WakeHit } from "@/components/WakeHit";
 import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
+import { NightCloseFlow } from "@/components/NightCloseFlow";
 import { TodayOverview } from "@/components/TodayOverview";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
 import { MorningPulseCard } from "@/components/MorningPulseCard";
@@ -157,6 +158,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   >([]);
   const [notifyReady, setNotifyReady] = useState(false);
   const [pulse, setPulse] = useState<MorningPulse | null>(null);
+  const [nightFlow, setNightFlow] = useState(false);
   const [timezone, setTimezone] = useState<string | undefined>();
   const tzRef = useRef<string | undefined>(undefined);
   const [, setTick] = useState(0);
@@ -391,6 +393,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       });
       return;
     }
+    if (h.key === "sleepEarly" && !done) {
+      setNightFlow(true);
+      return;
+    }
     const prev = checksRef.current;
     const next = { ...prev, [h.key]: !done };
     setChecks(next);
@@ -398,6 +404,24 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       checkKeys: [h.key],
     });
     if (!ok) setChecks(prev);
+  }
+
+  async function goingToSleep() {
+    if (bedRef.current) return;
+    const t = nowHHMM();
+    const prevChecks = checksRef.current;
+    const next = { ...prevChecks, sleepEarly: true };
+    setBedtime(t);
+    setChecks(next);
+    const ok = await persist(next, wakeRef.current, t, {
+      bed: true,
+      checkKeys: ["sleepEarly"],
+    });
+    if (!ok) {
+      setBedtime("");
+      setChecks(prevChecks);
+      throw new Error("Couldn’t log sleep. Try again.");
+    }
   }
 
   async function wokeUp() {
@@ -678,19 +702,38 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     </section>
   );
 
-  const nightCard =
-    inSleepWindow && !bedtime ? (
-      <Link
-        href="/sleep"
-        className="block rounded-[1.1rem] border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5"
-      >
-        <p className="ui-kicker">Night</p>
-        <p className="font-display mt-2 text-2xl text-white">Close the day</p>
-        <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Remember anything, set tomorrow’s tasks, then sleep.
-        </p>
-      </Link>
-    ) : null;
+  if (nightFlow && !bedtime) {
+    return (
+      <>
+        <WakeHit
+          open={Boolean(hit)}
+          title={hit?.title || ""}
+          subtitle={hit?.subtitle}
+          xpGained={hit?.xpGained || 0}
+          labels={hit?.labels || []}
+          level={hit?.level || 1}
+          progress={hit?.progress || 0}
+          streak={hit?.streak || 0}
+          celebrate={profile?.celebrate || "chill"}
+          onClose={() => setHit(null)}
+        />
+        <NightCloseFlow
+          name={hello}
+          sleepGoal={sleepGoal}
+          wakeGoal={wakeGoal}
+          bedtimeLogged={false}
+          inSleepWindow={inSleepWindow}
+          sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
+          onSleepNow={goingToSleep}
+          onSaved={() => {
+            setNightFlow(false);
+            void load();
+          }}
+          onCancel={() => setNightFlow(false)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -776,10 +819,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           </div>
         </div>
 
-        <div className={`dash-foot${nightCard ? " is-split" : ""}`}>
-          {remindersPanel}
-          {nightCard}
-        </div>
+        <div className="dash-foot">{remindersPanel}</div>
 
         {!notifyReady ? (
           <button
