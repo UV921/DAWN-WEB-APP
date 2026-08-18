@@ -2,24 +2,74 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  isHabitDone,
-  mergeLogChecks,
-  slugifyHabitKey,
-} from "@/lib/habits";
+import { slugifyHabitKey } from "@/lib/habits";
 import { formatDateInZone } from "@/lib/clock";
-import { challengeProgress } from "@/lib/daily-loop";
 import { ensureDefaultHabits } from "@/lib/ensure-habits";
+import {
+  clampMissionDays,
+  isMissionKind,
+  MAX_ACTIVE_MISSIONS,
+  missionHabitStats,
+  missionProgress,
+  parseJsonArray,
+  type MissionKind,
+  type MissionPublic,
+} from "@/lib/missions";
 
-function parseJsonArray(raw: string | null | undefined): string[] {
-  try {
-    const v = JSON.parse(raw || "[]");
-    return Array.isArray(v)
-      ? v.map((x) => String(x).trim()).filter(Boolean)
-      : [];
-  } catch {
-    return [];
-  }
+type MissionRow = {
+  id: string;
+  title: string;
+  kind: string;
+  note: string;
+  startDate: string;
+  days: number;
+  active: boolean;
+  habitKeys: string;
+  taskTemplates: string;
+  checks?: { date: string }[];
+};
+
+function toPublic(
+  mission: MissionRow,
+  today: string,
+  habits: { key: string; label: string }[],
+  logs: Parameters<typeof missionHabitStats>[0]["logs"]
+): MissionPublic {
+  const kind: MissionKind = isMissionKind(mission.kind) ? mission.kind : "run";
+  const keys = parseJsonArray(mission.habitKeys);
+  const checkDates = (mission.checks || [])
+    .map((c) => c.date)
+    .sort();
+  const progress = missionProgress(mission.startDate, today, mission.days);
+  return {
+    id: mission.id,
+    title: mission.title,
+    kind,
+    note: mission.note || "",
+    startDate: mission.startDate,
+    days: mission.days,
+    active: mission.active,
+    habitKeys: keys,
+    taskTemplates: parseJsonArray(mission.taskTemplates),
+    progress,
+    habitStats: keys.length
+      ? missionHabitStats({ keys, habits, logs, today })
+      : [],
+    checkDates,
+    daysWorked: checkDates.length,
+    doneToday: checkDates.includes(today),
+  };
+}
+
+async function loadLogs(
+  userId: string,
+  since: string | undefined,
+  today: string
+) {
+  if (!since) return [];
+  return prisma.habitLog.findMany({
+    where: { userId, date: { gte: since, lte: today } },
+  });
 }
 
 export async function GET() {
@@ -31,10 +81,21 @@ export async function GET() {
   const today = formatDateInZone(session.user.timezone);
   const habits = await ensureDefaultHabits(session.user.id);
 
-  const mission = await prisma.mission.findFirst({
-    where: { userId: session.user.id, active: true },
-    orderBy: { createdAt: "desc" },
+  const rows = await prisma.mission.findMany({
+    where: { userId: session.user.id },
+    orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+    include: { checks: { select: { date: true } } },
+    take: 40,
   });
+
+  const earliest = rows.reduce<string | undefined>((acc, m) => {
+    if (!acc || m.startDate < acc) return m.startDate;
+    return acc;
+  }, undefined);
+  const logs = await loadLogs(session.user.id, earliest, today);
+
+  const all = rows.map((m) => toPublic(m, today, habits, logs));
+  const live = all.filter((m) => m.active);
 
   const plan = await prisma.dayPlan.findUnique({
     where: {
@@ -47,48 +108,12 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
   });
 
-  let progress = null;
-  let habitStats: {
-    key: string;
-    label: string;
-    doneToday: boolean;
-    daysDone: number;
-  }[] = [];
-
-  if (mission) {
-    progress = challengeProgress(mission.startDate, today, mission.days);
-    const keys = parseJsonArray(mission.habitKeys);
-    const since = mission.startDate;
-    const logs = await prisma.habitLog.findMany({
-      where: {
-        userId: session.user.id,
-        date: { gte: since, lte: today },
-      },
-    });
-
-    habitStats = keys.map((key) => {
-      const label = habits.find((h) => h.key === key)?.label || key;
-      const todayLog = logs.find((l) => l.date === today);
-      const doneToday = todayLog
-        ? isHabitDone({ ...todayLog, checks: mergeLogChecks(todayLog) }, key)
-        : false;
-      const daysDone = logs.filter((l) =>
-        isHabitDone({ ...l, checks: mergeLogChecks(l) }, key)
-      ).length;
-      return { key, label, doneToday, daysDone };
-    });
-  }
-
   return NextResponse.json({
-    mission: mission
-      ? {
-          ...mission,
-          habitKeys: parseJsonArray(mission.habitKeys),
-          taskTemplates: parseJsonArray(mission.taskTemplates),
-          progress,
-          habitStats,
-        }
-      : null,
+    missions: live,
+    history: all.filter((m) => !m.active),
+    /** Primary card: newest live mission (manual first, then run). */
+    mission:
+      live.find((m) => m.kind === "manual") || live[0] || all[0] || null,
     habits,
     today,
     morningFlow: plan?.morningFlow || "none",
@@ -105,10 +130,17 @@ export async function POST(req: Request) {
   const body = await req.json();
   const action = String(body.action || "create");
   const today = formatDateInZone(session.user.timezone);
+  const userId = session.user.id;
 
   if (action === "create") {
-    const title = String(body.title || "7-day mission").trim().slice(0, 80);
-    const days = Math.min(90, Math.max(3, Number(body.days) || 7));
+    const kind: MissionKind = isMissionKind(body.kind) ? body.kind : "run";
+    const defaultTitle =
+      kind === "manual" ? "Hackathon" : "7-day mission";
+    const title = String(body.title || defaultTitle).trim().slice(0, 80);
+    const note = String(body.note || "").trim().slice(0, 200);
+    const rawDays = body.days;
+    const ongoing = kind === "manual" && (rawDays === 0 || rawDays === "0");
+    const days = ongoing ? 0 : clampMissionDays(rawDays ?? (kind === "manual" ? 3 : 7), kind);
     let habitKeys = Array.isArray(body.habitKeys)
       ? (body.habitKeys as unknown[])
           .map((k) => String(k).trim())
@@ -122,21 +154,18 @@ export async function POST(req: Request) {
           .slice(0, 10)
       : [];
 
-    // Custom new habits: [{ label, description? }]
     const newHabits = Array.isArray(body.newHabits)
       ? (body.newHabits as { label?: string; description?: string }[])
       : [];
 
-    await ensureDefaultHabits(session.user.id);
+    await ensureDefaultHabits(userId);
 
     for (const nh of newHabits) {
       const label = String(nh.label || "").trim().slice(0, 60);
       if (!label) continue;
       const key = slugifyHabitKey(label).slice(0, 40);
       const existing = await prisma.habit.findUnique({
-        where: {
-          userId_key: { userId: session.user.id, key },
-        },
+        where: { userId_key: { userId, key } },
       });
       if (existing) {
         await prisma.habit.update({
@@ -152,12 +181,12 @@ export async function POST(req: Request) {
         });
       } else {
         const maxSort = await prisma.habit.aggregate({
-          where: { userId: session.user.id },
+          where: { userId },
           _max: { sortOrder: true },
         });
         await prisma.habit.create({
           data: {
-            userId: session.user.id,
+            userId,
             key,
             label,
             description: String(nh.description || "").slice(0, 160),
@@ -170,59 +199,157 @@ export async function POST(req: Request) {
       if (!habitKeys.includes(key)) habitKeys.push(key);
     }
 
-    // Always include wakeEarly as foundation
-    if (!habitKeys.includes("wakeEarly")) {
+    if (kind === "run" && !habitKeys.includes("wakeEarly")) {
       habitKeys = ["wakeEarly", ...habitKeys];
     }
 
-    // Deactivate previous missions
-    await prisma.mission.updateMany({
-      where: { userId: session.user.id, active: true },
-      data: { active: false },
-    });
+    if (kind === "run") {
+      await prisma.mission.updateMany({
+        where: { userId, active: true, kind: "run" },
+        data: { active: false },
+      });
+    }
 
-    // Activate selected habits
-    await prisma.habit.updateMany({
-      where: { userId: session.user.id, key: { in: habitKeys } },
-      data: { active: true },
+    const activeCount = await prisma.mission.count({
+      where: { userId, active: true },
     });
+    if (activeCount >= MAX_ACTIVE_MISSIONS) {
+      return NextResponse.json(
+        { error: `At most ${MAX_ACTIVE_MISSIONS} missions can run at once.` },
+        { status: 400 }
+      );
+    }
 
-    const mission = await prisma.mission.create({
+    if (habitKeys.length) {
+      await prisma.habit.updateMany({
+        where: { userId, key: { in: habitKeys } },
+        data: { active: true },
+      });
+    }
+
+    const created = await prisma.mission.create({
       data: {
-        userId: session.user.id,
-        title: title || "7-day mission",
+        userId,
+        title: title || defaultTitle,
+        kind,
+        note,
         startDate: today,
         days,
         active: true,
         habitKeys: JSON.stringify(habitKeys),
         taskTemplates: JSON.stringify(taskTemplates),
       },
+      include: { checks: { select: { date: true } } },
     });
 
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        challengeStartDate: today,
-        focusHabitKey: habitKeys[0] || "wakeEarly",
-      },
-    });
+    if (kind === "run") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          challengeStartDate: today,
+          challengeDays: days || 7,
+          focusHabitKey: habitKeys[0] || "wakeEarly",
+        },
+      });
+    }
 
-    return NextResponse.json({
-      mission: {
-        ...mission,
-        habitKeys,
-        taskTemplates,
-        progress: challengeProgress(today, today, days),
-      },
-    });
+    const habits = await ensureDefaultHabits(userId);
+    const mission = toPublic(created, today, habits, []);
+    return NextResponse.json({ mission });
   }
 
   if (action === "end") {
-    await prisma.mission.updateMany({
-      where: { userId: session.user.id, active: true },
-      data: { active: false },
-    });
+    const missionId = typeof body.missionId === "string" ? body.missionId : "";
+    if (missionId) {
+      await prisma.mission.updateMany({
+        where: { userId, id: missionId, active: true },
+        data: { active: false },
+      });
+    } else {
+      await prisma.mission.updateMany({
+        where: { userId, active: true },
+        data: { active: false },
+      });
+    }
     return NextResponse.json({ ok: true });
+  }
+
+  if (action === "set-days") {
+    const missionId = String(body.missionId || "");
+    if (!missionId) {
+      return NextResponse.json({ error: "Missing mission" }, { status: 400 });
+    }
+    const row = await prisma.mission.findFirst({
+      where: { id: missionId, userId, active: true },
+    });
+    if (!row) {
+      return NextResponse.json({ error: "Mission not found" }, { status: 404 });
+    }
+    const kind: MissionKind = isMissionKind(row.kind) ? row.kind : "run";
+    const ongoing = kind === "manual" && (body.days === 0 || body.days === "0");
+    let days = ongoing ? 0 : clampMissionDays(body.days, kind);
+    const progress = missionProgress(row.startDate, today, row.days);
+    if (days > 0 && days < progress.day) {
+      days = progress.day;
+    }
+    const updated = await prisma.mission.update({
+      where: { id: row.id },
+      data: { days },
+      include: { checks: { select: { date: true } } },
+    });
+    const habits = await ensureDefaultHabits(userId);
+    const logs = await loadLogs(userId, row.startDate, today);
+    return NextResponse.json({
+      mission: toPublic(updated, today, habits, logs),
+    });
+  }
+
+  if (action === "check") {
+    const missionId = String(body.missionId || "");
+    if (!missionId) {
+      return NextResponse.json({ error: "Missing mission" }, { status: 400 });
+    }
+    const mission = await prisma.mission.findFirst({
+      where: { id: missionId, userId, active: true },
+    });
+    if (!mission) {
+      return NextResponse.json({ error: "Mission not found" }, { status: 404 });
+    }
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || ""))
+      ? String(body.date)
+      : today;
+    if (date < mission.startDate) {
+      return NextResponse.json({ error: "Before this mission started" }, { status: 400 });
+    }
+    const progress = missionProgress(mission.startDate, date, mission.days);
+    if (progress.ended) {
+      return NextResponse.json({ error: "This mission already ended" }, { status: 400 });
+    }
+    const done = body.done !== false;
+    if (done) {
+      await prisma.missionCheck.upsert({
+        where: { missionId_date: { missionId, date } },
+        create: {
+          missionId,
+          date,
+          note: String(body.note || "").slice(0, 160),
+        },
+        update: { note: String(body.note || "").slice(0, 160) },
+      });
+    } else {
+      await prisma.missionCheck.deleteMany({
+        where: { missionId, date },
+      });
+    }
+    const updated = await prisma.mission.findFirst({
+      where: { id: missionId, userId },
+      include: { checks: { select: { date: true } } },
+    });
+    const habits = await ensureDefaultHabits(userId);
+    const logs = await loadLogs(userId, mission.startDate, today);
+    return NextResponse.json({
+      mission: updated ? toPublic(updated, today, habits, logs) : null,
+    });
   }
 
   if (action === "morning-flow") {
@@ -232,10 +359,10 @@ export async function POST(req: Request) {
     }
     const plan = await prisma.dayPlan.upsert({
       where: {
-        userId_date: { userId: session.user.id, date: today },
+        userId_date: { userId, date: today },
       },
       create: {
-        userId: session.user.id,
+        userId,
         date: today,
         morningFlow: step,
       },
@@ -245,9 +372,15 @@ export async function POST(req: Request) {
   }
 
   if (action === "seed-today-tasks") {
-    const mission = await prisma.mission.findFirst({
-      where: { userId: session.user.id, active: true },
-    });
+    const missionId = typeof body.missionId === "string" ? body.missionId : "";
+    const mission = missionId
+      ? await prisma.mission.findFirst({
+          where: { userId, id: missionId, active: true },
+        })
+      : await prisma.mission.findFirst({
+          where: { userId, active: true },
+          orderBy: { createdAt: "desc" },
+        });
     const templates = parseJsonArray(mission?.taskTemplates);
     const extra = Array.isArray(body.todos)
       ? (body.todos as unknown[])
@@ -257,14 +390,14 @@ export async function POST(req: Request) {
     const texts = [...templates, ...extra].slice(0, 12);
     if (texts.length) {
       const existing = await prisma.todo.findMany({
-        where: { userId: session.user.id, date: today },
+        where: { userId, date: today },
       });
       const have = new Set(existing.map((t) => t.text.toLowerCase()));
       const toAdd = texts.filter((t) => !have.has(t.toLowerCase()));
       if (toAdd.length) {
         await prisma.todo.createMany({
           data: toAdd.map((text) => ({
-            userId: session.user.id,
+            userId,
             date: today,
             text,
           })),
@@ -272,7 +405,7 @@ export async function POST(req: Request) {
       }
     }
     const todos = await prisma.todo.findMany({
-      where: { userId: session.user.id, date: today },
+      where: { userId, date: today },
       orderBy: { createdAt: "asc" },
     });
     return NextResponse.json({ todos });

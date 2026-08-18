@@ -1124,6 +1124,113 @@ button,
   max-width: 68rem;
 }
 
+.app-page-dash {
+  width: 100%;
+  max-width: none;
+}
+
+.dash-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dash-pair,
+.dash-work,
+.dash-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dash-panel {
+  min-width: 0;
+}
+
+.day-loop {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.day-loop-step {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 0.65rem 0.7rem;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .day-loop {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .day-loop-step {
+    padding: 0.75rem 0.85rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dash-board {
+    gap: 1.35rem;
+  }
+
+  .dash-hero .ui-sub {
+    max-width: 42rem;
+  }
+
+  .dash-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: stretch;
+    gap: 1.15rem;
+  }
+
+  .dash-work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 1.15rem 1.35rem;
+  }
+
+  .dash-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.15rem;
+  }
+
+  .dash-foot.is-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dash-panel {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 1.1rem 1.2rem 1.2rem;
+  }
+
+  .dash-panel .ui-section-head {
+    margin-bottom: 0.9rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .dash-pair,
+  .dash-work,
+  .dash-foot {
+    gap: 1.35rem;
+  }
+}
+
 .ui-scroll {
   overflow-x: auto;
   scrollbar-width: none;

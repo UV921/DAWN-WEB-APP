@@ -32,7 +32,7 @@ const FEATURES = [
     id: "study",
     kicker: "Hours",
     title: "Study time that counts",
-    body: "Sit in a marked voice room. Dawn counts the hours for the board.",
+    body: "Sit in a marked voice room. Dawn asks what you’re doing and counts the hours.",
   },
 ] as const;
 

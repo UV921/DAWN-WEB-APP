@@ -20,6 +20,8 @@ import {
 } from "@/lib/progress-brief";
 import { HabitCharts } from "@/components/HabitCharts";
 import type { StudyStats } from "@/components/StudyStatusPanel";
+import { MissionStats } from "@/components/MissionStats";
+import type { MissionPublic } from "@/lib/missions";
 
 export type TodoStat = { date: string; total: number; done: number };
 
@@ -38,6 +40,8 @@ type Props = {
   todayTodos?: ReportTodo[];
   range: ReportRange;
   onRange: (range: ReportRange) => void;
+  missions?: MissionPublic[];
+  missionHistory?: MissionPublic[];
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -157,6 +161,8 @@ export function ProgressDetail({
   todayTodos = [],
   range,
   onRange,
+  missions = [],
+  missionHistory = [],
 }: Props) {
   const { data: session } = useSession();
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
@@ -381,8 +387,10 @@ export function ProgressDetail({
           hint:
             range === "today"
               ? study?.today.live
-                ? "You’re in a Discord study room right now."
-                : "Time in a marked Discord study room today."
+                ? study?.today.activity
+                  ? `You’re ${study.today.activity} in a study session right now.`
+                  : "You’re in a study session right now."
+                : "Time in a marked Discord study room today — or a session you started in Dawn."
               : study?.weekMinutes
                 ? `Studied on ${study.weekDaysWithStudy || 0} day${(study.weekDaysWithStudy || 0) === 1 ? "" : "s"} this week.`
                 : "Join a marked Discord study room — Dawn counts the minutes.",
@@ -589,6 +597,12 @@ export function ProgressDetail({
           <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
         </div>
       </div>
+
+      <MissionStats
+        missions={missions}
+        history={missionHistory}
+        range={range}
+      />
 
       {perHabit.length ? (
         <div>

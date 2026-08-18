@@ -20,6 +20,14 @@ type Props = {
     daysLeft: number;
     ended: boolean;
   } | null;
+  mission?: {
+    title: string;
+    day: number;
+    total: number;
+    daysLeft: number;
+    ongoing: boolean;
+    kind: string;
+  } | null;
   onStartChallenge: (days: number) => void;
 };
 
@@ -32,26 +40,60 @@ export function TodayOverview({
   intoLevel,
   need,
   challenge,
+  mission,
   onStartChallenge,
 }: Props) {
   const { data: session } = useSession();
   const active = Boolean(challenge?.active) && !challenge?.ended;
+  const missionLive = Boolean(mission);
   const habitPct = habitsTotal
     ? Math.round((habitsDone / habitsTotal) * 100)
     : 0;
   const lvlPct = need ? Math.round((intoLevel / need) * 100) : 0;
 
+  function shareButton() {
+    return (
+      <ShareCardButton
+        label="Share today"
+        make={() =>
+          shareTodayCard({
+            name: session?.user?.name || undefined,
+            date: formatLocalDate(new Date()),
+            earlyStreak,
+            habitsDone,
+            habitsTotal,
+            level,
+            xp,
+            challenge:
+              missionLive && mission
+                ? {
+                    day: mission.day,
+                    total: mission.ongoing ? mission.day : mission.total,
+                  }
+                : active && challenge
+                  ? { day: challenge.day, total: challenge.total }
+                  : null,
+          })
+        }
+      />
+    );
+  }
+
   return (
     <section className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="ui-card ui-card-compact !text-left">
+      <div className="hidden items-baseline justify-between lg:flex">
+        <h2 className="ui-section-title text-[1.15rem]">At a glance</h2>
+        {shareButton()}
+      </div>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <div className="ui-card ui-card-compact !text-left lg:min-h-[7.25rem]">
           <p className="ui-card-label">Early streak</p>
           <p className="font-display mt-1 text-[1.65rem] leading-none text-[var(--color-leaf)] sm:text-3xl">
             {earlyStreak}
           </p>
           <p className="mt-1 text-xs text-[var(--color-mist)]">days in a row</p>
         </div>
-        <div className="ui-card ui-card-compact !text-left">
+        <div className="ui-card ui-card-compact !text-left lg:min-h-[7.25rem]">
           <p className="ui-card-label">Habits</p>
           <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
             {habitsDone}/{habitsTotal || 1}
@@ -63,9 +105,22 @@ export function TodayOverview({
             />
           </div>
         </div>
-        <div className="ui-card ui-card-compact !text-left">
-          <p className="ui-card-label">Challenge</p>
-          {active ? (
+        <div className="ui-card ui-card-compact !text-left lg:min-h-[7.25rem]">
+          <p className="ui-card-label">{missionLive ? "Mission" : "Challenge"}</p>
+          {missionLive && mission ? (
+            <>
+              <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
+                {mission.ongoing
+                  ? `D${mission.day}`
+                  : `${mission.day}/${mission.total}`}
+              </p>
+              <p className="mt-1 truncate text-xs text-[var(--color-mist)]">
+                {mission.ongoing
+                  ? `${mission.title} · ongoing`
+                  : `${mission.title} · ${mission.daysLeft} left`}
+              </p>
+            </>
+          ) : active ? (
             <>
               <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
                 {challenge?.day}/{challenge?.total}
@@ -84,7 +139,7 @@ export function TodayOverview({
             </button>
           )}
         </div>
-        <div className="ui-card ui-card-compact !text-left">
+        <div className="ui-card ui-card-compact !text-left lg:min-h-[7.25rem]">
           <p className="ui-card-label">Level</p>
           <p className="font-display mt-1 text-[1.65rem] leading-none text-[var(--color-dawn)] sm:text-3xl">
             Lv {level}
@@ -100,23 +155,7 @@ export function TodayOverview({
           </div>
         </div>
       </div>
-      <ShareCardButton
-        label="Share today"
-        make={() =>
-          shareTodayCard({
-            name: session?.user?.name || undefined,
-            date: formatLocalDate(new Date()),
-            earlyStreak,
-            habitsDone,
-            habitsTotal,
-            level,
-            xp,
-            challenge: active && challenge
-              ? { day: challenge.day, total: challenge.total }
-              : null,
-          })
-        }
-      />
+      <div className="lg:hidden">{shareButton()}</div>
     </section>
   );
 }

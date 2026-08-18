@@ -128,8 +128,8 @@ export function SettingsClient() {
                       Mission
                     </h2>
                     <p className="mt-2 text-sm text-[var(--color-mist)]">
-                      Pick length, habits, and daily tasks yourself — AI defaults
-                      are optional.
+                      Pick length, habits, and daily tasks — or a long manual
+                      mission like a hackathon. It shows on Today and Stats.
                     </p>
                   </div>
                   <MissionSetup />

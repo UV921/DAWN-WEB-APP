@@ -10,6 +10,7 @@ import {
 import type { HabitDef, HabitLogLike } from "@/lib/habits";
 import type { StudyStats } from "@/components/StudyStatusPanel";
 import type { ReportRange } from "@/lib/progress-brief";
+import type { MissionPublic } from "@/lib/missions";
 
 export function ProgressClient() {
   const [logs, setLogs] = useState<HabitLogLike[]>([]);
@@ -17,15 +18,20 @@ export function ProgressClient() {
   const [todoStats, setTodoStats] = useState<TodoStat[]>([]);
   const [todayTodos, setTodayTodos] = useState<ReportTodo[]>([]);
   const [study, setStudy] = useState<StudyStats | null>(null);
+  const [missions, setMissions] = useState<MissionPublic[]>([]);
+  const [missionHistory, setMissionHistory] = useState<MissionPublic[]>([]);
   const [range, setRange] = useState<ReportRange>("week");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void Promise.all([
       fetch("/api/habits?days=365").then((r) => r.json()),
-      fetch("/api/study?days=365", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/study?days=365", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : null
+      ),
+      fetch("/api/mission").then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([d, s]: [
+      .then(([d, s, m]: [
         {
           logs?: HabitLogLike[];
           habits?: HabitDef[];
@@ -33,12 +39,18 @@ export function ProgressClient() {
           todayTodos?: ReportTodo[];
         },
         StudyStats | null,
+        {
+          missions?: MissionPublic[];
+          history?: MissionPublic[];
+        } | null,
       ]) => {
         setLogs(d.logs || []);
         setHabits(d.habits || []);
         setTodoStats(d.todoStats || []);
         setTodayTodos(d.todayTodos || []);
         if (s?.status) setStudy(s);
+        setMissions(m?.missions || []);
+        setMissionHistory(m?.history || []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -52,11 +64,12 @@ export function ProgressClient() {
           <h1 className="ui-title mt-2">How you’re doing</h1>
           <p className="ui-sub mt-3 max-w-xl">
             Pick a window. You’ll see what you finished, what you missed, and
-            one next step. Study time is from Discord rooms (last 30 days).
+            one next step. Study time is from Discord rooms or a session you
+            start on Today (last 30 days).
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
-          ) : logs.length === 0 && todoStats.length === 0 ? (
+          ) : logs.length === 0 && todoStats.length === 0 && missions.length === 0 ? (
             <div className="mt-8 space-y-6">
               <p className="max-w-md text-[var(--color-mist)]">
                 Nothing to score yet. Go to{" "}
@@ -78,6 +91,8 @@ export function ProgressClient() {
                 todayTodos={todayTodos}
                 range={range}
                 onRange={setRange}
+                missions={missions}
+                missionHistory={missionHistory}
               />
             </div>
           )}

@@ -1,30 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MissionLiveRow } from "@/components/TodayMissions";
+import { MAX_MISSION_DAYS, type MissionKind, type MissionPublic } from "@/lib/missions";
 
 type HabitOpt = { key: string; label: string; active?: boolean };
-
-type Mission = {
-  id: string;
-  title: string;
-  startDate: string;
-  days: number;
-  habitKeys: string[];
-  taskTemplates: string[];
-  progress: {
-    active: boolean;
-    day: number;
-    total: number;
-    daysLeft: number;
-    ended: boolean;
-  } | null;
-  habitStats?: {
-    key: string;
-    label: string;
-    doneToday: boolean;
-    daysDone: number;
-  }[];
-};
 
 const QUICK = [
   { key: "wakeEarly", label: "Wake early" },
@@ -37,6 +17,9 @@ const QUICK = [
   { key: "journal", label: "Journal" },
 ];
 
+const LENGTHS_RUN = [3, 7, 14, 21, 30];
+const LENGTHS_MANUAL = [2, 3, 7, 14, 30, 60, 90, 180];
+
 export function MissionSetup({
   onStarted,
   compact,
@@ -44,36 +27,57 @@ export function MissionSetup({
   onStarted?: () => void;
   compact?: boolean;
 }) {
-  const [mission, setMission] = useState<Mission | null>(null);
+  const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [habits, setHabits] = useState<HabitOpt[]>([]);
   const [selected, setSelected] = useState<string[]>(["wakeEarly"]);
   const [customLabel, setCustomLabel] = useState("");
   const [newHabits, setNewHabits] = useState<{ label: string }[]>([]);
   const [tasks, setTasks] = useState<string[]>([]);
   const [taskDraft, setTaskDraft] = useState("");
-  const [title, setTitle] = useState("Morning mission");
-  const [days, setDays] = useState(7);
+  const [kind, setKind] = useState<MissionKind>("manual");
+  const [title, setTitle] = useState("Hackathon");
+  const [note, setNote] = useState("");
+  const [days, setDays] = useState(3);
+  const [daysText, setDaysText] = useState("3");
+  const [customPick, setCustomPick] = useState(false);
+  const [ongoing, setOngoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const live = missions.filter((m) => m.active && !m.progress.ended);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/mission");
     if (!res.ok) return;
     const data = await res.json();
-    setMission(data.mission);
+    setMissions(data.missions || []);
     setHabits(data.habits || []);
-    if (data.mission?.habitKeys?.length) {
-      setSelected(data.mission.habitKeys);
-    }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (kind === "run") {
+      setOngoing(false);
+      setDays((d) => (d < 3 ? 7 : d));
+      setDaysText((t) => {
+        const n = Math.round(Number(t));
+        return !Number.isFinite(n) || n < 3 ? "7" : t;
+      });
+      setSelected((prev) =>
+        prev.includes("wakeEarly") ? prev : ["wakeEarly", ...prev]
+      );
+      setTitle((t) => (t === "Hackathon" ? "Morning mission" : t));
+    } else {
+      setTitle((t) => (t === "Morning mission" ? "Hackathon" : t));
+    }
+  }, [kind]);
+
   function toggleKey(key: string) {
-    if (key === "wakeEarly") return; // always on
+    if (kind === "run" && key === "wakeEarly") return;
     setSelected((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
@@ -96,13 +100,24 @@ export function MissionSetup({
   async function startMission() {
     setBusy(true);
     setMsg("");
+    const typed = Math.round(Number(daysText));
+    const length =
+      kind === "manual" && ongoing
+        ? 0
+        : Number.isFinite(typed) && typed > 0
+          ? kind === "run"
+            ? Math.min(90, Math.max(3, typed))
+            : Math.min(MAX_MISSION_DAYS, Math.max(1, typed))
+          : days;
     const res = await fetch("/api/mission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "create",
+        kind,
         title,
-        days: days,
+        note,
+        days: length,
         habitKeys: selected,
         newHabits,
         taskTemplates: tasks,
@@ -110,101 +125,95 @@ export function MissionSetup({
     });
     setBusy(false);
     if (!res.ok) {
-      setMsg("Could not start mission.");
+      const err = await res.json().catch(() => ({}));
+      setMsg(String(err.error || "Could not start mission."));
       return;
     }
-    setMsg("7-day mission started.");
+    setMsg(
+      kind === "manual"
+        ? ongoing
+          ? "Long mission started — it stays on Today until you end it."
+          : `${title} is on Today.`
+        : `${days}-day mission started.`
+    );
     setCreating(false);
     setNewHabits([]);
+    setTasks([]);
     await load();
     onStarted?.();
   }
 
-  async function endMission() {
+  async function endMission(id: string) {
     if (!confirm("End this mission?")) return;
     setBusy(true);
     await fetch("/api/mission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "end" }),
+      body: JSON.stringify({ action: "end", missionId: id }),
     });
     setBusy(false);
     await load();
   }
 
-  if (mission?.progress?.active && !creating) {
-    const p = mission.progress;
+  async function checkIn(id: string, done: boolean) {
+    const res = await fetch("/api/mission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check", missionId: id, done }),
+    });
+    if (!res.ok) return;
+    await load();
+  }
+
+  async function setMissionDays(id: string, daysValue: number) {
+    await fetch("/api/mission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set-days", missionId: id, days: daysValue }),
+    });
+    await load();
+  }
+
+  if (live.length && !creating) {
     return (
-      <section
-        className={`rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5 ${compact ? "" : ""}`}
-      >
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-          Mission
-        </p>
-        <h2 className="font-display mt-1 text-2xl text-white">{mission.title}</h2>
-        <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Day {p.day} of {p.total} · {p.daysLeft} left
-        </p>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/30">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-dawn)]"
-            style={{
-              width: `${Math.min(100, Math.round((p.day / p.total) * 100))}%`,
-            }}
-          />
-        </div>
-        {mission.habitStats?.length ? (
-          <ul className="mt-4 space-y-2">
-            {mission.habitStats.map((h) => (
-              <li
-                key={h.key}
-                className="flex items-center justify-between text-sm"
-              >
-                <span
-                  className={
-                    h.doneToday
-                      ? "text-[var(--color-leaf)]"
-                      : "text-[var(--color-cloud)]"
-                  }
-                >
-                  {h.doneToday ? "✓ " : "○ "}
-                  {h.label}
-                </span>
-                <span className="text-xs text-[var(--color-mist)]">
-                  {h.daysDone}/{p.day} days
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {mission.taskTemplates?.length ? (
-          <p className="mt-3 text-xs text-[var(--color-mist)]">
-            Daily tasks: {mission.taskTemplates.join(" · ")}
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setCreating(true)}
-            className="rounded-full border border-white/20 px-4 py-2 text-xs text-white"
+      <div className="space-y-4">
+        {live.map((mission) => (
+          <section
+            key={mission.id}
+            className="rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5"
           >
-            New mission
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void endMission()}
-            className="rounded-full border border-white/10 px-4 py-2 text-xs text-[var(--color-mist)]"
-          >
-            End
-          </button>
-        </div>
-      </section>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
+              {mission.kind === "manual" ? "Manual mission" : "Habit run"}
+            </p>
+            <div className="mt-2">
+              <MissionLiveRow
+                mission={mission}
+                onCheck={
+                  mission.kind === "manual"
+                    ? (done) => void checkIn(mission.id, done)
+                    : undefined
+                }
+                onSetDays={(daysValue) => void setMissionDays(mission.id, daysValue)}
+                showEnd
+                onEnd={() => void endMission(mission.id)}
+              />
+            </div>
+          </section>
+        ))}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setCreating(true)}
+          className="rounded-full border border-white/20 px-4 py-2 text-xs text-white"
+        >
+          New mission
+        </button>
+        {msg ? <p className="text-sm text-[var(--color-leaf)]">{msg}</p> : null}
+      </div>
     );
   }
 
-  if (!creating && !mission) {
+  if (!creating && !live.length) {
     if (compact) return null;
     return (
       <section className="rounded-2xl border border-dashed border-white/20 px-5 py-5">
@@ -212,10 +221,11 @@ export function MissionSetup({
           Mission
         </p>
         <p className="font-display mt-2 text-2xl text-white">
-          Build your own run
+          Hackathon, exam, a long build
         </p>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Pick habits and daily tasks yourself, then choose how many days.
+          Manual missions stay on Today. Mark the days you worked. Habit runs
+          are the short wake-early stretches.
         </p>
         <button
           type="button"
@@ -234,29 +244,61 @@ export function MissionSetup({
       .filter((h) => !QUICK.some((q) => q.key === h.key))
       .map((h) => ({ key: h.key, label: h.label })),
   ];
+  const lengths = kind === "run" ? LENGTHS_RUN : LENGTHS_MANUAL;
 
   return (
     <section className="rounded-2xl border border-[var(--color-dawn)]/25 bg-[var(--color-dawn)]/[0.05] px-5 py-5 space-y-5">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
-          Setup · pick length
+          Setup
         </p>
         <h2 className="font-display mt-1 text-2xl text-white">Your mission</h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Choose length, habits + optional daily tasks. You decide what to track.
+          Manual missions (hackathon, project) can run for months. Habit runs
+          stay short and pin wake-early.
         </p>
       </div>
 
       <div>
-        <p className="text-sm text-[var(--color-mist)]">How many days?</p>
+        <p className="text-sm text-[var(--color-mist)]">Type</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {[3, 7, 14, 21, 30].map((n) => (
+          {(
+            [
+              { id: "manual", label: "Manual / project" },
+              { id: "run", label: "Habit run" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setKind(opt.id)}
+              className={`rounded-full border px-3.5 py-1.5 text-sm ${
+                kind === opt.id
+                  ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                  : "border-white/15 text-white"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm text-[var(--color-mist)]">How long?</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {lengths.map((n) => (
             <button
               key={n}
               type="button"
-              onClick={() => setDays(n)}
+              onClick={() => {
+                setOngoing(false);
+                setCustomPick(false);
+                setDays(n);
+                setDaysText(String(n));
+              }}
               className={`rounded-full border px-3.5 py-1.5 text-sm ${
-                days === n
+                !ongoing && !customPick && days === n
                   ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
                   : "border-white/15 text-white"
               }`}
@@ -264,19 +306,69 @@ export function MissionSetup({
               {n} days
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setOngoing(false);
+              setCustomPick(true);
+              setDaysText("");
+            }}
+            className={`rounded-full border px-3.5 py-1.5 text-sm ${
+              !ongoing && (customPick || !lengths.includes(days))
+                ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                : "border-white/15 text-white"
+            }`}
+          >
+            Custom
+          </button>
+          {kind === "manual" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOngoing(true);
+                setCustomPick(false);
+              }}
+              className={`rounded-full border px-3.5 py-1.5 text-sm ${
+                ongoing
+                  ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                  : "border-white/15 text-white"
+              }`}
+            >
+              Ongoing
+            </button>
+          ) : null}
         </div>
-        <input
-          type="number"
-          min={3}
-          max={90}
-          value={days}
-          onChange={(e) =>
-            setDays(
-              Math.min(90, Math.max(3, Math.round(Number(e.target.value) || 7)))
-            )
-          }
-          className="ui-field mt-3 w-28 text-sm !px-3 !py-2"
-        />
+        {kind === "manual" && ongoing ? (
+          <p className="mt-2 text-xs text-[var(--color-mist)]">
+            No end date. It stays on Today and Stats until you end it.
+          </p>
+        ) : (
+          <label className="mt-3 block text-sm text-[var(--color-mist)]">
+            Or type the number of days
+            <input
+              type="number"
+              inputMode="numeric"
+              min={kind === "run" ? 3 : 1}
+              max={kind === "run" ? 90 : MAX_MISSION_DAYS}
+              value={daysText}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setDaysText(raw);
+                setOngoing(false);
+                setCustomPick(true);
+                const n = Math.round(Number(raw));
+                if (!Number.isFinite(n) || n < 1) return;
+                setDays(
+                  kind === "run"
+                    ? Math.min(90, Math.max(3, n))
+                    : Math.min(MAX_MISSION_DAYS, Math.max(1, n))
+                );
+              }}
+              placeholder={kind === "run" ? "7" : "12"}
+              className="ui-field mt-2 w-40 text-sm !px-3 !py-2"
+            />
+          </label>
+        )}
       </div>
 
       <label className="block text-sm text-[var(--color-mist)]">
@@ -284,12 +376,29 @@ export function MissionSetup({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          placeholder="Hackathon"
           className="ui-field mt-2"
         />
       </label>
 
+      {kind === "manual" ? (
+        <label className="block text-sm text-[var(--color-mist)]">
+          What you’re tracking
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Ship the demo. One focused block a day."
+            className="ui-field mt-2"
+          />
+        </label>
+      ) : null}
+
       <div>
-        <p className="text-sm text-[var(--color-mist)]">Habits to track</p>
+        <p className="text-sm text-[var(--color-mist)]">
+          {kind === "manual"
+            ? "Optional habits (also on Today)"
+            : "Habits to track"}
+        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {allOpts.map((h) => {
             const on = selected.includes(h.key);
@@ -359,7 +468,7 @@ export function MissionSetup({
                 addTask();
               }
             }}
-            placeholder="e.g. Drink water, Make bed"
+            placeholder="e.g. Push a commit, Review PRs"
             className="ui-field flex-1 text-sm !py-2"
           />
           <button
@@ -397,7 +506,11 @@ export function MissionSetup({
           onClick={() => void startMission()}
           className="ui-btn ui-btn-primary"
         >
-          {busy ? "Starting…" : `Start ${days}-day mission`}
+          {busy
+            ? "Starting…"
+            : ongoing
+              ? "Start ongoing mission"
+              : `Start ${days}-day mission`}
         </button>
         <button
           type="button"

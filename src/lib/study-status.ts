@@ -17,6 +17,7 @@ export function buildStudyStatus(opts: {
   weekMinutes: number;
   weekDaysWithStudy: number;
   bestDayMinutes: number;
+  activity?: string | null;
 }): StudyStatus {
   if (!opts.hasDiscord) {
     return {
@@ -35,11 +36,16 @@ export function buildStudyStatus(opts: {
     };
   }
   if (opts.live) {
+    const doing = opts.activity?.trim();
     return {
       tone: "live",
-      kicker: "In session",
-      headline: `You’re in a study room · ${formatStudyDuration(opts.todayMinutes)} today.`,
-      body: "Time is counting now. Leave the voice channel when you stop — Dawn saves the block.",
+      kicker: doing ? doing : "In session",
+      headline: doing
+        ? `${doing} · ${formatStudyDuration(opts.todayMinutes)} today.`
+        : `You’re in a study room · ${formatStudyDuration(opts.todayMinutes)} today.`,
+      body: doing
+        ? "Time is counting. Change what you’re doing here, in the Discord ping, or with /doing."
+        : "Dawn asked what you’re doing in Discord. Tap Coding or write it — or set it here.",
     };
   }
   if (opts.todayMinutes <= 0 && opts.weekMinutes <= 0) {
@@ -47,7 +53,7 @@ export function buildStudyStatus(opts: {
       tone: "empty",
       kicker: "Waiting",
       headline: "No study time this week yet.",
-      body: "Join a marked study voice channel. The first two minutes don’t count (join-leave flicker). The bot must be online.",
+      body: "Join a marked study voice channel — Dawn pings you to ask what you’re doing. Or tap Start on Today. The first two minutes don’t count (join-leave flicker).",
     };
   }
   if (opts.todayMinutes <= 0) {

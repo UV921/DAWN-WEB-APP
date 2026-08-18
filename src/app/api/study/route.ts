@@ -7,6 +7,7 @@ import {
   envStudyVoiceIds,
   formatStudyDuration,
   lastNDates,
+  MIN_SESSION_MS,
   minutesOnLocalDate,
   parseStudyVoiceIds,
   sessionMinutes,
@@ -15,6 +16,13 @@ import {
   todayInZone,
 } from "@/lib/study-time";
 import { buildStudyStatus, studyStreak } from "@/lib/study-status";
+import {
+  isWebStudySession,
+  normalizeStudyActivity,
+  WEB_STUDY_CHANNEL,
+  WEB_STUDY_GUILD,
+  studyActivityLabel,
+} from "@/lib/study-activity";
 
 function snowflake(raw: unknown): string {
   return String(raw || "").replace(/\D/g, "").slice(0, 32);
@@ -158,6 +166,7 @@ export async function GET(req: Request) {
   ).length;
   const best = [...week].sort((a, b) => b.minutes - a.minutes)[0];
   const hasDiscord = Boolean(user?.discordId || user?.accounts?.length);
+  const liveActivity = live ? studyActivityLabel(live) : null;
   const status = buildStudyStatus({
     configured,
     hasDiscord,
@@ -166,6 +175,7 @@ export async function GET(req: Request) {
     weekMinutes,
     weekDaysWithStudy,
     bestDayMinutes: best?.minutes || 0,
+    activity: liveActivity,
   });
 
   const periods = {
@@ -187,6 +197,9 @@ export async function GET(req: Request) {
       label: periods.today.label,
       live: Boolean(live),
       liveStartedAt: live?.startedAt?.toISOString() || null,
+      activity: liveActivity,
+      activityKey: live?.activityKey || null,
+      source: live ? (isWebStudySession(live) ? "web" : "discord") : null,
     },
     days: series,
     week,
@@ -268,6 +281,119 @@ export async function POST(req: Request) {
     await prisma.studyRoom.deleteMany({ where: { channelId } });
     const rooms = await roomsForGuild(guildId || null);
     return NextResponse.json({ ok: true, rooms });
+  }
+
+  const parsed = normalizeStudyActivity({
+    key: body.activityKey ?? body.key,
+    text: body.activity ?? body.text ?? body.what,
+  });
+
+  if (action === "set-activity") {
+    if (!parsed) {
+      return NextResponse.json(
+        { error: "Pick Coding, or write what you’re doing." },
+        { status: 400 }
+      );
+    }
+    const open = await prisma.studySession.findFirst({
+      where: { userId: session.user.id, endedAt: null },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!open) {
+      return NextResponse.json(
+        { error: "No live session. Join a study room or tap Start." },
+        { status: 400 }
+      );
+    }
+    await prisma.studySession.update({
+      where: { id: open.id },
+      data: {
+        activityKey: parsed.key,
+        activity: parsed.label,
+        activityAskedAt: open.activityAskedAt || new Date(),
+      },
+    });
+    return NextResponse.json({
+      ok: true,
+      activity: parsed.label,
+      activityKey: parsed.key,
+    });
+  }
+
+  if (action === "start") {
+    const tz = session.user.timezone || DEFAULT_TZ;
+    const existing = await prisma.studySession.findFirst({
+      where: { userId: session.user.id, endedAt: null },
+      orderBy: { startedAt: "desc" },
+    });
+    if (existing) {
+      if (parsed) {
+        await prisma.studySession.update({
+          where: { id: existing.id },
+          data: {
+            activityKey: parsed.key,
+            activity: parsed.label,
+            activityAskedAt: existing.activityAskedAt || new Date(),
+          },
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        live: true,
+        activity: parsed?.label || studyActivityLabel(existing),
+        activityKey: parsed?.key || existing.activityKey,
+      });
+    }
+    const created = await prisma.studySession.create({
+      data: {
+        userId: session.user.id,
+        guildId: WEB_STUDY_GUILD,
+        channelId: WEB_STUDY_CHANNEL,
+        source: "web",
+        date: todayInZone(tz),
+        startedAt: new Date(),
+        activityKey: parsed?.key || null,
+        activity: parsed?.label || null,
+        activityAskedAt: parsed ? new Date() : null,
+      },
+    });
+    return NextResponse.json({
+      ok: true,
+      live: true,
+      activity: studyActivityLabel(created),
+      activityKey: created.activityKey,
+    });
+  }
+
+  if (action === "stop") {
+    const open = await prisma.studySession.findFirst({
+      where: { userId: session.user.id, endedAt: null },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!open) {
+      return NextResponse.json({ ok: true, live: false });
+    }
+    if (!isWebStudySession(open)) {
+      return NextResponse.json(
+        {
+          error:
+            "Leave the study voice channel to stop. You can still change what you’re doing here.",
+        },
+        { status: 400 }
+      );
+    }
+    const now = new Date();
+    const elapsed = now.getTime() - open.startedAt.getTime();
+    if (elapsed < MIN_SESSION_MS) {
+      await prisma.studySession.delete({ where: { id: open.id } }).catch(() => undefined);
+      return NextResponse.json({ ok: true, live: false, dropped: true });
+    }
+    const minutes = sessionMinutes(open.startedAt, now);
+    await prisma.studySession.update({
+      where: { id: open.id },
+      data: { endedAt: now, minutes },
+    });
+    return NextResponse.json({ ok: true, live: false, minutes });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
