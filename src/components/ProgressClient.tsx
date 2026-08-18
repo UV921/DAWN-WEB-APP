@@ -52,7 +52,8 @@ export function ProgressClient() {
           <h1 className="ui-title mt-2">How you’re doing</h1>
           <p className="ui-sub mt-3 max-w-xl">
             Pick a window. You’ll see what you finished, what you missed, and
-            one next step. Study time is from Discord rooms (last 30 days).
+            one next step. Study time is from Discord rooms or a session you
+            start on Today (last 30 days).
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>

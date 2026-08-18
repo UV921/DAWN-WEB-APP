@@ -381,8 +381,10 @@ export function ProgressDetail({
           hint:
             range === "today"
               ? study?.today.live
-                ? "You’re in a Discord study room right now."
-                : "Time in a marked Discord study room today."
+                ? study?.today.activity
+                  ? `You’re ${study.today.activity} in a study session right now.`
+                  : "You’re in a study session right now."
+                : "Time in a marked Discord study room today — or a session you started in Dawn."
               : study?.weekMinutes
                 ? `Studied on ${study.weekDaysWithStudy || 0} day${(study.weekDaysWithStudy || 0) === 1 ? "" : "s"} this week.`
                 : "Join a marked Discord study room — Dawn counts the minutes.",
