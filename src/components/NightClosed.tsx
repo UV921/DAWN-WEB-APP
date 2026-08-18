@@ -4,15 +4,18 @@ import { useEffect, useRef } from "react";
 import { motion, useInView } from "motion/react";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import type { AnimatedIconHandle } from "@/components/animated-icons/use-icon-animation";
+import { DayTallyCard } from "@/components/DayTallyCard";
+import type { DayTally } from "@/lib/day-tally";
 import { cn } from "@/lib/utils";
 
 type Props = {
   sleepGoal: string;
   wakeGoal: string;
+  tally?: DayTally | null;
   className?: string;
 };
 
-export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
+export function NightClosed({ sleepGoal, wakeGoal, tally, className }: Props) {
   const moonRef = useRef<AnimatedIconHandle>(null);
   const root = useRef<HTMLElement>(null);
   const inView = useInView(root, { margin: "-80px" });
@@ -87,6 +90,9 @@ export function NightClosed({ sleepGoal, wakeGoal, className }: Props) {
       <p className="relative mt-5 text-xs tabular-nums text-[var(--color-cloud)]">
         Sleep window target {sleepGoal}
       </p>
+      {tally ? (
+        <DayTallyCard tally={tally} compact className="relative mt-6 text-left" />
+      ) : null}
     </motion.section>
   );
 }

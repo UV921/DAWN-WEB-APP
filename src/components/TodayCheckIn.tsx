@@ -13,6 +13,7 @@ import {
   defaultWindowForKey,
 } from "@/lib/habit-windows";
 import { WakeHit } from "@/components/WakeHit";
+import { NightTally } from "@/components/NightTally";
 import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { NightCloseFlow } from "@/components/NightCloseFlow";
@@ -28,6 +29,7 @@ import {
   type MorningPulse,
   type WeekPulse,
 } from "@/lib/morning-pulse";
+import { buildDayTally, type TallyHit } from "@/lib/day-tally";
 import type { MissionPublic } from "@/lib/missions";
 
 type Streaks = Record<string, { current: number; longest: number }>;
@@ -147,6 +149,9 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hit, setHit] = useState<Hit | null>(null);
+  const [nightHit, setNightHit] = useState<TallyHit | null>(null);
+  const [showNightTally, setShowNightTally] = useState(false);
+  const [studyMinutes, setStudyMinutes] = useState(0);
   const [dayMode, setDayMode] = useState<DayMode>("day");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [missions, setMissions] = useState<MissionPublic[]>([]);
@@ -229,6 +234,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       const nextChecks = tlog
         ? { ...emptyChecks(defs), ...(tlog.checks || {}) }
         : emptyChecks(defs);
+      void fetch("/api/study")
+        .then((r) => r.json())
+        .then((d: { today?: { minutes?: number } }) => {
+          setStudyMinutes(d.today?.minutes || 0);
+        })
+        .catch(() => undefined);
       const localPulse = buildMorningPulse({
         week: (data.weekPulse as WeekPulse) || {
           days: 0,
@@ -356,8 +367,13 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           await load();
           return false;
         }
-        if (saved.hit) {
+        if (send.bed) {
+          if (saved.hit) setNightHit(saved.hit as TallyHit);
+          setShowNightTally(true);
+        } else if (saved.hit) {
           setHit(saved.hit as Hit);
+        }
+        if (saved.hit) {
           setProfile((p) =>
             p
               ? {
@@ -384,6 +400,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     [load]
   );
 
+  const closeNightTally = useCallback(() => setShowNightTally(false), []);
+
   async function toggleHabit(h: HabitRow) {
     const live = enrichHabitsWithWindows(
       defsRef.current,
@@ -394,6 +412,14 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     ) as HabitRow[];
     const row = live.find((x) => x.key === h.key) || h;
     const done = checksRef.current[h.key];
+    if (h.key === "sleepEarly") {
+      if (done || bedRef.current) {
+        setShowNightTally(true);
+        return;
+      }
+      setNightFlow(true);
+      return;
+    }
     if (!done && !row.canSubmit) {
       setBanner({
         tone: "tip",
@@ -401,10 +427,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           ? `${h.label} opens in ${formatDuration(row.opensInMin)} (${row.windowStart}–${row.windowEnd})`
           : `${h.label} isn’t open yet. Window ${row.windowStart}–${row.windowEnd}.`,
       });
-      return;
-    }
-    if (h.key === "sleepEarly" && !done) {
-      setNightFlow(true);
       return;
     }
     const prev = checksRef.current;
@@ -564,6 +586,17 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
   const tasksDone = todayTodos.filter((t) => t.done).length;
   const hello = firstName(session?.user?.name);
+  const todayTally = buildDayTally({
+    wakeTime,
+    wakeGoal,
+    bedtime,
+    sleepGoal,
+    habits: liveHabits,
+    checks,
+    todos: todayTodos,
+    studyMinutes,
+    streak: profile?.earlyStreak,
+  });
   const nextLine = wakeTime
     ? openNow[0]
       ? `Next: ${openNow[0].label}${openNow[0].closesInMin ? ` · ${formatDuration(openNow[0].closesInMin)} left` : ""}`
@@ -653,6 +686,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           bedtimeLogged={false}
           inSleepWindow={inSleepWindow}
           sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
+          tally={todayTally}
           onSleepNow={goingToSleep}
           onSaved={() => {
             setNightFlow(false);
@@ -708,12 +742,16 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
                   <span className="block font-medium text-white">{h.label}</span>
                   <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
                     {isDone
-                      ? "Done"
+                      ? h.key === "sleepEarly"
+                        ? "Night closed"
+                        : "Done"
                       : locked
                         ? h.opensInMin
                           ? `Opens in ${formatDuration(h.opensInMin)}`
                           : `From ${h.windowStart || "—"}`
-                        : `Tap · until ${h.windowEnd}`}
+                        : h.key === "sleepEarly"
+                          ? "Tap to close the night"
+                          : `Tap · until ${h.windowEnd}`}
                   </span>
                 </span>
               </button>
@@ -777,7 +815,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   return (
     <>
       <WakeHit
-        open={Boolean(hit)}
+        open={Boolean(hit) && !showNightTally}
         title={hit?.title || ""}
         subtitle={hit?.subtitle}
         xpGained={hit?.xpGained || 0}
@@ -787,6 +825,13 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         streak={hit?.streak || 0}
         celebrate={profile?.celebrate || "chill"}
         onClose={() => setHit(null)}
+      />
+      <NightTally
+        open={showNightTally}
+        tally={todayTally}
+        hit={nightHit}
+        celebrate={profile?.celebrate || "chill"}
+        onClose={closeNightTally}
       />
 
       <div className="dash-board">
