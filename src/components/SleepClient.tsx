@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
+import { DayTallyCard } from "@/components/DayTallyCard";
 import { SleepReport } from "@/components/SleepReport";
+import {
+  buildDayTally,
+  emptyDayTally,
+  type DayTally,
+} from "@/lib/day-tally";
 import type { HabitLogLike } from "@/lib/habits";
+
+type StudyToday = { today?: { minutes?: number } };
 
 export function SleepClient({
   wakeGoal,
@@ -14,17 +22,38 @@ export function SleepClient({
 }) {
   const [logs, setLogs] = useState<HabitLogLike[]>([]);
   const [today, setToday] = useState("");
+  const [tally, setTally] = useState<DayTally>(() =>
+    emptyDayTally(wakeGoal, sleepGoal)
+  );
   const [loading, setLoading] = useState(true);
 
-  async function refresh() {
-    const d = await fetch("/api/habits?days=42").then((r) => r.json());
+  const refresh = useCallback(async () => {
+    const [d, study] = await Promise.all([
+      fetch("/api/habits?days=42").then((r) => r.json()),
+      fetch("/api/study")
+        .then((r) => r.json() as Promise<StudyToday>)
+        .catch(() => null),
+    ]);
     setLogs(d.logs || []);
     setToday(d.today || "");
-  }
+    setTally(
+      buildDayTally({
+        wakeTime: d.todayLog?.wakeTime,
+        wakeGoal: d.wakeGoal || wakeGoal,
+        bedtime: d.todayLog?.bedtime,
+        sleepGoal: d.sleepGoal || sleepGoal,
+        habits: d.habits || [],
+        checks: d.todayLog?.checks || {},
+        todos: d.todayTodos,
+        studyMinutes: study?.today?.minutes || 0,
+        streak: d.profile?.earlyStreak,
+      })
+    );
+  }, [wakeGoal, sleepGoal]);
 
   useEffect(() => {
     void refresh().finally(() => setLoading(false));
-  }, []);
+  }, [refresh]);
 
   return (
     <main className="dawn-bg relative min-h-screen">
@@ -36,19 +65,22 @@ export function SleepClient({
             <h1 className="ui-title mt-2">Sleep report</h1>
             <p className="ui-sub mt-3">
               How much sleep you need, how much you took, and how the nights
-              behind you look.
+              behind you look. Close the night from the sleep habit on Today.
             </p>
           </div>
 
           {loading ? (
             <p className="text-[var(--color-mist)]">Loading report…</p>
           ) : today ? (
-            <SleepReport
-              logs={logs}
-              today={today}
-              sleepGoal={sleepGoal}
-              wakeGoal={wakeGoal}
-            />
+            <>
+              <DayTallyCard tally={tally} />
+              <SleepReport
+                logs={logs}
+                today={today}
+                sleepGoal={sleepGoal}
+                wakeGoal={wakeGoal}
+              />
+            </>
           ) : (
             <p className="text-[var(--color-mist)]">
               Log a wake or bedtime on Today to unlock your sleep report.
