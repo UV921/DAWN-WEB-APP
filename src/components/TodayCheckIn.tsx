@@ -616,6 +616,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         daysLeft: primary.progress.daysLeft,
         ongoing: primary.progress.ongoing,
         kind: primary.kind,
+        stepsDone: (primary.steps || []).filter((s) => s.done).length,
+        stepsTotal: (primary.steps || []).length,
       }
     : null;
 

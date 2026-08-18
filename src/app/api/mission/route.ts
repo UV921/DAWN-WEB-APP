@@ -90,15 +90,62 @@ const missionInclude = {
   steps: { orderBy: { sortOrder: "asc" as const } },
 };
 
+const missionIncludeNoSteps = {
+  checks: { select: { date: true } },
+};
+
+function asMissionRow(
+  row: MissionRow & { steps?: MissionRow["steps"] }
+): MissionRow {
+  return { ...row, steps: row.steps || [] };
+}
+
+async function findUserMissions(userId: string): Promise<MissionRow[]> {
+  try {
+    return await prisma.mission.findMany({
+      where: { userId },
+      orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+      include: missionInclude,
+      take: 40,
+    });
+  } catch (error) {
+    console.error("Mission steps query failed; loading without steps", error);
+    const rows = await prisma.mission.findMany({
+      where: { userId },
+      orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+      include: missionIncludeNoSteps,
+      take: 40,
+    });
+    return rows.map((row) => asMissionRow(row));
+  }
+}
+
+async function findUserMission(
+  userId: string,
+  missionId: string
+): Promise<MissionRow | null> {
+  try {
+    const row = await prisma.mission.findFirst({
+      where: { id: missionId, userId },
+      include: missionInclude,
+    });
+    return row;
+  } catch (error) {
+    console.error("Mission steps query failed; loading without steps", error);
+    const row = await prisma.mission.findFirst({
+      where: { id: missionId, userId },
+      include: missionIncludeNoSteps,
+    });
+    return row ? asMissionRow(row) : null;
+  }
+}
+
 async function publicMission(
   userId: string,
   missionId: string,
   today: string
 ): Promise<MissionPublic | null> {
-  const row = await prisma.mission.findFirst({
-    where: { id: missionId, userId },
-    include: missionInclude,
-  });
+  const row = await findUserMission(userId, missionId);
   if (!row) return null;
   const habits = await ensureDefaultHabits(userId);
   const logs = await loadLogs(userId, row.startDate, today);
@@ -114,15 +161,7 @@ export async function GET() {
   const today = formatDateInZone(session.user.timezone);
   const habits = await ensureDefaultHabits(session.user.id);
 
-  const rows = await prisma.mission.findMany({
-    where: { userId: session.user.id },
-    orderBy: [{ active: "desc" }, { createdAt: "desc" }],
-    include: {
-      checks: { select: { date: true } },
-      steps: { orderBy: { sortOrder: "asc" } },
-    },
-    take: 40,
-  });
+  const rows = await findUserMissions(session.user.id);
 
   const earliest = rows.reduce<string | undefined>((acc, m) => {
     if (!acc || m.startDate < acc) return m.startDate;
@@ -290,13 +329,17 @@ export async function POST(req: Request) {
           .slice(0, MAX_MISSION_STEPS)
       : [];
     if (stepTexts.length) {
-      await prisma.missionStep.createMany({
-        data: stepTexts.map((text, i) => ({
-          missionId: created.id,
-          text,
-          sortOrder: i,
-        })),
-      });
+      try {
+        await prisma.missionStep.createMany({
+          data: stepTexts.map((text, i) => ({
+            missionId: created.id,
+            text,
+            sortOrder: i,
+          })),
+        });
+      } catch (error) {
+        console.error("Could not save mission steps on create", error);
+      }
     }
 
     if (kind === "run") {
@@ -373,7 +416,7 @@ export async function POST(req: Request) {
           .slice(0, 10)
       : parseJsonArray(row.taskTemplates);
 
-    const updated = await prisma.mission.update({
+    await prisma.mission.update({
       where: { id: row.id },
       data: {
         title,
@@ -383,15 +426,9 @@ export async function POST(req: Request) {
         habitKeys: JSON.stringify(habitKeys),
         taskTemplates: JSON.stringify(taskTemplates),
       },
-      include: {
-      checks: { select: { date: true } },
-      steps: { orderBy: { sortOrder: "asc" } },
-    },
     });
-    const habits = await ensureDefaultHabits(userId);
-    const logs = await loadLogs(userId, span.startDate, today);
     return NextResponse.json({
-      mission: toPublic(updated, today, habits, logs),
+      mission: await publicMission(userId, row.id, today),
     });
   }
 
@@ -413,18 +450,12 @@ export async function POST(req: Request) {
     if (days > 0 && days < progress.day) {
       days = progress.day;
     }
-    const updated = await prisma.mission.update({
+    await prisma.mission.update({
       where: { id: row.id },
       data: { days },
-      include: {
-      checks: { select: { date: true } },
-      steps: { orderBy: { sortOrder: "asc" } },
-    },
     });
-    const habits = await ensureDefaultHabits(userId);
-    const logs = await loadLogs(userId, row.startDate, today);
     return NextResponse.json({
-      mission: toPublic(updated, today, habits, logs),
+      mission: await publicMission(userId, row.id, today),
     });
   }
 
@@ -465,17 +496,8 @@ export async function POST(req: Request) {
         where: { missionId, date },
       });
     }
-    const updated = await prisma.mission.findFirst({
-      where: { id: missionId, userId },
-      include: {
-      checks: { select: { date: true } },
-      steps: { orderBy: { sortOrder: "asc" } },
-    },
-    });
-    const habits = await ensureDefaultHabits(userId);
-    const logs = await loadLogs(userId, mission.startDate, today);
     return NextResponse.json({
-      mission: updated ? toPublic(updated, today, habits, logs) : null,
+      mission: await publicMission(userId, missionId, today),
     });
   }
 
@@ -550,33 +572,41 @@ export async function POST(req: Request) {
     if (!mission) {
       return NextResponse.json({ error: "Mission not found" }, { status: 404 });
     }
-    const count = await prisma.missionStep.count({ where: { missionId } });
-    if (count >= MAX_MISSION_STEPS) {
+    try {
+      const count = await prisma.missionStep.count({ where: { missionId } });
+      if (count >= MAX_MISSION_STEPS) {
+        return NextResponse.json(
+          { error: `Max ${MAX_MISSION_STEPS} steps on a mission.` },
+          { status: 400 }
+        );
+      }
+      const maxSort = await prisma.missionStep.aggregate({
+        where: { missionId },
+        _max: { sortOrder: true },
+      });
+      const step = await prisma.missionStep.create({
+        data: {
+          missionId,
+          text,
+          sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+        },
+      });
+      return NextResponse.json({
+        step: {
+          id: step.id,
+          text: step.text,
+          done: step.done,
+          sortOrder: step.sortOrder,
+        },
+        mission: await publicMission(userId, missionId, today),
+      });
+    } catch (error) {
+      console.error("Could not add mission step", error);
       return NextResponse.json(
-        { error: `Max ${MAX_MISSION_STEPS} steps on a mission.` },
-        { status: 400 }
+        { error: "Could not save that step. Try again." },
+        { status: 500 }
       );
     }
-    const maxSort = await prisma.missionStep.aggregate({
-      where: { missionId },
-      _max: { sortOrder: true },
-    });
-    const step = await prisma.missionStep.create({
-      data: {
-        missionId,
-        text,
-        sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
-      },
-    });
-    return NextResponse.json({
-      step: {
-        id: step.id,
-        text: step.text,
-        done: step.done,
-        sortOrder: step.sortOrder,
-      },
-      mission: await publicMission(userId, missionId, today),
-    });
   }
 
   if (action === "toggle-step") {

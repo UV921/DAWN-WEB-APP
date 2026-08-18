@@ -142,6 +142,9 @@ function MissionStatCard({
             {m.kind === "manual"
               ? ` · ${worked}/${windowDays.length || 0} days worked in this window`
               : ""}
+            {(m.steps || []).length
+              ? ` · ${m.steps.filter((s) => s.done).length}/${m.steps.length} steps`
+              : ""}
           </p>
         </div>
         <p className="font-display text-2xl tabular-nums text-white">
@@ -196,6 +199,23 @@ function MissionStatCard({
             ? ` · ${m.habitStats.map((h) => `${h.label} ${h.daysDone}`).join(" · ")}`
             : ""}
         </p>
+      ) : null}
+      {(m.steps || []).length ? (
+        <ul className="mt-3 space-y-1">
+          {m.steps.map((s) => (
+            <li
+              key={s.id}
+              className={`text-sm ${
+                s.done
+                  ? "text-[var(--color-mist)] line-through"
+                  : "text-[var(--color-cloud)]"
+              }`}
+            >
+              {s.done ? "✓ " : "○ "}
+              {s.text}
+            </li>
+          ))}
+        </ul>
       ) : null}
     </li>
   );

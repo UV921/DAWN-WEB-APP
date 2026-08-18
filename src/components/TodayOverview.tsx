@@ -27,6 +27,8 @@ type Props = {
     daysLeft: number;
     ongoing: boolean;
     kind: string;
+    stepsDone?: number;
+    stepsTotal?: number;
   } | null;
   onStartChallenge: (days: number) => void;
 };
@@ -118,6 +120,9 @@ export function TodayOverview({
                 {mission.ongoing
                   ? `${mission.title} · ongoing`
                   : `${mission.title} · ${mission.daysLeft} left`}
+                {mission.stepsTotal
+                  ? ` · ${mission.stepsDone || 0}/${mission.stepsTotal} steps`
+                  : ""}
               </p>
             </>
           ) : active ? (

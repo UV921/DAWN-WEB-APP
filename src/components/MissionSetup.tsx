@@ -211,12 +211,17 @@ export function MissionSetup({
 
   async function mutateStep(body: Record<string, unknown>) {
     setBusy(true);
-    await fetch("/api/mission", {
+    setMsg("");
+    const res = await fetch("/api/mission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    const data = await res.json().catch(() => ({}));
     setBusy(false);
+    if (!res.ok) {
+      setMsg(String(data.error || "Could not update steps."));
+    }
     await load();
   }
 
@@ -320,6 +325,10 @@ export function MissionSetup({
       </div>
       <div>
         <p className="text-sm text-[var(--color-mist)]">Daily tasks</p>
+        <p className="mt-0.5 text-[11px] text-[var(--color-mist)]">
+          Optional. These copy onto Today’s task list — mission steps are on
+          the card above.
+        </p>
         <div className="mt-2 flex gap-2">
           <input
             value={taskDraft}

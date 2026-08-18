@@ -5,6 +5,7 @@ import {
   daysFromRange,
   formatMissionSpan,
   MAX_MISSION_DAYS,
+  MAX_MISSION_STEPS,
   type MissionPublic,
 } from "@/lib/missions";
 
@@ -14,6 +15,7 @@ export type MissionDraft = {
   startDate: string;
   endDate: string;
   ongoing: boolean;
+  steps?: string[];
 };
 
 export function emptyDraft(today: string): MissionDraft {
@@ -23,6 +25,7 @@ export function emptyDraft(today: string): MissionDraft {
     startDate: today,
     endDate: "",
     ongoing: false,
+    steps: [],
   };
 }
 
@@ -33,6 +36,7 @@ export function draftFromMission(m: MissionPublic): MissionDraft {
     startDate: m.startDate,
     endDate: m.endDate || "",
     ongoing: Boolean(m.progress.ongoing || !m.days),
+    steps: (m.steps || []).map((s) => s.text),
   };
 }
 
@@ -48,20 +52,36 @@ export function MissionAddRow({
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState("");
+  const [steps, setSteps] = useState<string[]>([]);
+  const [stepDraft, setStepDraft] = useState("");
+
+  function queueStep() {
+    const text = stepDraft.trim();
+    if (!text || steps.length >= MAX_MISSION_STEPS) return;
+    setSteps((prev) => [...prev, text]);
+    setStepDraft("");
+  }
 
   function submit() {
     const name = title.trim();
     if (!name) return;
+    const pending = stepDraft.trim();
+    const nextSteps = pending
+      ? [...steps, pending].slice(0, MAX_MISSION_STEPS)
+      : steps;
     onAdd({
       title: name,
       note: "",
       startDate: startDate || today,
       endDate,
       ongoing: !endDate,
+      steps: nextSteps,
     });
     setTitle("");
     setStartDate(today);
     setEndDate("");
+    setSteps([]);
+    setStepDraft("");
   }
 
   return (
@@ -116,6 +136,57 @@ export function MissionAddRow({
           ? `${daysFromRange(startDate || today, endDate)} days · ${formatMissionSpan(startDate || today, endDate)}`
           : "Leave end empty to keep it going."}
       </p>
+      {steps.length ? (
+        <ul className="space-y-1">
+          {steps.map((step, i) => (
+            <li
+              key={`${step}-${i}`}
+              className="flex items-center justify-between gap-2 text-sm text-white"
+            >
+              <span className="min-w-0 truncate">○ {step}</span>
+              <button
+                type="button"
+                className="text-xs text-[var(--color-mist)]"
+                onClick={() =>
+                  setSteps((prev) => prev.filter((_, j) => j !== i))
+                }
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {steps.length < MAX_MISSION_STEPS ? (
+        <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] py-1 pl-3 pr-1.5">
+          <input
+            value={stepDraft}
+            onChange={(e) => setStepDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                queueStep();
+              }
+            }}
+            placeholder="Add a step (optional)"
+            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-white outline-none placeholder:text-[var(--color-mist)]"
+            autoComplete="off"
+            maxLength={120}
+          />
+          <button
+            type="button"
+            disabled={!stepDraft.trim()}
+            onClick={queueStep}
+            className="rounded-lg px-3 py-1.5 text-sm text-[var(--color-dawn)] disabled:opacity-40"
+          >
+            Add step
+          </button>
+        </div>
+      ) : (
+        <p className="text-[11px] text-[var(--color-mist)]">
+          Max {MAX_MISSION_STEPS} steps.
+        </p>
+      )}
     </form>
   );
 }
@@ -288,5 +359,9 @@ export function payloadFromDraft(draft: MissionDraft) {
     startDate: draft.startDate,
     endDate: draft.ongoing ? "" : draft.endDate,
     days: Math.min(MAX_MISSION_DAYS, days),
+    steps: (draft.steps || [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, MAX_MISSION_STEPS),
   };
 }

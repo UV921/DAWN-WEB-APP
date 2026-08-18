@@ -60,9 +60,12 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   const [err, setErr] = useState("");
 
   const apply = useCallback(
-    (next: MissionPublic[]) => {
-      setMissions(next);
-      onChange?.(next);
+    (next: MissionPublic[] | ((prev: MissionPublic[]) => MissionPublic[])) => {
+      setMissions((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+        onChange?.(resolved);
+        return resolved;
+      });
     },
     [onChange]
   );
@@ -107,7 +110,7 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
       await load();
       return;
     }
-    apply(missions.map((m) => (m.id === updated.id ? updated : m)));
+    apply((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
   }
 
   async function applyMissionResult(ok: boolean, data: { mission?: MissionPublic | null; error?: string }) {
@@ -121,10 +124,29 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
       await load();
       return;
     }
-    apply(missions.map((m) => (m.id === updated.id ? updated : m)));
+    apply((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
   }
 
   async function addStep(missionId: string, text: string) {
+    const tempId = `tmp-${Date.now()}`;
+    apply((prev) =>
+      prev.map((m) =>
+        m.id === missionId
+          ? {
+              ...m,
+              steps: [
+                ...(m.steps || []),
+                {
+                  id: tempId,
+                  text,
+                  done: false,
+                  sortOrder: (m.steps || []).length,
+                },
+              ],
+            }
+          : m
+      )
+    );
     setBusyId(missionId);
     const { ok, data } = await post({ action: "add-step", missionId, text });
     setBusyId("");
@@ -132,6 +154,18 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   }
 
   async function toggleStep(missionId: string, stepId: string, done: boolean) {
+    apply((prev) =>
+      prev.map((m) =>
+        m.id === missionId
+          ? {
+              ...m,
+              steps: (m.steps || []).map((s) =>
+                s.id === stepId ? { ...s, done } : s
+              ),
+            }
+          : m
+      )
+    );
     setBusyId(missionId);
     const { ok, data } = await post({ action: "toggle-step", stepId, done });
     setBusyId("");
@@ -139,6 +173,13 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   }
 
   async function deleteStep(missionId: string, stepId: string) {
+    apply((prev) =>
+      prev.map((m) =>
+        m.id === missionId
+          ? { ...m, steps: (m.steps || []).filter((s) => s.id !== stepId) }
+          : m
+      )
+    );
     setBusyId(missionId);
     const { ok, data } = await post({ action: "delete-step", stepId });
     setBusyId("");
@@ -234,7 +275,7 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
             {live.length > 1 ? "Missions" : "Mission"}
           </p>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Add one like a task. Set when it starts and when it ends.
+            Add one like a task. Put steps on it — they stay on this card.
           </p>
         </div>
         <Link
@@ -372,7 +413,7 @@ export function MissionLiveRow({
               : ""}
             {(m.steps || []).length
               ? ` · ${m.steps.filter((s) => s.done).length}/${m.steps.length} steps`
-              : ""}
+              : " · 0 steps"}
           </p>
         </div>
         {m.kind === "manual" && p.active && onCheck ? (
@@ -390,6 +431,15 @@ export function MissionLiveRow({
           </button>
         ) : null}
       </div>
+
+      <MissionSteps
+        steps={m.steps || []}
+        busy={busy}
+        onAdd={onAddStep}
+        onToggle={onToggleStep}
+        onDelete={onDeleteStep}
+      />
+
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-dawn)]"
@@ -398,16 +448,6 @@ export function MissionLiveRow({
       </div>
       {m.note ? (
         <p className="mt-2 text-xs text-[var(--color-mist)]">{m.note}</p>
-      ) : null}
-
-      {onAddStep && onToggleStep && onDeleteStep ? (
-        <MissionSteps
-          steps={m.steps || []}
-          busy={busy}
-          onAdd={onAddStep}
-          onToggle={onToggleStep}
-          onDelete={onDeleteStep}
-        />
       ) : null}
 
       {editing && draft && onDraft ? (
