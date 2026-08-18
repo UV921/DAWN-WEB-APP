@@ -1136,7 +1136,8 @@ button,
 }
 
 .dash-pair,
-.dash-work {
+.dash-work,
+.dash-foot {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1146,16 +1147,37 @@ button,
   min-width: 0;
 }
 
+.day-loop {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.day-loop-step {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 0.65rem 0.7rem;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .day-loop {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .day-loop-step {
+    padding: 0.75rem 0.85rem;
+  }
+}
+
 @media (min-width: 1024px) {
   .dash-board {
     gap: 1.35rem;
-  }
-
-  .dash-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem);
-    align-items: end;
-    gap: 1.25rem 2.25rem;
   }
 
   .dash-hero .ui-sub {
@@ -1172,11 +1194,24 @@ button,
   .dash-work {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
+    align-items: stretch;
     gap: 1.15rem 1.35rem;
   }
 
+  .dash-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.15rem;
+  }
+
+  .dash-foot.is-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
   .dash-panel {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
     border-radius: 1.2rem;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.025);
@@ -1189,12 +1224,9 @@ button,
 }
 
 @media (min-width: 1440px) {
-  .dash-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(24rem, 32rem);
-  }
-
   .dash-pair,
-  .dash-work {
+  .dash-work,
+  .dash-foot {
     gap: 1.35rem;
   }
 }
