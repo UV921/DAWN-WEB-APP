@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MissionLiveRow } from "@/components/TodayMissions";
-import type { MissionKind, MissionPublic } from "@/lib/missions";
+import { MAX_MISSION_DAYS, type MissionKind, type MissionPublic } from "@/lib/missions";
 
 type HabitOpt = { key: string; label: string; active?: boolean };
 
@@ -38,6 +38,8 @@ export function MissionSetup({
   const [title, setTitle] = useState("Hackathon");
   const [note, setNote] = useState("");
   const [days, setDays] = useState(3);
+  const [daysText, setDaysText] = useState("3");
+  const [customPick, setCustomPick] = useState(false);
   const [ongoing, setOngoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -61,6 +63,10 @@ export function MissionSetup({
     if (kind === "run") {
       setOngoing(false);
       setDays((d) => (d < 3 ? 7 : d));
+      setDaysText((t) => {
+        const n = Math.round(Number(t));
+        return !Number.isFinite(n) || n < 3 ? "7" : t;
+      });
       setSelected((prev) =>
         prev.includes("wakeEarly") ? prev : ["wakeEarly", ...prev]
       );
@@ -94,6 +100,15 @@ export function MissionSetup({
   async function startMission() {
     setBusy(true);
     setMsg("");
+    const typed = Math.round(Number(daysText));
+    const length =
+      kind === "manual" && ongoing
+        ? 0
+        : Number.isFinite(typed) && typed > 0
+          ? kind === "run"
+            ? Math.min(90, Math.max(3, typed))
+            : Math.min(MAX_MISSION_DAYS, Math.max(1, typed))
+          : days;
     const res = await fetch("/api/mission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -102,7 +117,7 @@ export function MissionSetup({
         kind,
         title,
         note,
-        days: kind === "manual" && ongoing ? 0 : days,
+        days: length,
         habitKeys: selected,
         newHabits,
         taskTemplates: tasks,
@@ -150,6 +165,15 @@ export function MissionSetup({
     await load();
   }
 
+  async function setMissionDays(id: string, daysValue: number) {
+    await fetch("/api/mission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set-days", missionId: id, days: daysValue }),
+    });
+    await load();
+  }
+
   if (live.length && !creating) {
     return (
       <div className="space-y-4">
@@ -169,6 +193,7 @@ export function MissionSetup({
                     ? (done) => void checkIn(mission.id, done)
                     : undefined
                 }
+                onSetDays={(daysValue) => void setMissionDays(mission.id, daysValue)}
                 showEnd
                 onEnd={() => void endMission(mission.id)}
               />
@@ -268,10 +293,12 @@ export function MissionSetup({
               type="button"
               onClick={() => {
                 setOngoing(false);
+                setCustomPick(false);
                 setDays(n);
+                setDaysText(String(n));
               }}
               className={`rounded-full border px-3.5 py-1.5 text-sm ${
-                !ongoing && days === n
+                !ongoing && !customPick && days === n
                   ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
                   : "border-white/15 text-white"
               }`}
@@ -279,10 +306,28 @@ export function MissionSetup({
               {n} days
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setOngoing(false);
+              setCustomPick(true);
+              setDaysText("");
+            }}
+            className={`rounded-full border px-3.5 py-1.5 text-sm ${
+              !ongoing && (customPick || !lengths.includes(days))
+                ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                : "border-white/15 text-white"
+            }`}
+          >
+            Custom
+          </button>
           {kind === "manual" ? (
             <button
               type="button"
-              onClick={() => setOngoing(true)}
+              onClick={() => {
+                setOngoing(true);
+                setCustomPick(false);
+              }}
               className={`rounded-full border px-3.5 py-1.5 text-sm ${
                 ongoing
                   ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
@@ -293,36 +338,36 @@ export function MissionSetup({
             </button>
           ) : null}
         </div>
-        {kind === "manual" && !ongoing ? (
-          <input
-            type="number"
-            min={1}
-            max={365}
-            value={days}
-            onChange={(e) =>
-              setDays(
-                Math.min(365, Math.max(1, Math.round(Number(e.target.value) || 3)))
-              )
-            }
-            className="ui-field mt-3 w-28 text-sm !px-3 !py-2"
-          />
-        ) : kind === "run" ? (
-          <input
-            type="number"
-            min={3}
-            max={90}
-            value={days}
-            onChange={(e) =>
-              setDays(
-                Math.min(90, Math.max(3, Math.round(Number(e.target.value) || 7)))
-              )
-            }
-            className="ui-field mt-3 w-28 text-sm !px-3 !py-2"
-          />
-        ) : (
+        {kind === "manual" && ongoing ? (
           <p className="mt-2 text-xs text-[var(--color-mist)]">
             No end date. It stays on Today and Stats until you end it.
           </p>
+        ) : (
+          <label className="mt-3 block text-sm text-[var(--color-mist)]">
+            Or type the number of days
+            <input
+              type="number"
+              inputMode="numeric"
+              min={kind === "run" ? 3 : 1}
+              max={kind === "run" ? 90 : MAX_MISSION_DAYS}
+              value={daysText}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setDaysText(raw);
+                setOngoing(false);
+                setCustomPick(true);
+                const n = Math.round(Number(raw));
+                if (!Number.isFinite(n) || n < 1) return;
+                setDays(
+                  kind === "run"
+                    ? Math.min(90, Math.max(3, n))
+                    : Math.min(MAX_MISSION_DAYS, Math.max(1, n))
+                );
+              }}
+              placeholder={kind === "run" ? "7" : "12"}
+              className="ui-field mt-2 w-40 text-sm !px-3 !py-2"
+            />
+          </label>
         )}
       </div>
 

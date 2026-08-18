@@ -274,6 +274,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (action === "set-days") {
+    const missionId = String(body.missionId || "");
+    if (!missionId) {
+      return NextResponse.json({ error: "Missing mission" }, { status: 400 });
+    }
+    const row = await prisma.mission.findFirst({
+      where: { id: missionId, userId, active: true },
+    });
+    if (!row) {
+      return NextResponse.json({ error: "Mission not found" }, { status: 404 });
+    }
+    const kind: MissionKind = isMissionKind(row.kind) ? row.kind : "run";
+    const ongoing = kind === "manual" && (body.days === 0 || body.days === "0");
+    let days = ongoing ? 0 : clampMissionDays(body.days, kind);
+    const progress = missionProgress(row.startDate, today, row.days);
+    if (days > 0 && days < progress.day) {
+      days = progress.day;
+    }
+    const updated = await prisma.mission.update({
+      where: { id: row.id },
+      data: { days },
+      include: { checks: { select: { date: true } } },
+    });
+    const habits = await ensureDefaultHabits(userId);
+    const logs = await loadLogs(userId, row.startDate, today);
+    return NextResponse.json({
+      mission: toPublic(updated, today, habits, logs),
+    });
+  }
+
   if (action === "check") {
     const missionId = String(body.missionId || "");
     if (!missionId) {
