@@ -71,6 +71,55 @@ export function minutesToHHMM(total: number): string {
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
+/**
+ * Clock time on an overnight axis: evening stays as-is, morning
+ * (before noon) is shifted +24h so 23:00 → 06:00 is a continuous span.
+ */
+export function overnightMinutes(hhmm: string): number {
+  const m = timeToMinutes(hhmm);
+  return m < 12 * 60 ? m + 24 * 60 : m;
+}
+
+export function overnightSpan(
+  start: string,
+  end: string
+): { startMin: number; endMin: number } {
+  const startMin = overnightMinutes(start);
+  let endMin = overnightMinutes(end);
+  if (endMin <= startMin) endMin += 24 * 60;
+  return { startMin, endMin };
+}
+
+/** Nice hour-aligned window that fits every listed clock time. */
+export function sleepAxisRange(
+  times: string[],
+  paddingMin = 75
+): { start: number; end: number } {
+  if (times.length === 0) {
+    return { start: 21 * 60, end: 30 * 60 };
+  }
+  const vals = times.map(overnightMinutes);
+  let lo = Math.min(...vals) - paddingMin;
+  let hi = Math.max(...vals) + paddingMin;
+  lo = Math.floor(lo / 60) * 60;
+  hi = Math.ceil(hi / 60) * 60;
+  if (hi - lo < 8 * 60) {
+    const extra = Math.ceil((8 * 60 - (hi - lo)) / 2 / 60) * 60;
+    lo -= extra;
+    hi += extra;
+  }
+  return { start: lo, end: hi };
+}
+
+export function sleepAxisTicks(start: number, end: number): number[] {
+  const hours = (end - start) / 60;
+  const step = hours > 12 ? 180 : hours > 8 ? 120 : 60;
+  const first = Math.ceil(start / step) * step;
+  const ticks: number[] = [];
+  for (let t = first; t <= end; t += step) ticks.push(t);
+  return ticks.length > 0 ? ticks : [start, end];
+}
+
 /** Ideal bedtime so you get `hours` before wakeGoal. */
 export function idealBedtimeForWake(
   wakeGoal: string,
@@ -118,10 +167,7 @@ export function minutesPastWakeGoal(
 
 function averageTime(times: string[]): string | null {
   if (times.length === 0) return null;
-  const mins = times.map((t) => {
-    const m = timeToMinutes(t);
-    return m < 12 * 60 ? m + 24 * 60 : m;
-  });
+  const mins = times.map(overnightMinutes);
   const avg =
     Math.round(mins.reduce((a, b) => a + b, 0) / mins.length) % (24 * 60);
   return minutesToHHMM(avg);
@@ -129,10 +175,7 @@ function averageTime(times: string[]): string | null {
 
 function stdDevMinutes(times: string[]): number | null {
   if (times.length < 2) return null;
-  const mins = times.map((t) => {
-    const m = timeToMinutes(t);
-    return m < 12 * 60 ? m + 24 * 60 : m;
-  });
+  const mins = times.map(overnightMinutes);
   const mean = mins.reduce((a, b) => a + b, 0) / mins.length;
   const variance =
     mins.reduce((a, b) => a + (b - mean) ** 2, 0) / mins.length;

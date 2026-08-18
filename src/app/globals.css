@@ -1124,6 +1124,81 @@ button,
   max-width: 68rem;
 }
 
+.app-page-dash {
+  width: 100%;
+  max-width: none;
+}
+
+.dash-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dash-pair,
+.dash-work {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dash-panel {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .dash-board {
+    gap: 1.35rem;
+  }
+
+  .dash-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem);
+    align-items: end;
+    gap: 1.25rem 2.25rem;
+  }
+
+  .dash-hero .ui-sub {
+    max-width: 42rem;
+  }
+
+  .dash-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: stretch;
+    gap: 1.15rem;
+  }
+
+  .dash-work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.15rem 1.35rem;
+  }
+
+  .dash-panel {
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 1.1rem 1.2rem 1.2rem;
+  }
+
+  .dash-panel .ui-section-head {
+    margin-bottom: 0.9rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .dash-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, 32rem);
+  }
+
+  .dash-pair,
+  .dash-work {
+    gap: 1.35rem;
+  }
+}
+
 .ui-scroll {
   overflow-x: auto;
   scrollbar-width: none;

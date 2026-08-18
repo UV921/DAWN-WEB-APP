@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type Step = {
+export type LoopStep = {
   key: string;
   label: string;
   detail: string;
@@ -10,7 +10,7 @@ type Step = {
   href?: string;
 };
 
-export function DailyLoop({ steps }: { steps: Step[] }) {
+export function DailyLoop({ steps }: { steps: LoopStep[] }) {
   const done = steps.filter((s) => s.done).length;
   return (
     <section>

@@ -31,7 +31,7 @@ const TONE: Record<
 export function MorningPulseCard({ pulse }: { pulse: MorningPulse }) {
   const t = TONE[pulse.tone] ?? TONE.start;
   return (
-    <section className={`relative overflow-hidden rounded-[1.1rem] border px-5 py-5 ${t.border} ${t.bg}`}>
+    <section className={`relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.1rem] border px-5 py-5 ${t.border} ${t.bg}`}>
       <p className="ui-kicker">{t.kicker}</p>
       <h2 className="font-display mt-2 text-[1.85rem] leading-[1.15] text-white">
         {pulse.headline}
@@ -39,11 +39,13 @@ export function MorningPulseCard({ pulse }: { pulse: MorningPulse }) {
       <p className="mt-2 text-sm leading-relaxed text-[var(--color-cloud)]">
         {pulse.body}
       </p>
-      <div className="mt-4 border-l-2 border-[var(--color-dawn)] bg-black/20 px-3 py-2.5">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
-          Next
-        </p>
-        <p className="mt-1 text-sm font-medium text-white">{pulse.nextMove}</p>
+      <div className="mt-auto pt-4">
+        <div className="border-l-2 border-[var(--color-dawn)] bg-black/20 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
+            Next
+          </p>
+          <p className="mt-1 text-sm font-medium text-white">{pulse.nextMove}</p>
+        </div>
       </div>
     </section>
   );

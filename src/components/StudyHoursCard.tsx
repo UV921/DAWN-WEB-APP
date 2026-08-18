@@ -91,7 +91,7 @@ export function StudyHoursCard() {
   const doing = data.today.activity;
 
   return (
-    <section className={`rounded-2xl border px-4 py-4 sm:px-5 ${border}`}>
+    <section className={`flex h-full min-h-0 flex-col rounded-2xl border px-4 py-4 sm:px-5 ${border}`}>
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <div
           className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
@@ -132,25 +132,27 @@ export function StudyHoursCard() {
           Stats
         </Link>
       </div>
-      <StudyActivityControls
-        live={live}
-        source={data.today.source}
-        activity={data.today.activity}
-        activityKey={data.today.activityKey}
-        busy={busy}
-        error={error}
-        onPick={(key) =>
-          void act(live ? "set-activity" : "start", { activityKey: key })
-        }
-        onCustom={(text) =>
-          void act(live ? "set-activity" : "start", {
-            activityKey: "custom",
-            activity: text,
-          })
-        }
-        onStart={() => void act("start")}
-        onStop={() => void act("stop")}
-      />
+      <div className="mt-auto">
+        <StudyActivityControls
+          live={live}
+          source={data.today.source}
+          activity={data.today.activity}
+          activityKey={data.today.activityKey}
+          busy={busy}
+          error={error}
+          onPick={(key) =>
+            void act(live ? "set-activity" : "start", { activityKey: key })
+          }
+          onCustom={(text) =>
+            void act(live ? "set-activity" : "start", {
+              activityKey: "custom",
+              activity: text,
+            })
+          }
+          onStart={() => void act("start")}
+          onStop={() => void act("stop")}
+        />
+      </div>
     </section>
   );
 }
