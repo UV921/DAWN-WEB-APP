@@ -1,13 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   formatMissionDay,
-  MAX_MISSION_DAYS,
+  formatMissionSpan,
   type MissionKind,
   type MissionPublic,
 } from "@/lib/missions";
+import {
+  draftFromMission,
+  MissionAddRow,
+  MissionEditor,
+  MissionStopAsk,
+  payloadFromDraft,
+  type MissionDraft,
+} from "@/components/MissionEditor";
 
 const QUICK: {
   kind: MissionKind;
@@ -33,12 +41,6 @@ const QUICK: {
     days: 0,
     note: "Open-ended — stays on Today until you end it.",
   },
-  {
-    kind: "run",
-    title: "Morning mission",
-    days: 7,
-    note: "Wake early and the habits you pick, for a week.",
-  },
 ];
 
 type Props = {
@@ -48,9 +50,12 @@ type Props = {
 
 export function TodayMissions({ missions: incoming, onChange }: Props) {
   const [missions, setMissions] = useState<MissionPublic[]>(incoming || []);
+  const [today, setToday] = useState("");
   const [loaded, setLoaded] = useState(Boolean(incoming));
   const [busyId, setBusyId] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<MissionDraft | null>(null);
   const [err, setErr] = useState("");
 
   const apply = useCallback(
@@ -69,6 +74,7 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
     }
     const data = await res.json();
     apply((data.missions || []) as MissionPublic[]);
+    if (typeof data.today === "string") setToday(data.today);
     setLoaded(true);
   }, [apply]);
 
@@ -76,21 +82,25 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
     if (incoming) {
       setMissions(incoming);
       setLoaded(true);
-      return;
     }
     void load();
   }, [incoming, load]);
 
-  async function checkIn(id: string, done: boolean) {
-    setBusyId(id);
+  async function post(body: Record<string, unknown>) {
     const res = await fetch("/api/mission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "check", missionId: id, done }),
+      body: JSON.stringify(body),
     });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
+  }
+
+  async function checkIn(id: string, done: boolean) {
+    setBusyId(id);
+    const { ok, data } = await post({ action: "check", missionId: id, done });
     setBusyId("");
-    if (!res.ok) return;
-    const data = await res.json();
+    if (!ok) return;
     const updated = data.mission as MissionPublic | null;
     if (!updated) {
       await load();
@@ -99,67 +109,78 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
     apply(missions.map((m) => (m.id === updated.id ? updated : m)));
   }
 
-  async function startMission(opts: {
-    kind?: MissionKind;
-    title: string;
-    days: number;
-    note?: string;
-  }) {
+  async function addMission(next: MissionDraft) {
     setErr("");
     setBusyId("new");
-    const kind = opts.kind || "manual";
-    const res = await fetch("/api/mission", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create",
-        kind,
-        title: opts.title,
-        days: opts.days,
-        note: opts.note || "",
-        habitKeys: kind === "run" ? ["wakeEarly"] : [],
-      }),
+    const payload = payloadFromDraft(next);
+    const { ok, data } = await post({
+      action: "create",
+      kind: "manual",
+      ...payload,
+      habitKeys: [],
     });
     setBusyId("");
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErr(String(body.error || "Could not start mission."));
+    if (!ok) {
+      setErr(String(data.error || "Could not add mission."));
       return;
     }
-    setCreating(false);
     await load();
   }
 
   async function startQuick(preset: (typeof QUICK)[number]) {
-    await startMission({
+    setErr("");
+    setBusyId("new");
+    const { ok, data } = await post({
+      action: "create",
       kind: preset.kind,
       title: preset.title,
       days: preset.days,
       note: preset.note,
-    });
-  }
-
-  async function setDays(id: string, days: number) {
-    setBusyId(id);
-    const res = await fetch("/api/mission", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "set-days", missionId: id, days }),
+      startDate: today || undefined,
+      habitKeys: preset.kind === "run" ? ["wakeEarly"] : [],
     });
     setBusyId("");
-    if (!res.ok) return;
-    const data = await res.json();
-    const updated = data.mission as MissionPublic | null;
-    if (!updated) {
-      await load();
+    if (!ok) {
+      setErr(String(data.error || "Could not start mission."));
       return;
     }
-    apply(missions.map((m) => (m.id === updated.id ? updated : m)));
+    await load();
+  }
+
+  async function saveEdit() {
+    if (!editingId || !draft) return;
+    setBusyId(editingId);
+    const payload = payloadFromDraft(draft);
+    const { ok, data } = await post({
+      action: "update",
+      missionId: editingId,
+      ...payload,
+    });
+    setBusyId("");
+    if (!ok) {
+      setErr(String(data.error || "Could not save."));
+      return;
+    }
+    setEditingId(null);
+    setDraft(null);
+    await load();
+  }
+
+  async function stopMission(id: string) {
+    setBusyId(id);
+    await post({ action: "end", missionId: id });
+    setBusyId("");
+    setStoppingId(null);
+    if (editingId === id) {
+      setEditingId(null);
+      setDraft(null);
+    }
+    await load();
   }
 
   const live = missions.filter((m) => m.active && !m.progress.ended);
   const finished = missions.filter((m) => m.active && m.progress.ended);
-  const showStart = !live.length || creating;
+  const day = today || new Date().toISOString().slice(0, 10);
 
   if (!loaded) return null;
 
@@ -176,76 +197,76 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
           <p className="ui-kicker text-[var(--color-dawn)]">
             {live.length > 1 ? "Missions" : "Mission"}
           </p>
-          {!live.length ? (
-            <>
-              <h2 className="font-display mt-1 text-xl text-white">
-                Track a long run
-              </h2>
-              <p className="mt-1 text-sm text-[var(--color-mist)]">
-                Type how many days, or pick a preset. It stays on Today so you
-                can mark the days you actually worked.
-              </p>
-            </>
-          ) : null}
+          <p className="mt-1 text-sm text-[var(--color-mist)]">
+            Add one like a task. Set when it starts and when it ends.
+          </p>
         </div>
-        <div className="flex shrink-0 gap-3">
-          {live.length ? (
-            <button
-              type="button"
-              onClick={() => setCreating((v) => !v)}
-              className="text-xs text-[var(--color-dawn)]"
-            >
-              {creating ? "Close" : "New"}
-            </button>
-          ) : null}
-          <Link
-            href="/settings?tab=mission"
-            className="text-xs text-[var(--color-dawn)]"
-          >
-            {live.length ? "Edit" : "Full setup"}
-          </Link>
-        </div>
+        <Link
+          href="/settings?tab=mission"
+          className="shrink-0 text-xs text-[var(--color-mist)]"
+        >
+          Settings
+        </Link>
       </div>
 
-      {showStart ? (
-        <div className="mt-4 space-y-3">
-          <MissionCustomStart
-            busy={busyId === "new"}
-            onStart={(opts) => void startMission(opts)}
-          />
-          <div className="flex flex-wrap gap-2">
-            {QUICK.map((p) => (
-              <button
-                key={p.title}
-                type="button"
-                disabled={busyId === "new"}
-                onClick={() => void startQuick(p)}
-                className="rounded-full border border-white/15 px-3.5 py-1.5 text-sm text-white"
-              >
-                {p.title}
-                {p.days ? ` · ${p.days}d` : " · ongoing"}
-              </button>
-            ))}
-          </div>
-          {err ? <p className="text-sm text-red-300">{err}</p> : null}
+      <div className="mt-4 space-y-3">
+        <MissionAddRow
+          today={day}
+          busy={busyId === "new"}
+          onAdd={(d) => void addMission(d)}
+        />
+        <div className="flex flex-wrap gap-2">
+          {QUICK.map((p) => (
+            <button
+              key={p.title}
+              type="button"
+              disabled={busyId === "new"}
+              onClick={() => void startQuick(p)}
+              className="rounded-full border border-white/15 px-3.5 py-1.5 text-sm text-white"
+            >
+              {p.title}
+              {p.days ? ` · ${p.days}d` : " · ongoing"}
+            </button>
+          ))}
         </div>
-      ) : null}
+        {err ? <p className="text-sm text-red-300">{err}</p> : null}
+      </div>
 
       {live.length || finished.length ? (
-        <ul className={`space-y-4 ${showStart ? "mt-5" : "mt-4"}`}>
+        <ul className="mt-5 space-y-4">
           {live.map((m) => (
             <li key={m.id}>
               <MissionLiveRow
                 mission={m}
                 busy={busyId === m.id}
+                editing={editingId === m.id}
+                stopping={stoppingId === m.id}
+                draft={editingId === m.id ? draft : null}
+                onDraft={setDraft}
                 onCheck={(done) => void checkIn(m.id, done)}
-                onSetDays={(days) => void setDays(m.id, days)}
+                onEdit={() => {
+                  setStoppingId(null);
+                  setEditingId(m.id);
+                  setDraft(draftFromMission(m));
+                }}
+                onCancelEdit={() => {
+                  setEditingId(null);
+                  setDraft(null);
+                }}
+                onSaveEdit={() => void saveEdit()}
+                onAskStop={() => {
+                  setEditingId(null);
+                  setDraft(null);
+                  setStoppingId(m.id);
+                }}
+                onKeep={() => setStoppingId(null)}
+                onStop={() => void stopMission(m.id)}
               />
             </li>
           ))}
           {finished.map((m) => (
             <li key={m.id} className="text-sm text-[var(--color-mist)]">
-              {m.title} finished · {m.daysWorked} days worked
+              {m.title} finished · {formatMissionSpan(m.startDate, m.endDate)}
             </li>
           ))}
         </ul>
@@ -254,118 +275,43 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   );
 }
 
-export function MissionCustomStart({
-  busy,
-  defaultTitle = "",
-  onStart,
-}: {
-  busy?: boolean;
-  defaultTitle?: string;
-  onStart: (opts: { title: string; days: number }) => void;
-}) {
-  const [title, setTitle] = useState(defaultTitle);
-  const [daysText, setDaysText] = useState("");
-
-  function submit() {
-    const raw = daysText.trim();
-    if (!raw) return;
-    const n = Math.round(Number(raw));
-    if (!Number.isFinite(n) || n < 1) return;
-    onStart({
-      title: title.trim() || `${Math.min(MAX_MISSION_DAYS, n)}-day mission`,
-      days: Math.min(MAX_MISSION_DAYS, Math.max(1, n)),
-    });
-  }
-
-  return (
-    <div className="rounded-xl border border-white/12 bg-black/20 px-3 py-3">
-      <p className="text-xs text-[var(--color-mist)]">Your own days</p>
-      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Name — Hackathon, exam, build"
-          className="ui-field flex-1 !px-3 !py-2 text-sm"
-        />
-        <div className="flex gap-2">
-          <label className="relative flex min-w-[7.5rem] items-center">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={MAX_MISSION_DAYS}
-              value={daysText}
-              onChange={(e) => setDaysText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-              placeholder="Days"
-              className="ui-field w-full !px-3 !py-2 pr-12 text-sm"
-            />
-            <span className="pointer-events-none absolute right-3 text-xs text-[var(--color-mist)]">
-              days
-            </span>
-          </label>
-          <button
-            type="button"
-            disabled={busy || !daysText.trim()}
-            onClick={submit}
-            className="ui-btn ui-btn-primary !px-4 !py-2 text-sm"
-          >
-            {busy ? "Starting…" : "Start"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function MissionLiveRow({
   mission: m,
   busy,
+  editing,
+  stopping,
+  draft,
+  onDraft,
   onCheck,
-  onSetDays,
-  showEnd,
-  onEnd,
+  onEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onAskStop,
+  onKeep,
+  onStop,
+  extra,
 }: {
   mission: MissionPublic;
   busy?: boolean;
+  editing?: boolean;
+  stopping?: boolean;
+  draft?: MissionDraft | null;
+  onDraft?: (d: MissionDraft) => void;
   onCheck?: (done: boolean) => void;
-  onSetDays?: (days: number) => void;
-  showEnd?: boolean;
-  onEnd?: () => void;
+  onEdit?: () => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: () => void;
+  onAskStop?: () => void;
+  onKeep?: () => void;
+  onStop?: () => void;
+  extra?: ReactNode;
 }) {
   const p = m.progress;
-  const [daysText, setDaysText] = useState(
-    p.ongoing ? "" : String(m.days || p.total || "")
-  );
-  useEffect(() => {
-    setDaysText(p.ongoing ? "" : String(m.days || p.total || ""));
-  }, [m.days, p.ongoing, p.total]);
   const pct = p.ongoing
     ? Math.min(100, p.day > 0 ? 8 : 0)
     : p.total
       ? Math.min(100, Math.round((p.day / p.total) * 100))
       : 0;
-  const workPct =
-    p.ongoing || !p.total
-      ? null
-      : Math.round((m.daysWorked / Math.max(1, Math.min(p.day, p.total))) * 100);
-
-  function saveDays() {
-    if (!onSetDays) return;
-    const raw = daysText.trim();
-    if (!raw) {
-      onSetDays(0);
-      return;
-    }
-    const n = Math.round(Number(raw));
-    if (!Number.isFinite(n) || n < 1) return;
-    onSetDays(Math.min(MAX_MISSION_DAYS, n));
-  }
 
   return (
     <div>
@@ -375,11 +321,10 @@ export function MissionLiveRow({
             {m.title}
           </p>
           <p className="mt-0.5 text-sm text-[var(--color-mist)]">
-            {formatMissionDay(p)}
+            {formatMissionDay(p)} · {formatMissionSpan(m.startDate, m.endDate)}
             {m.kind === "manual"
               ? ` · ${m.daysWorked} day${m.daysWorked === 1 ? "" : "s"} worked`
               : ""}
-            {workPct != null && m.kind === "manual" ? ` · ${workPct}%` : ""}
           </p>
         </div>
         {m.kind === "manual" && p.active && onCheck ? (
@@ -403,39 +348,54 @@ export function MissionLiveRow({
           style={{ width: `${pct}%` }}
         />
       </div>
-      {onSetDays ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--color-mist)]">Length</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={MAX_MISSION_DAYS}
-            value={daysText}
-            onChange={(e) => setDaysText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                saveDays();
-              }
-            }}
-            placeholder="Ongoing"
-            className="ui-field w-24 !px-3 !py-1.5 text-sm"
-          />
-          <span className="text-xs text-[var(--color-mist)]">days</span>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={saveDays}
-            className="rounded-full border border-white/15 px-3 py-1 text-xs text-white"
-          >
-            Save
-          </button>
-        </div>
-      ) : null}
       {m.note ? (
         <p className="mt-2 text-xs text-[var(--color-mist)]">{m.note}</p>
       ) : null}
+
+      {editing && draft && onDraft ? (
+        <div className="mt-3">
+          <MissionEditor
+            draft={draft}
+            onChange={onDraft}
+            busy={busy}
+            onSave={() => onSaveEdit?.()}
+            onCancel={() => onCancelEdit?.()}
+          >
+            {extra}
+          </MissionEditor>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {onEdit ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-full border border-white/15 px-3 py-1 text-xs text-white"
+            >
+              Edit
+            </button>
+          ) : null}
+          {onAskStop ? (
+            <button
+              type="button"
+              onClick={onAskStop}
+              className="rounded-full border border-white/10 px-3 py-1 text-xs text-[var(--color-mist)]"
+            >
+              Stop
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      {stopping && onKeep && onStop ? (
+        <MissionStopAsk
+          title={m.title}
+          busy={busy}
+          onKeep={onKeep}
+          onStop={onStop}
+        />
+      ) : null}
+
       {m.habitStats?.length ? (
         <ul className="mt-3 space-y-1.5">
           {m.habitStats.map((h) => (
@@ -459,20 +419,6 @@ export function MissionLiveRow({
             </li>
           ))}
         </ul>
-      ) : null}
-      {m.taskTemplates?.length ? (
-        <p className="mt-2 text-xs text-[var(--color-mist)]">
-          Daily tasks: {m.taskTemplates.join(" · ")}
-        </p>
-      ) : null}
-      {showEnd && onEnd ? (
-        <button
-          type="button"
-          onClick={onEnd}
-          className="mt-3 text-xs text-[var(--color-mist)]"
-        >
-          End mission
-        </button>
       ) : null}
     </div>
   );

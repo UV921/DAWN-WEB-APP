@@ -24,6 +24,7 @@ export type MissionPublic = {
   kind: MissionKind;
   note: string;
   startDate: string;
+  endDate: string | null;
   days: number;
   active: boolean;
   habitKeys: string[];
@@ -132,6 +133,77 @@ export function missionEndDate(
   const d = new Date(startDate + "T12:00:00");
   d.setDate(d.getDate() + days - 1);
   return formatLocalDate(d);
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isYmd(v: unknown): v is string {
+  if (typeof v !== "string" || !YMD.test(v.trim())) return false;
+  const s = v.trim();
+  const d = new Date(s + "T12:00:00");
+  return !Number.isNaN(d.getTime()) && formatLocalDate(d) === s;
+}
+
+export function daysFromRange(start: string, end: string): number {
+  const a = new Date(start + "T12:00:00");
+  const b = new Date(end + "T12:00:00");
+  const diff = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+  return Math.max(1, Math.min(MAX_MISSION_DAYS, diff));
+}
+
+export function prettyMissionDate(iso: string): string {
+  try {
+    return new Date(iso + "T12:00:00").toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+export function formatMissionSpan(start: string, end: string | null): string {
+  if (!end) return `From ${prettyMissionDate(start)}`;
+  return `${prettyMissionDate(start)} – ${prettyMissionDate(end)}`;
+}
+
+export function resolveMissionSpan(opts: {
+  kind: MissionKind;
+  startDate?: unknown;
+  endDate?: unknown;
+  days?: unknown;
+  fallbackStart: string;
+}): { startDate: string; days: number; endDate: string | null } {
+  const start = isYmd(opts.startDate) ? opts.startDate : opts.fallbackStart;
+  if (isYmd(opts.endDate)) {
+    const end = opts.endDate < start ? start : opts.endDate;
+    return {
+      startDate: start,
+      days: daysFromRange(start, end),
+      endDate: end,
+    };
+  }
+  const noEnd =
+    opts.endDate === "" ||
+    opts.endDate === null ||
+    opts.endDate === "ongoing";
+  if (noEnd && opts.kind === "manual") {
+    const rawDays = opts.days;
+    if (
+      rawDays === undefined ||
+      rawDays === "" ||
+      rawDays === 0 ||
+      rawDays === "0"
+    ) {
+      return { startDate: start, days: 0, endDate: null };
+    }
+  }
+  const days = clampMissionDays(opts.days, opts.kind);
+  return {
+    startDate: start,
+    days,
+    endDate: missionEndDate(start, days),
+  };
 }
 
 export function formatMissionDay(progress: MissionProgress): string {

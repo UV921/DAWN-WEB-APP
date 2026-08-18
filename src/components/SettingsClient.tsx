@@ -128,8 +128,8 @@ export function SettingsClient() {
                       Mission
                     </h2>
                     <p className="mt-2 text-sm text-[var(--color-mist)]">
-                      Pick length, habits, and daily tasks — or a long manual
-                      mission like a hackathon. It shows on Today and Stats.
+                      Add a mission like a task. Edit the name, start date, and
+                      end date. Stop stays on this screen — no browser popup.
                     </p>
                   </div>
                   <MissionSetup />

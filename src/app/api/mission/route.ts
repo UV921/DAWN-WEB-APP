@@ -9,9 +9,11 @@ import {
   clampMissionDays,
   isMissionKind,
   MAX_ACTIVE_MISSIONS,
+  missionEndDate,
   missionHabitStats,
   missionProgress,
   parseJsonArray,
+  resolveMissionSpan,
   type MissionKind,
   type MissionPublic,
 } from "@/lib/missions";
@@ -47,6 +49,7 @@ function toPublic(
     kind,
     note: mission.note || "",
     startDate: mission.startDate,
+    endDate: missionEndDate(mission.startDate, mission.days),
     days: mission.days,
     active: mission.active,
     habitKeys: keys,
@@ -138,9 +141,15 @@ export async function POST(req: Request) {
       kind === "manual" ? "Hackathon" : "7-day mission";
     const title = String(body.title || defaultTitle).trim().slice(0, 80);
     const note = String(body.note || "").trim().slice(0, 200);
-    const rawDays = body.days;
-    const ongoing = kind === "manual" && (rawDays === 0 || rawDays === "0");
-    const days = ongoing ? 0 : clampMissionDays(rawDays ?? (kind === "manual" ? 3 : 7), kind);
+    const span = resolveMissionSpan({
+      kind,
+      startDate: body.startDate,
+      endDate: body.endDate,
+      days: body.days,
+      fallbackStart: today,
+    });
+    const days = span.days;
+    const startDate = span.startDate;
     let habitKeys = Array.isArray(body.habitKeys)
       ? (body.habitKeys as unknown[])
           .map((k) => String(k).trim())
@@ -233,7 +242,7 @@ export async function POST(req: Request) {
         title: title || defaultTitle,
         kind,
         note,
-        startDate: today,
+        startDate,
         days,
         active: true,
         habitKeys: JSON.stringify(habitKeys),
@@ -272,6 +281,68 @@ export async function POST(req: Request) {
       });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (action === "update") {
+    const missionId = String(body.missionId || "");
+    if (!missionId) {
+      return NextResponse.json({ error: "Missing mission" }, { status: 400 });
+    }
+    const row = await prisma.mission.findFirst({
+      where: { id: missionId, userId, active: true },
+    });
+    if (!row) {
+      return NextResponse.json({ error: "Mission not found" }, { status: 404 });
+    }
+    const kind: MissionKind = isMissionKind(row.kind) ? row.kind : "run";
+    const span = resolveMissionSpan({
+      kind,
+      startDate: body.startDate ?? row.startDate,
+      endDate:
+        body.endDate !== undefined
+          ? body.endDate
+          : missionEndDate(row.startDate, row.days),
+      days: body.days !== undefined ? body.days : row.days,
+      fallbackStart: row.startDate,
+    });
+    const title =
+      typeof body.title === "string"
+        ? body.title.trim().slice(0, 80) || row.title
+        : row.title;
+    const note =
+      typeof body.note === "string"
+        ? body.note.trim().slice(0, 200)
+        : row.note;
+    const habitKeys = Array.isArray(body.habitKeys)
+      ? (body.habitKeys as unknown[])
+          .map((k) => String(k).trim())
+          .filter(Boolean)
+          .slice(0, 12)
+      : parseJsonArray(row.habitKeys);
+    const taskTemplates = Array.isArray(body.taskTemplates)
+      ? (body.taskTemplates as unknown[])
+          .map((t) => String(t).trim().slice(0, 120))
+          .filter(Boolean)
+          .slice(0, 10)
+      : parseJsonArray(row.taskTemplates);
+
+    const updated = await prisma.mission.update({
+      where: { id: row.id },
+      data: {
+        title,
+        note,
+        startDate: span.startDate,
+        days: span.days,
+        habitKeys: JSON.stringify(habitKeys),
+        taskTemplates: JSON.stringify(taskTemplates),
+      },
+      include: { checks: { select: { date: true } } },
+    });
+    const habits = await ensureDefaultHabits(userId);
+    const logs = await loadLogs(userId, span.startDate, today);
+    return NextResponse.json({
+      mission: toPublic(updated, today, habits, logs),
+    });
   }
 
   if (action === "set-days") {
