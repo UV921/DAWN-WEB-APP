@@ -14,13 +14,13 @@ export function DailyLoop({ steps }: { steps: LoopStep[] }) {
   const done = steps.filter((s) => s.done).length;
   return (
     <section>
-      <div className="mb-2 flex items-baseline justify-between">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
         <h2 className="ui-section-title text-[1.15rem]">The day</h2>
-        <span className="text-xs tabular-nums text-[var(--color-mist)]">
+        <span className="shrink-0 text-xs tabular-nums text-[var(--color-mist)]">
           {done}/{steps.length} done
         </span>
       </div>
-      <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      <ol className="day-loop">
         {steps.map((s, i) => {
           const inner = (
             <>
@@ -47,15 +47,15 @@ export function DailyLoop({ steps }: { steps: LoopStep[] }) {
               </span>
             </>
           );
-          const cls = `rounded-xl border px-2 py-2.5 text-left sm:px-3 sm:py-3 ${
+          const cls = `day-loop-step ${
             s.done
               ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]"
               : "border-white/12 bg-white/[0.03]"
           }`;
           return (
-            <li key={s.key}>
+            <li key={s.key} className="min-w-0">
               {s.href && !s.done ? (
-                <Link href={s.href} className={`${cls} block`}>
+                <Link href={s.href} className={cls}>
                   {inner}
                 </Link>
               ) : (
