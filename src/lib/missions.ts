@@ -18,6 +18,13 @@ export type MissionHabitStat = {
   daysDone: number;
 };
 
+export type MissionStepPublic = {
+  id: string;
+  text: string;
+  done: boolean;
+  sortOrder: number;
+};
+
 export type MissionPublic = {
   id: string;
   title: string;
@@ -34,10 +41,12 @@ export type MissionPublic = {
   checkDates: string[];
   daysWorked: number;
   doneToday: boolean;
+  steps: MissionStepPublic[];
 };
 
 export const MAX_ACTIVE_MISSIONS = 8;
 export const MAX_MISSION_DAYS = 365;
+export const MAX_MISSION_STEPS = 8;
 
 export function parseJsonArray(raw: string | null | undefined): string[] {
   try {

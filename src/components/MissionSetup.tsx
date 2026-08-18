@@ -209,6 +209,17 @@ export function MissionSetup({
     await load();
   }
 
+  async function mutateStep(body: Record<string, unknown>) {
+    setBusy(true);
+    await fetch("/api/mission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setBusy(false);
+    await load();
+  }
+
   const allOpts = [
     ...HABIT_QUICK,
     ...habits
@@ -424,6 +435,19 @@ export function MissionSetup({
                   onKeep={() => setStoppingId(null)}
                   onStop={() => void stopMission(mission.id)}
                   extra={editingId === mission.id ? extras : undefined}
+                  onAddStep={(text) =>
+                    void mutateStep({
+                      action: "add-step",
+                      missionId: mission.id,
+                      text,
+                    })
+                  }
+                  onToggleStep={(stepId, done) =>
+                    void mutateStep({ action: "toggle-step", stepId, done })
+                  }
+                  onDeleteStep={(stepId) =>
+                    void mutateStep({ action: "delete-step", stepId })
+                  }
                 />
               </div>
             </li>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { MissionSteps } from "@/components/MissionSteps";
 import {
   formatMissionDay,
   formatMissionSpan,
@@ -107,6 +108,41 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
       return;
     }
     apply(missions.map((m) => (m.id === updated.id ? updated : m)));
+  }
+
+  async function applyMissionResult(ok: boolean, data: { mission?: MissionPublic | null; error?: string }) {
+    if (!ok) {
+      setErr(String(data.error || "Could not update steps."));
+      await load();
+      return;
+    }
+    const updated = data.mission as MissionPublic | null;
+    if (!updated) {
+      await load();
+      return;
+    }
+    apply(missions.map((m) => (m.id === updated.id ? updated : m)));
+  }
+
+  async function addStep(missionId: string, text: string) {
+    setBusyId(missionId);
+    const { ok, data } = await post({ action: "add-step", missionId, text });
+    setBusyId("");
+    await applyMissionResult(ok, data);
+  }
+
+  async function toggleStep(missionId: string, stepId: string, done: boolean) {
+    setBusyId(missionId);
+    const { ok, data } = await post({ action: "toggle-step", stepId, done });
+    setBusyId("");
+    await applyMissionResult(ok, data);
+  }
+
+  async function deleteStep(missionId: string, stepId: string) {
+    setBusyId(missionId);
+    const { ok, data } = await post({ action: "delete-step", stepId });
+    setBusyId("");
+    await applyMissionResult(ok, data);
   }
 
   async function addMission(next: MissionDraft) {
@@ -261,6 +297,9 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
                 }}
                 onKeep={() => setStoppingId(null)}
                 onStop={() => void stopMission(m.id)}
+                onAddStep={(text) => void addStep(m.id, text)}
+                onToggleStep={(stepId, done) => void toggleStep(m.id, stepId, done)}
+                onDeleteStep={(stepId) => void deleteStep(m.id, stepId)}
               />
             </li>
           ))}
@@ -290,6 +329,9 @@ export function MissionLiveRow({
   onKeep,
   onStop,
   extra,
+  onAddStep,
+  onToggleStep,
+  onDeleteStep,
 }: {
   mission: MissionPublic;
   busy?: boolean;
@@ -305,6 +347,9 @@ export function MissionLiveRow({
   onKeep?: () => void;
   onStop?: () => void;
   extra?: ReactNode;
+  onAddStep?: (text: string) => void;
+  onToggleStep?: (id: string, done: boolean) => void;
+  onDeleteStep?: (id: string) => void;
 }) {
   const p = m.progress;
   const pct = p.ongoing
@@ -324,6 +369,9 @@ export function MissionLiveRow({
             {formatMissionDay(p)} · {formatMissionSpan(m.startDate, m.endDate)}
             {m.kind === "manual"
               ? ` · ${m.daysWorked} day${m.daysWorked === 1 ? "" : "s"} worked`
+              : ""}
+            {(m.steps || []).length
+              ? ` · ${m.steps.filter((s) => s.done).length}/${m.steps.length} steps`
               : ""}
           </p>
         </div>
@@ -350,6 +398,16 @@ export function MissionLiveRow({
       </div>
       {m.note ? (
         <p className="mt-2 text-xs text-[var(--color-mist)]">{m.note}</p>
+      ) : null}
+
+      {onAddStep && onToggleStep && onDeleteStep ? (
+        <MissionSteps
+          steps={m.steps || []}
+          busy={busy}
+          onAdd={onAddStep}
+          onToggle={onToggleStep}
+          onDelete={onDeleteStep}
+        />
       ) : null}
 
       {editing && draft && onDraft ? (

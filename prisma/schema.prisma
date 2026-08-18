@@ -400,6 +400,7 @@ model Mission {
 
   user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   checks MissionCheck[]
+  steps  MissionStep[]
 
   @@index([userId, active])
   @@index([userId, kind])
@@ -417,4 +418,18 @@ model MissionCheck {
 
   @@unique([missionId, date])
   @@index([missionId, date])
+}
+
+/// One checklist step on a mission — same idea as a todo subtask.
+model MissionStep {
+  id        String   @id @default(cuid())
+  missionId String
+  text      String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@index([missionId, sortOrder])
 }
