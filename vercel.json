@@ -1,5 +1,19 @@
 {
   "framework": "nextjs",
   "buildCommand": "prisma generate && prisma db push && next build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "dawn-web-app.vercel.app" }],
+      "destination": "https://dawn.uvesh.in/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!api/auth/).*)",
+      "has": [{ "type": "host", "value": "dawn-web-app.vercel.app" }],
+      "destination": "https://dawn.uvesh.in/$1",
+      "permanent": false
+    }
+  ]
 }
