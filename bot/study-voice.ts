@@ -3,14 +3,22 @@
  * Counts only existing Dawn users (discordId linked). Bot must stay online.
  */
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   Client,
   EmbedBuilder,
+  ModalBuilder,
   PermissionFlagsBits,
+  TextInputBuilder,
+  TextInputStyle,
+  type ButtonInteraction,
   type ChatInputCommandInteraction,
+  type ModalSubmitInteraction,
   type VoiceState,
 } from "discord.js";
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient, StudySession } from "@prisma/client";
 import { DEFAULT_TZ } from "../src/lib/clock";
 import {
   envStudyVoiceIds,
@@ -22,6 +30,13 @@ import {
   sessionMinutes,
   todayInZone,
 } from "../src/lib/study-time";
+import {
+  isWebStudySession,
+  normalizeStudyActivity,
+  STUDY_ACTIVITY_MAX,
+  STUDY_ACTIVITY_PRESETS,
+  studyActivityLabel,
+} from "../src/lib/study-activity";
 import { safeRespond } from "./respond";
 
 type RoomCache = { ids: Set<string>; at: number };
@@ -113,6 +128,129 @@ async function peopleInStudyRooms(
   return present;
 }
 
+function activityAskRows(discordId: string, selected?: string | null) {
+  const presetBtns = STUDY_ACTIVITY_PRESETS.map((p) =>
+    new ButtonBuilder()
+      .setCustomId(`st:${p.key}:${discordId}`)
+      .setLabel(p.label)
+      .setStyle(
+        p.key === selected
+          ? ButtonStyle.Success
+          : p.key === "coding"
+            ? ButtonStyle.Primary
+            : ButtonStyle.Secondary
+      )
+  );
+  return [
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      ...presetBtns,
+      new ButtonBuilder()
+        .setCustomId(`st:other:${discordId}`)
+        .setLabel("Write it…")
+        .setStyle(
+          selected === "custom" ? ButtonStyle.Success : ButtonStyle.Secondary
+        )
+    ),
+  ];
+}
+
+function activityModal(discordId: string) {
+  return new ModalBuilder()
+    .setCustomId(`st_modal:${discordId}`)
+    .setTitle("What are you doing?")
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("text")
+          .setLabel("Write it in your words")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(STUDY_ACTIVITY_MAX)
+          .setPlaceholder("Coding Dawn, reading notes, …")
+      )
+    );
+}
+
+function activityAskEmbed(name?: string | null) {
+  const who = name ? `**${name}**, ` : "";
+  return new EmbedBuilder()
+    .setColor(0xf0b45a)
+    .setTitle("What are you doing?")
+    .setDescription(
+      `${who}tap **Coding** or write it. Same options are on Today in Dawn.`
+    );
+}
+
+async function askWhatYouDoing(
+  client: Client,
+  prisma: PrismaClient,
+  discordId: string,
+  session: {
+    id: string;
+    channelId: string;
+    activity?: string | null;
+    activityKey?: string | null;
+    activityAskedAt?: Date | null;
+  },
+  name?: string | null
+) {
+  if (studyActivityLabel(session)) return;
+  if (session.activityAskedAt) return;
+  await prisma.studySession.update({
+    where: { id: session.id },
+    data: { activityAskedAt: new Date() },
+  });
+
+  const rows = activityAskRows(discordId);
+  const embed = activityAskEmbed(name);
+
+  const ch = await client.channels.fetch(session.channelId).catch(() => null);
+  if (ch && "send" in ch && typeof ch.send === "function") {
+    try {
+      await ch.send({
+        content: `<@${discordId}> what are you doing?`,
+        embeds: [embed],
+        components: rows,
+        allowedMentions: { users: [discordId] },
+      });
+      return;
+    } catch {
+      /* text-in-voice may be off — DM instead */
+    }
+  }
+
+  try {
+    const user = await client.users.fetch(discordId);
+    await user.send({
+      content: "You joined a study room — what are you doing?",
+      embeds: [embed],
+      components: rows,
+    });
+  } catch {
+    /* DMs closed */
+  }
+}
+
+async function applyLiveActivity(
+  prisma: PrismaClient,
+  userId: string,
+  parsed: { key: string; label: string }
+) {
+  const open = await prisma.studySession.findFirst({
+    where: { userId, endedAt: null },
+    orderBy: { startedAt: "desc" },
+  });
+  if (!open) return null;
+  return prisma.studySession.update({
+    where: { id: open.id },
+    data: {
+      activityKey: parsed.key,
+      activity: parsed.label,
+      activityAskedAt: open.activityAskedAt || new Date(),
+    },
+  });
+}
+
 async function closeSession(
   prisma: PrismaClient,
   session: { id: string; startedAt: Date; date: string },
@@ -143,20 +281,43 @@ async function openSession(
   user: { id: string; timezone: string },
   guildId: string,
   channelId: string
-) {
+): Promise<StudySession> {
   const existing = await prisma.studySession.findFirst({
     where: { userId: user.id, endedAt: null },
     orderBy: { startedAt: "desc" },
   });
   if (existing) {
-    if (existing.channelId === channelId) return;
+    if (existing.channelId === channelId) return existing;
+    if (isWebStudySession(existing)) {
+      return prisma.studySession.update({
+        where: { id: existing.id },
+        data: { guildId, channelId, source: "discord" },
+      });
+    }
+    const carried = {
+      activityKey: existing.activityKey,
+      activity: existing.activity,
+      activityAskedAt: existing.activityAskedAt,
+    };
     await closeSession(prisma, existing, new Date());
+    return prisma.studySession.create({
+      data: {
+        userId: user.id,
+        guildId,
+        channelId,
+        source: "discord",
+        date: todayInZone(user.timezone || DEFAULT_TZ),
+        startedAt: new Date(),
+        ...carried,
+      },
+    });
   }
-  await prisma.studySession.create({
+  return prisma.studySession.create({
     data: {
       userId: user.id,
       guildId,
       channelId,
+      source: "discord",
       date: todayInZone(user.timezone || DEFAULT_TZ),
       startedAt: new Date(),
     },
@@ -228,8 +389,9 @@ export async function handleVoiceStateUpdate(
 
   const guildId = newState.guild.id;
   if (joinedStudy && newCh) {
-    await openSession(prisma, user, guildId, newCh);
+    const session = await openSession(prisma, user, guildId, newCh);
     console.log(`[study] joined user=${user.id} ch=${newCh}`);
+    await askWhatYouDoing(client, prisma, discordId, session, user.name);
   }
 }
 
@@ -266,6 +428,25 @@ export async function reconcileOpenSessions(
   const counted = new Set<string>();
 
   for (const session of open) {
+    if (isWebStudySession(session)) {
+      const ids = discordIdsForUser(session.user);
+      const loc = ids.map((id) => present.get(id)).find(Boolean);
+      if (loc) {
+        await prisma.studySession.update({
+          where: { id: session.id },
+          data: {
+            guildId: loc.guildId,
+            channelId: loc.channelId,
+            source: "discord",
+          },
+        });
+        counted.add(session.user.id);
+        for (const id of ids) present.delete(id);
+        continue;
+      }
+      counted.add(session.user.id);
+      continue;
+    }
     const ids = discordIdsForUser(session.user);
     const loc = ids.map((id) => present.get(id)).find(Boolean);
     if (loc) {
@@ -293,9 +474,10 @@ export async function reconcileOpenSessions(
   for (const [discordId, loc] of present) {
     const user = await findDawnUser(prisma, discordId);
     if (!user || counted.has(user.id)) continue;
-    await openSession(prisma, user, loc.guildId, loc.channelId);
+    const session = await openSession(prisma, user, loc.guildId, loc.channelId);
     counted.add(user.id);
     console.log(`[study] recovered occupant user=${user.id} ch=${loc.channelId}`);
+    await askWhatYouDoing(client, prisma, discordId, session, user.name);
   }
 }
 
@@ -457,7 +639,9 @@ export async function handleStudiedCommand(
 
   const todayMin = byDate.get(today) || 0;
   const weekMin = [...byDate.values()].reduce((a, b) => a + b, 0);
-  const live = sessions.some((s) => !s.endedAt);
+  const liveSession = sessions.find((s) => !s.endedAt);
+  const live = Boolean(liveSession);
+  const doing = liveSession ? studyActivityLabel(liveSession) : null;
   const weekLines = weekDates.map((d) => {
     const m = Math.round(byDate.get(d) || 0);
     const mark = d === today ? " ←" : "";
@@ -468,10 +652,20 @@ export async function handleStudiedCommand(
     .setColor(0xf0b45a)
     .setTitle("Study time")
     .setDescription(
-      `**Today** ${formatStudyDuration(todayMin)}${live ? " · in a study VC now" : ""}\n**This week** ${formatStudyDuration(weekMin)}\n\n${weekLines.join("\n")}`
+      [
+        `**Today** ${formatStudyDuration(todayMin)}${live ? " · in a study session now" : ""}`,
+        doing ? `**Doing** ${doing}` : null,
+        `**This week** ${formatStudyDuration(weekMin)}`,
+        "",
+        weekLines.join("\n"),
+      ]
+        .filter(Boolean)
+        .join("\n")
     )
     .setFooter({
-      text: "Dawn tracks marked study VCs — not LionBot. Bot must stay online.",
+      text: live
+        ? "Tap the ping buttons, /doing, or set it on Today in Dawn."
+        : "Dawn tracks marked study VCs — not LionBot. Bot must stay online.",
     });
 
   try {
@@ -483,7 +677,186 @@ export async function handleStudiedCommand(
   } catch {
     await safeRespond(
       interaction,
-      `**Today** ${formatStudyDuration(todayMin)}${live ? " · live" : ""}\n**This week** ${formatStudyDuration(weekMin)}`
+      `**Today** ${formatStudyDuration(todayMin)}${live ? " · live" : ""}${doing ? ` · ${doing}` : ""}\n**This week** ${formatStudyDuration(weekMin)}`
     );
   }
+}
+
+export async function handleDoingCommand(
+  prisma: PrismaClient,
+  interaction: ChatInputCommandInteraction
+) {
+  const user = await findDawnUser(prisma, interaction.user.id);
+  if (!user) {
+    await safeRespond(
+      interaction,
+      "Link Discord in Dawn first, then join a study room — or start a session on Today in the app."
+    );
+    return;
+  }
+
+  const open = await prisma.studySession.findFirst({
+    where: { userId: user.id, endedAt: null },
+    orderBy: { startedAt: "desc" },
+  });
+  if (!open) {
+    await safeRespond(
+      interaction,
+      "No live session. Join a marked study voice channel, or tap **Start** on Today in Dawn."
+    );
+    return;
+  }
+
+  const what = interaction.options.getString("what");
+  if (what) {
+    const parsed = normalizeStudyActivity({ text: what });
+    if (!parsed) {
+      await safeRespond(interaction, "Write what you’re doing, or pick a button.");
+      return;
+    }
+    await applyLiveActivity(prisma, user.id, parsed);
+    await safeRespond(interaction, `Logged **${parsed.label}**. Keep going.`);
+    return;
+  }
+
+  const current = studyActivityLabel(open);
+  const payload = {
+    content: current
+      ? `This session is **${current}**. Change it:`
+      : "What are you doing?",
+    embeds: [activityAskEmbed(user.name)],
+    components: activityAskRows(interaction.user.id, open.activityKey),
+  };
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(payload);
+    } else {
+      await interaction.reply({ ...payload, ephemeral: true });
+    }
+  } catch {
+    await safeRespond(
+      interaction,
+      current
+        ? `This session is **${current}**. Use the buttons in the study room ping, or set it on Today in Dawn.`
+        : "Join ping didn’t stick — set what you’re doing on Today in Dawn."
+    );
+  }
+}
+
+export function isStudyActivityCustomId(customId: string): boolean {
+  return customId.startsWith("st:") || customId.startsWith("st_modal:");
+}
+
+export async function handleStudyActivityButton(
+  prisma: PrismaClient,
+  interaction: ButtonInteraction
+) {
+  const parts = interaction.customId.split(":");
+  const key = parts[1] || "";
+  const forDiscordId = parts[2] || "";
+  if (forDiscordId && forDiscordId !== interaction.user.id) {
+    await interaction.reply({
+      content: "That ping is for someone else.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (key === "other") {
+    await interaction.showModal(activityModal(interaction.user.id));
+    return;
+  }
+
+  const parsed = normalizeStudyActivity({ key });
+  if (!parsed) {
+    await interaction.reply({
+      content: "Pick Coding, or write what you’re doing.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const user = await findDawnUser(prisma, interaction.user.id);
+  if (!user) {
+    await interaction.reply({
+      content: "Link Discord in Dawn first (Login → Continue with Discord).",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const saved = await applyLiveActivity(prisma, user.id, parsed);
+  if (!saved) {
+    await interaction.reply({
+      content:
+        "No live session. Join a study voice channel, or start one on Today in Dawn.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const next = {
+    content: `<@${interaction.user.id}> is **${parsed.label}**.`,
+    embeds: [],
+    components: activityAskRows(interaction.user.id, parsed.key),
+    allowedMentions: { users: [interaction.user.id] },
+  };
+
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(next);
+    } else if (interaction.message) {
+      await interaction.update(next);
+    } else {
+      await interaction.reply({ ...next, ephemeral: true });
+    }
+  } catch {
+    await interaction
+      .reply({
+        content: `Logged **${parsed.label}**.`,
+        ephemeral: true,
+      })
+      .catch(() => undefined);
+  }
+}
+
+export async function handleStudyActivityModal(
+  prisma: PrismaClient,
+  interaction: ModalSubmitInteraction
+) {
+  const forDiscordId = interaction.customId.split(":")[1] || "";
+  if (forDiscordId && forDiscordId !== interaction.user.id) {
+    await interaction.reply({
+      content: "That prompt is for someone else.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const text = interaction.fields.getTextInputValue("text");
+  const parsed = normalizeStudyActivity({ text });
+  if (!parsed) {
+    await interaction.reply({
+      content: "Write a short note about what you’re doing.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const user = await findDawnUser(prisma, interaction.user.id);
+  if (!user) {
+    await interaction.reply({
+      content: "Link Discord in Dawn first.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const saved = await applyLiveActivity(prisma, user.id, parsed);
+  await interaction.reply({
+    content: saved
+      ? `Logged **${parsed.label}**. You can change it anytime — same options are on Today in Dawn.`
+      : "No live session. Join a study voice channel, or start one on Today in Dawn.",
+    ephemeral: true,
+  });
 }

@@ -16,6 +16,10 @@ export type StudyStats = {
     minutes: number;
     label: string;
     live: boolean;
+    liveStartedAt?: string | null;
+    activity?: string | null;
+    activityKey?: string | null;
+    source?: "discord" | "web" | null;
   };
   days?: { date: string; minutes: number }[];
   week: { date: string; minutes: number }[];
@@ -155,6 +159,11 @@ export function StudyStatusPanel({
       <p className="mt-2 text-sm leading-relaxed text-[var(--color-cloud)]">
         {data.status.body}
       </p>
+      {data.today.live && data.today.activity ? (
+        <p className="mt-2 text-sm text-[var(--color-leaf)]">
+          Doing {data.today.activity}
+        </p>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Mini

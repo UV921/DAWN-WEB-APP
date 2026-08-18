@@ -283,12 +283,20 @@ model StudyRoom {
   @@index([guildId])
 }
 
-/// Time spent in a marked study voice channel.
+/// Time spent in a marked study voice channel, or started from the Dawn app.
 model StudySession {
   id        String    @id @default(cuid())
   userId    String
   guildId   String
   channelId String
+  /// discord | web
+  source    String    @default("discord")
+  /// coding | studying | reading | writing | custom
+  activityKey String?
+  /// Display label — preset name, or what they typed
+  activity    String?
+  /// When Dawn asked “what are you doing?” (avoids repeat pings)
+  activityAskedAt DateTime?
   /// Local YYYY-MM-DD of session start (user timezone)
   date      String
   startedAt DateTime
