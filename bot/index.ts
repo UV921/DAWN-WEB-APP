@@ -2,7 +2,7 @@
  * Dawn Discord bot
  *
  * /setup /woke /checkin /habit /today /me /streak /focus /why /board
- * /week /grid /track /join /morning /study-room /studied
+ * /week /grid /track /join /morning /study-room /studied /doing
  * /ping — DM every member now "are you awake?"
  * /leaderboard — post who woke + habit ranks
  *
@@ -92,8 +92,12 @@ import {
 } from "./day-flow";
 import {
   attachStudyVoice,
+  handleDoingCommand,
   handleStudiedCommand,
+  handleStudyActivityButton,
+  handleStudyActivityModal,
   handleStudyRoomCommand,
+  isStudyActivityCustomId,
 } from "./study-voice";
 
 (function loadEnv() {
@@ -770,6 +774,14 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName("studied")
       .setDescription("Your Dawn study hours from marked voice channels"),
+    new SlashCommandBuilder()
+      .setName("doing")
+      .setDescription("Say what you’re doing in this study session")
+      .addStringOption((o) =>
+        o
+          .setName("what")
+          .setDescription("Coding, or write it in your words")
+      ),
   ].map((c) => c.toJSON());
 
   const rest = new REST({ version: "10" }).setToken(token!);
@@ -1346,6 +1358,11 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
 
   if (interaction.commandName === "studied") {
     await handleStudiedCommand(prisma, interaction);
+    return;
+  }
+
+  if (interaction.commandName === "doing") {
+    await handleDoingCommand(prisma, interaction);
     return;
   }
 
@@ -2294,6 +2311,11 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
 async function handleButton(interaction: ButtonInteraction) {
   const date = todayStr();
 
+  if (isStudyActivityCustomId(interaction.customId)) {
+    await handleStudyActivityButton(prisma, interaction);
+    return;
+  }
+
   // Public board join / leave (no privileged members intent needed)
   if (interaction.customId === "board:join" || interaction.customId === "board:leave") {
     if (!interaction.guildId || !interaction.channelId) {
@@ -2935,6 +2957,10 @@ async function handleButton(interaction: ButtonInteraction) {
 }
 
 async function handleModal(interaction: ModalSubmitInteraction) {
+  if (isStudyActivityCustomId(interaction.customId)) {
+    await handleStudyActivityModal(prisma, interaction);
+    return;
+  }
   if (interaction.customId === "mq_modal_remind") {
     const what = interaction.fields.getTextInputValue("what").trim();
     const timeRaw = interaction.fields.getTextInputValue("time").trim();

@@ -19,8 +19,8 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 - Wake-time chart, completion bars, 6-week heatmap  
 - Friend circle: invite code, Discord / same-server add, rank board (habits + study hours)  
 - Check-ins posted to your Discord channel  
-- Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`, `/study-room`, `/studied`
-- Study hours from marked Discord voice channels (Dawn’s own timer)
+- Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`, `/study-room`, `/studied`, `/doing`
+- Study hours from marked Discord voice channels (Dawn’s own timer). Join a room and the bot asks what you’re doing (Coding, or write it). You can also start / label a session on Today in the app.
 
 ## Setup
 
@@ -135,6 +135,7 @@ In Discord you can use:
    - `/week` · `/grid` — personal bars + contribution grid
    - `/habit add` · `/woke` · `/checkin` · `/today` · `/setup`
    - `/study-room add` — mark a voice channel · `/studied` — your hours
+   - Join a study VC → Dawn pings **what are you doing?** · `/doing` to change it
 
 
 
