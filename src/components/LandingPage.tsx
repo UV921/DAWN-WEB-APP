@@ -463,8 +463,8 @@ export function LandingPage({ snap }: Props) {
               Night
             </h2>
             <p className="mt-2 max-w-[36ch] text-[14px] leading-relaxed text-[#9aa6b2]">
-              Minimum you need. Hours you took. A suggestion for tonight. Then
-              the report and the week’s stats.
+              What time you slept. What time you should have. A gold band for
+              the plan — bars for the nights you actually took.
             </p>
             <div className="mt-6 flex min-h-[20rem] flex-1">
               <LandingNightDetail sleepGoal={SLEEP} wakeGoal={WAKE} />
