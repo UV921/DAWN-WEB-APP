@@ -20,6 +20,8 @@ import {
 } from "@/lib/progress-brief";
 import { HabitCharts } from "@/components/HabitCharts";
 import type { StudyStats } from "@/components/StudyStatusPanel";
+import { MissionStats } from "@/components/MissionStats";
+import type { MissionPublic } from "@/lib/missions";
 
 export type TodoStat = { date: string; total: number; done: number };
 
@@ -38,6 +40,8 @@ type Props = {
   todayTodos?: ReportTodo[];
   range: ReportRange;
   onRange: (range: ReportRange) => void;
+  missions?: MissionPublic[];
+  missionHistory?: MissionPublic[];
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -157,6 +161,8 @@ export function ProgressDetail({
   todayTodos = [],
   range,
   onRange,
+  missions = [],
+  missionHistory = [],
 }: Props) {
   const { data: session } = useSession();
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
@@ -591,6 +597,12 @@ export function ProgressDetail({
           <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
         </div>
       </div>
+
+      <MissionStats
+        missions={missions}
+        history={missionHistory}
+        range={range}
+      />
 
       {perHabit.length ? (
         <div>

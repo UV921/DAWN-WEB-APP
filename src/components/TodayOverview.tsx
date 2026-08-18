@@ -20,6 +20,14 @@ type Props = {
     daysLeft: number;
     ended: boolean;
   } | null;
+  mission?: {
+    title: string;
+    day: number;
+    total: number;
+    daysLeft: number;
+    ongoing: boolean;
+    kind: string;
+  } | null;
   onStartChallenge: (days: number) => void;
 };
 
@@ -32,10 +40,12 @@ export function TodayOverview({
   intoLevel,
   need,
   challenge,
+  mission,
   onStartChallenge,
 }: Props) {
   const { data: session } = useSession();
   const active = Boolean(challenge?.active) && !challenge?.ended;
+  const missionLive = Boolean(mission);
   const habitPct = habitsTotal
     ? Math.round((habitsDone / habitsTotal) * 100)
     : 0;
@@ -55,9 +65,14 @@ export function TodayOverview({
             level,
             xp,
             challenge:
-              active && challenge
-                ? { day: challenge.day, total: challenge.total }
-                : null,
+              missionLive && mission
+                ? {
+                    day: mission.day,
+                    total: mission.ongoing ? mission.day : mission.total,
+                  }
+                : active && challenge
+                  ? { day: challenge.day, total: challenge.total }
+                  : null,
           })
         }
       />
@@ -91,8 +106,21 @@ export function TodayOverview({
           </div>
         </div>
         <div className="ui-card ui-card-compact !text-left lg:min-h-[7.25rem]">
-          <p className="ui-card-label">Challenge</p>
-          {active ? (
+          <p className="ui-card-label">{missionLive ? "Mission" : "Challenge"}</p>
+          {missionLive && mission ? (
+            <>
+              <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
+                {mission.ongoing
+                  ? `D${mission.day}`
+                  : `${mission.day}/${mission.total}`}
+              </p>
+              <p className="mt-1 truncate text-xs text-[var(--color-mist)]">
+                {mission.ongoing
+                  ? `${mission.title} · ongoing`
+                  : `${mission.title} · ${mission.daysLeft} left`}
+              </p>
+            </>
+          ) : active ? (
             <>
               <p className="font-display mt-1 text-[1.65rem] leading-none text-white sm:text-3xl">
                 {challenge?.day}/{challenge?.total}

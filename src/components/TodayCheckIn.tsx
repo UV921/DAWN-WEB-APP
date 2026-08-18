@@ -17,6 +17,7 @@ import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { NightCloseFlow } from "@/components/NightCloseFlow";
 import { TodayOverview } from "@/components/TodayOverview";
+import { TodayMissions } from "@/components/TodayMissions";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
 import { MorningPulseCard } from "@/components/MorningPulseCard";
 import { DailyLoop, type LoopStep } from "@/components/DailyLoop";
@@ -27,6 +28,7 @@ import {
   type MorningPulse,
   type WeekPulse,
 } from "@/lib/morning-pulse";
+import type { MissionPublic } from "@/lib/missions";
 
 type Streaks = Record<string, { current: number; longest: number }>;
 
@@ -147,6 +149,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const [hit, setHit] = useState<Hit | null>(null);
   const [dayMode, setDayMode] = useState<DayMode>("day");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [todayPlan, setTodayPlan] = useState<{
     goalText?: string;
     wakeGoal?: string | null;
@@ -192,7 +195,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/habits?days=42&lite=1");
+      const [res, missionRes] = await Promise.all([
+        fetch("/api/habits?days=42&lite=1"),
+        fetch("/api/mission"),
+      ]);
       if (!res.ok) {
         setLoadError("Couldn’t load today. Check your connection.");
         setLoading(false);
@@ -200,6 +206,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       }
       setLoadError("");
       const data = await res.json();
+      if (missionRes.ok) {
+        const m = await missionRes.json();
+        setMissions((m.missions || []) as MissionPublic[]);
+      }
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
       setStreaks(data.streaks);
@@ -562,6 +572,20 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         : "Morning habits done."
     : null;
 
+  const liveMissions = missions.filter((m) => m.active && !m.progress.ended);
+  const primary =
+    liveMissions.find((x) => x.kind === "manual") || liveMissions[0] || null;
+  const primaryMission = primary
+    ? {
+        title: primary.title,
+        day: primary.progress.day,
+        total: primary.progress.total,
+        daysLeft: primary.progress.daysLeft,
+        ongoing: primary.progress.ongoing,
+        kind: primary.kind,
+      }
+    : null;
+
   const loopSteps: LoopStep[] = [
     {
       key: "wake",
@@ -814,8 +838,11 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           intoLevel={profile?.intoLevel || 0}
           need={profile?.need || 80}
           challenge={challenge}
+          mission={primaryMission}
           onStartChallenge={(days) => void startChallenge(days)}
         />
+
+        <TodayMissions missions={missions} onChange={setMissions} />
 
         <div className="dash-work">
           {habitsPanel}
