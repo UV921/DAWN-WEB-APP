@@ -3,12 +3,12 @@ import { DEFAULT_HABITS } from "@/lib/habits";
 
 /** Ensure user has default habits (sleep/wake early + stack). */
 export async function ensureDefaultHabits(userId: string) {
-  const count = await prisma.habit.count({ where: { userId } });
-  if (count > 0) {
-    return prisma.habit.findMany({
-      where: { userId, active: true },
-      orderBy: { sortOrder: "asc" },
-    });
+  const existing = await prisma.habit.findMany({
+    where: { userId },
+    orderBy: { sortOrder: "asc" },
+  });
+  if (existing.length > 0) {
+    return existing.filter((h) => h.active);
   }
 
   await prisma.habit.createMany({

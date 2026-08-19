@@ -91,11 +91,15 @@ export function ReminderWatcher() {
       }
     }
 
-    void refreshList();
-    void tick();
+    const boot = window.setTimeout(() => {
+      void refreshList();
+    }, 2500);
+    const firstTick = window.setTimeout(() => void tick(), 5000);
     const listId = window.setInterval(() => void refreshList(), 180_000);
     const tickId = window.setInterval(() => void tick(), 60_000);
     return () => {
+      window.clearTimeout(boot);
+      window.clearTimeout(firstTick);
       window.clearInterval(listId);
       window.clearInterval(tickId);
     };

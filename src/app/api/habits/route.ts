@@ -85,9 +85,8 @@ export async function GET(req: Request) {
     new Date(Date.now() - days * 24 * 60 * 60 * 1000),
     tz
   );
-  const tomorrow = nextCalendarDate(today);
 
-  const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, tomorrowPlan, tomorrowTodos, todoHistory] =
+  const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, todoHistory] =
     await Promise.all([
       ensureDefaultHabits(userId),
       prisma.habitLog.findMany({
@@ -136,20 +135,11 @@ export async function GET(req: Request) {
         orderBy: { createdAt: "asc" },
       }),
       lite
-        ? Promise.resolve(null)
-        : prisma.dayPlan.findUnique({
-            where: { userId_date: { userId, date: tomorrow } },
-          }),
-      lite
-        ? Promise.resolve([])
+        ? Promise.resolve([] as { date: string; done: boolean }[])
         : prisma.todo.findMany({
-            where: { userId, date: tomorrow },
-            orderBy: { createdAt: "asc" },
+            where: { userId, date: { gte: since } },
+            select: { date: true, done: true },
           }),
-      prisma.todo.findMany({
-        where: { userId, date: { gte: since } },
-        select: { date: true, done: true },
-      }),
     ]);
 
   const habits = enrichHabitsWithWindows(
@@ -195,7 +185,7 @@ export async function GET(req: Request) {
     streaks,
     todayLog,
     today,
-    tomorrow,
+    tomorrow: nextCalendarDate(today),
     habits,
     wakeGoal,
     sleepGoal,
@@ -204,11 +194,9 @@ export async function GET(req: Request) {
     challenge,
     todayPlan,
     todayTodos,
-    tomorrowPlan,
-    tomorrowTodos,
     morningFlow: todayPlan?.morningFlow || "none",
     weekPulse,
-    todoStats,
+    todoStats: lite ? undefined : todoStats,
     profile: {
       xp: profile?.xp ?? 0,
       focusHabitKey: profile?.focusHabitKey,
