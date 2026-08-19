@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Sora } from "next/font/google";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "./providers";
 import { PwaRegister } from "@/components/PwaRegister";
 import { ReminderWatcher } from "@/components/ReminderWatcher";
@@ -70,6 +71,7 @@ export default function RootLayout({
           <PwaRegister />
           <ReminderWatcher />
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
