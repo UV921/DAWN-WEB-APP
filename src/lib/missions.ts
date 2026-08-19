@@ -221,6 +221,17 @@ export function formatMissionDay(progress: MissionProgress): string {
   return `Day ${progress.day} of ${progress.total}`;
 }
 
+/** Day count plus how many days remain to finish. */
+export function formatMissionRemaining(progress: MissionProgress): string {
+  if (progress.ongoing) return `Day ${progress.day} · ongoing`;
+  if (progress.ended) return `Finished · ${progress.total} days`;
+  if (progress.daysLeft <= 0) return formatMissionDay(progress);
+  if (progress.daysLeft === 1) {
+    return `Day ${progress.day} of ${progress.total} · last day`;
+  }
+  return `Day ${progress.day} of ${progress.total} · ${progress.daysLeft} days left`;
+}
+
 type LogLike = {
   date: string;
   checks?: Record<string, boolean> | string;

@@ -27,10 +27,17 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+function tabFromSearch(search: { get: (key: string) => string | null } | null): TabId {
+  const t = search?.get("tab");
+  if (t === "profile") return "you";
+  if (t && TABS.some((x) => x.id === t)) return t as TabId;
+  return "morning";
+}
+
 export function SettingsClient() {
   const { data: session, update } = useSession();
   const search = useSearchParams();
-  const [tab, setTab] = useState<TabId>("morning");
+  const [tab, setTab] = useState<TabId>(() => tabFromSearch(search));
   const [wakeGoal, setWakeGoal] = useState("06:00");
   const [sleepGoal, setSleepGoal] = useState("23:00");
 
@@ -128,11 +135,12 @@ export function SettingsClient() {
                       Mission
                     </h2>
                     <p className="mt-2 text-sm text-[var(--color-mist)]">
-                      Add a mission like a task. Edit the name, start date, and
-                      end date. Stop stays on this screen — no browser popup.
+                      Add and edit missions here. Today only shows the name,
+                      steps, and days left — tap Settings on a mission to open
+                      it on this tab.
                     </p>
                   </div>
-                  <MissionSetup />
+                  <MissionSetup focusId={search?.get("mission")} />
                 </div>
               ) : null}
 
