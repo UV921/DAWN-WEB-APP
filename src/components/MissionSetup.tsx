@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MissionLiveRow } from "@/components/TodayMissions";
 import {
   draftFromMission,
@@ -28,9 +28,11 @@ const HABIT_QUICK = [
 export function MissionSetup({
   onStarted,
   compact,
+  focusId,
 }: {
   onStarted?: () => void;
   compact?: boolean;
+  focusId?: string | null;
 }) {
   const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [habits, setHabits] = useState<HabitOpt[]>([]);
@@ -47,6 +49,7 @@ export function MissionSetup({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const openedFocus = useRef<string | null>(null);
 
   const live = missions.filter((m) => m.active && !m.progress.ended);
   const day = today || new Date().toISOString().slice(0, 10);
@@ -93,6 +96,21 @@ export function MissionSetup({
     setEditingId(m.id);
     setMsg("");
   }
+
+  useEffect(() => {
+    if (!focusId || openedFocus.current === focusId) return;
+    const mission = missions.find(
+      (m) => m.id === focusId && m.active && !m.progress.ended
+    );
+    if (!mission) return;
+    openedFocus.current = focusId;
+    beginEdit(mission);
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`mission-${focusId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [focusId, missions]);
 
   function toggleKey(key: string) {
     if (kind === "run" && key === "wakeEarly") return;
@@ -411,7 +429,12 @@ export function MissionSetup({
           {live.map((mission) => (
             <li
               key={mission.id}
-              className="rounded-2xl border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5"
+              id={`mission-${mission.id}`}
+              className={`rounded-2xl border bg-[var(--color-dawn)]/[0.07] px-5 py-5 ${
+                focusId === mission.id
+                  ? "border-[var(--color-dawn)]/70 ring-1 ring-[var(--color-dawn)]/35"
+                  : "border-[var(--color-dawn)]/30"
+              }`}
             >
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-dawn)]">
                 {mission.kind === "manual" ? "Manual mission" : "Habit run"}
