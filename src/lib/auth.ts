@@ -1,9 +1,11 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { enrollDiscordFriend } from "@/lib/discord-enroll";
+import type { SessionUserCache } from "@/types/next-auth";
 
 const discordConfigured =
   Boolean(process.env.DISCORD_CLIENT_ID?.trim()) &&
@@ -132,6 +134,73 @@ async function resolveSessionUser(token: {
   }
 
   return null;
+}
+
+type SessionUserRow = NonNullable<Awaited<ReturnType<typeof resolveSessionUser>>>;
+
+/** Collapse a burst of getServerSession calls on one warm instance into one DB read. */
+const SESSION_MEMO_MS = 20_000;
+const JWT_HYDRATE_MS = 60_000;
+const sessionMemo = new Map<string, { at: number; user: SessionUserRow }>();
+
+function toCachedUser(user: SessionUserRow): SessionUserCache {
+  return {
+    id: user.id,
+    discordId: user.discordId,
+    wakeGoal: user.wakeGoal,
+    sleepGoal: user.sleepGoal,
+    timezone: user.timezone,
+    name: user.name,
+    image: user.image,
+    email: user.email,
+    onboardingDone: user.onboardingDone,
+    focusHabitKey: user.focusHabitKey,
+    identityLine: user.identityLine,
+    whyLine: user.whyLine,
+    xp: user.xp,
+    level: user.level,
+  };
+}
+
+function rememberSessionUser(user: SessionUserRow) {
+  sessionMemo.set(user.id, { at: Date.now(), user });
+}
+
+async function resolveSessionUserMemo(token: {
+  sub?: string;
+  discordId?: unknown;
+}) {
+  if (token.sub && !isSnowflake(token.sub)) {
+    const hit = sessionMemo.get(token.sub);
+    if (hit && Date.now() - hit.at < SESSION_MEMO_MS) return hit.user;
+  }
+  const user = await resolveSessionUser(token);
+  if (user) rememberSessionUser(user);
+  return user;
+}
+
+function stampToken(token: JWT, user: SessionUserRow) {
+  token.sub = user.id;
+  token.hydratedAt = Date.now();
+  token.u = toCachedUser(user);
+}
+
+function applyCachedUser(session: { user?: Session["user"] }, user: SessionUserCache) {
+  if (!session.user) return;
+  session.user.id = user.id;
+  session.user.discordId = user.discordId;
+  session.user.wakeGoal = user.wakeGoal;
+  session.user.sleepGoal = user.sleepGoal;
+  session.user.timezone = user.timezone;
+  session.user.name = user.name ?? session.user.name;
+  session.user.image = user.image ?? session.user.image;
+  session.user.email = user.email ?? session.user.email;
+  session.user.onboardingDone = user.onboardingDone;
+  session.user.focusHabitKey = user.focusHabitKey;
+  session.user.identityLine = user.identityLine;
+  session.user.whyLine = user.whyLine;
+  session.user.xp = user.xp;
+  session.user.level = user.level;
 }
 
 type DiscordProfileBits = {
@@ -553,33 +622,37 @@ export const authOptions: NextAuthOptions = {
       } else if (user?.id && !isSnowflake(user.id)) {
         token.sub = user.id;
       } else if (isSnowflake(token.sub) || token.discordId) {
-        const dbUser = await resolveSessionUser(token);
+        const dbUser = await resolveSessionUserMemo(token);
         if (dbUser) token.sub = dbUser.id;
+      }
+
+      const jwtStale =
+        !token.u ||
+        !token.u.onboardingDone ||
+        Date.now() - (token.hydratedAt || 0) > JWT_HYDRATE_MS;
+      if (user || account || jwtStale) {
+        const dbUser = await resolveSessionUserMemo(token);
+        if (dbUser) stampToken(token, dbUser);
       }
       return token;
     },
     async session({ session, token }) {
       if (!session.user) return session;
       try {
-        const dbUser = await resolveSessionUser(token);
-        if (dbUser) {
-          session.user.id = dbUser.id;
-          session.user.discordId = dbUser.discordId;
-          session.user.wakeGoal = dbUser.wakeGoal;
-          session.user.sleepGoal = dbUser.sleepGoal;
-          session.user.timezone = dbUser.timezone;
-          session.user.name = dbUser.name ?? session.user.name;
-          session.user.image = dbUser.image ?? session.user.image;
-          session.user.email = dbUser.email ?? session.user.email;
-          session.user.onboardingDone = dbUser.onboardingDone;
-          session.user.focusHabitKey = dbUser.focusHabitKey;
-          session.user.identityLine = dbUser.identityLine;
-          session.user.whyLine = dbUser.whyLine;
-          session.user.xp = dbUser.xp;
-          session.user.level = dbUser.level;
-        } else if (token.sub && !isSnowflake(token.sub)) {
-          session.user.id = token.sub;
-          session.user.onboardingDone = false;
+        const fromJwt =
+          Boolean(token.u) &&
+          typeof token.hydratedAt === "number" &&
+          Date.now() - token.hydratedAt < JWT_HYDRATE_MS;
+        if (fromJwt && token.u) {
+          applyCachedUser(session, token.u);
+        } else {
+          const dbUser = await resolveSessionUserMemo(token);
+          if (dbUser) {
+            applyCachedUser(session, toCachedUser(dbUser));
+          } else if (token.sub && !isSnowflake(token.sub)) {
+            session.user.id = token.sub;
+            session.user.onboardingDone = false;
+          }
         }
       } catch (e) {
         console.error("session hydrate failed", e);

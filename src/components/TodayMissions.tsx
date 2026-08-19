@@ -83,9 +83,10 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   }, [apply]);
 
   useEffect(() => {
-    if (incoming) {
+    if (incoming !== undefined) {
       setMissions(incoming);
       setLoaded(true);
+      return;
     }
     void load();
   }, [incoming, load]);

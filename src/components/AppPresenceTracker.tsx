@@ -56,7 +56,7 @@ export function AppPresenceTracker() {
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    void ping("cold");
+    const boot = window.setTimeout(() => void ping("cold"), 1500);
 
     function onVis() {
       if (document.visibilityState === "visible") void ping("visibility");
@@ -73,6 +73,7 @@ export function AppPresenceTracker() {
     window.addEventListener("pageshow", onPageShow);
 
     return () => {
+      window.clearTimeout(boot);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);

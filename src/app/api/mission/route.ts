@@ -152,47 +152,57 @@ async function publicMission(
   return toPublic(row, today, habits, logs);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const lite = new URL(req.url).searchParams.get("lite") === "1";
   const today = formatDateInZone(session.user.timezone);
-  const habits = await ensureDefaultHabits(session.user.id);
+  const userId = session.user.id;
 
-  const rows = await findUserMissions(session.user.id);
+  const [habits, rows] = await Promise.all([
+    ensureDefaultHabits(userId),
+    findUserMissions(userId),
+  ]);
 
   const earliest = rows.reduce<string | undefined>((acc, m) => {
     if (!acc || m.startDate < acc) return m.startDate;
     return acc;
   }, undefined);
-  const logs = await loadLogs(session.user.id, earliest, today);
+
+  const [logs, extras] = await Promise.all([
+    loadLogs(userId, earliest, today),
+    lite
+      ? Promise.resolve({
+          plan: null as { morningFlow?: string } | null,
+          todos: [] as Awaited<ReturnType<typeof prisma.todo.findMany>>,
+        })
+      : Promise.all([
+          prisma.dayPlan.findUnique({
+            where: { userId_date: { userId, date: today } },
+          }),
+          prisma.todo.findMany({
+            where: { userId, date: today },
+            orderBy: { createdAt: "asc" },
+          }),
+        ]).then(([plan, todos]) => ({ plan, todos })),
+  ]);
 
   const all = rows.map((m) => toPublic(m, today, habits, logs));
   const live = all.filter((m) => m.active);
 
-  const plan = await prisma.dayPlan.findUnique({
-    where: {
-      userId_date: { userId: session.user.id, date: today },
-    },
-  });
-
-  const todos = await prisma.todo.findMany({
-    where: { userId: session.user.id, date: today },
-    orderBy: { createdAt: "asc" },
-  });
-
   return NextResponse.json({
     missions: live,
-    history: all.filter((m) => !m.active),
+    history: lite ? [] : all.filter((m) => !m.active),
     /** Primary card: newest live mission (manual first, then run). */
     mission:
       live.find((m) => m.kind === "manual") || live[0] || all[0] || null,
-    habits,
+    habits: lite ? undefined : habits,
     today,
-    morningFlow: plan?.morningFlow || "none",
-    todos,
+    morningFlow: extras.plan?.morningFlow || "none",
+    todos: extras.todos,
   });
 }
 

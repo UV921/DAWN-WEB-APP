@@ -200,9 +200,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const [res, missionRes] = await Promise.all([
+      const [res, missionRes, reminderRes] = await Promise.all([
         fetch("/api/habits?days=42&lite=1"),
-        fetch("/api/mission"),
+        fetch("/api/mission?lite=1"),
+        fetch("/api/reminders"),
       ]);
       if (!res.ok) {
         setLoadError("Couldn’t load today. Check your connection.");
@@ -214,6 +215,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       if (missionRes.ok) {
         const m = await missionRes.json();
         setMissions((m.missions || []) as MissionPublic[]);
+      }
+      if (reminderRes.ok) {
+        const d = (await reminderRes.json()) as {
+          reminders?: { id: string; title: string; time: string; enabled: boolean }[];
+        };
+        setReminders((d.reminders || []).filter((x) => x.enabled));
       }
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
@@ -234,12 +241,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       const nextChecks = tlog
         ? { ...emptyChecks(defs), ...(tlog.checks || {}) }
         : emptyChecks(defs);
-      void fetch("/api/study")
-        .then((r) => r.json())
-        .then((d: { today?: { minutes?: number } }) => {
-          setStudyMinutes(d.today?.minutes || 0);
-        })
-        .catch(() => undefined);
       const localPulse = buildMorningPulse({
         week: (data.weekPulse as WeekPulse) || {
           days: 0,
@@ -267,12 +268,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         ),
       });
       setPulse(localPulse);
-      void fetch("/api/reminders")
-        .then((r) => r.json())
-        .then((d: { reminders?: { id: string; title: string; time: string; enabled: boolean }[] }) => {
-          setReminders((d.reminders || []).filter((x) => x.enabled));
-        })
-        .catch(() => undefined);
       onData?.({
         logs: data.logs || [],
         streaks: data.streaks,
@@ -871,7 +866,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
             {wakeAction}
             <div className="flex min-h-0 flex-1 flex-col">
-              <StudyHoursCard />
+              <StudyHoursCard onMinutes={setStudyMinutes} />
             </div>
           </div>
         </div>

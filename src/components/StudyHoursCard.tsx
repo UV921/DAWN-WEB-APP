@@ -7,7 +7,11 @@ import type { GraduationCapIconHandle } from "@/components/ui/graduation-cap";
 import { StudyActivityControls } from "@/components/StudyActivityControls";
 import { type StudyStats } from "@/components/StudyStatusPanel";
 
-export function StudyHoursCard() {
+export function StudyHoursCard({
+  onMinutes,
+}: {
+  onMinutes?: (minutes: number) => void;
+}) {
   const [data, setData] = useState<StudyStats | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,13 +19,15 @@ export function StudyHoursCard() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/study", { cache: "no-store" });
+      const res = await fetch("/api/study?lite=1", { cache: "no-store" });
       if (!res.ok) return;
-      setData((await res.json()) as StudyStats);
+      const json = (await res.json()) as StudyStats;
+      setData(json);
+      onMinutes?.(json.today?.minutes || 0);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [onMinutes]);
 
   async function act(
     action: "start" | "stop" | "set-activity",
@@ -50,18 +56,19 @@ export function StudyHoursCard() {
 
   useEffect(() => {
     void load();
-    const id = window.setInterval(() => void load(), 15_000);
     const onVis = () => {
       if (document.visibilityState === "visible") void load();
     };
     document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [load]);
 
   const live = Boolean(data?.today.live);
+  useEffect(() => {
+    const ms = live ? 15_000 : 45_000;
+    const id = window.setInterval(() => void load(), ms);
+    return () => window.clearInterval(id);
+  }, [load, live]);
   useEffect(() => {
     iconRef.current?.startAnimation();
     if (!live) return;
