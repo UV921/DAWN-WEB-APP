@@ -3,7 +3,7 @@
    cache.addAll() then fails the whole install — the old worker keeps serving
    hashed /_next chunks from a previous deploy and the app white-screens.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v6";
+const CACHE = "dawn-v7";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",

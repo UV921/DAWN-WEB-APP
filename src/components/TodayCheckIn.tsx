@@ -18,6 +18,7 @@ import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { NightCloseFlow } from "@/components/NightCloseFlow";
 import { TodayOverview } from "@/components/TodayOverview";
+import { TodayMissions } from "@/components/TodayMissions";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
 import { MorningPulseCard } from "@/components/MorningPulseCard";
 import { DailyLoop, type LoopStep } from "@/components/DailyLoop";
@@ -29,6 +30,7 @@ import {
   type WeekPulse,
 } from "@/lib/morning-pulse";
 import { buildDayTally, type TallyHit } from "@/lib/day-tally";
+import type { MissionPublic } from "@/lib/missions";
 
 type Streaks = Record<string, { current: number; longest: number }>;
 
@@ -152,6 +154,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const [studyMinutes, setStudyMinutes] = useState(0);
   const [dayMode, setDayMode] = useState<DayMode>("day");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [todayPlan, setTodayPlan] = useState<{
     goalText?: string;
     wakeGoal?: string | null;
@@ -197,7 +200,11 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/habits?days=42&lite=1");
+      const [res, missionRes, reminderRes] = await Promise.all([
+        fetch("/api/habits?days=42&lite=1"),
+        fetch("/api/mission?lite=1"),
+        fetch("/api/reminders"),
+      ]);
       if (!res.ok) {
         setLoadError("Couldn’t load today. Check your connection.");
         setLoading(false);
@@ -205,6 +212,16 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       }
       setLoadError("");
       const data = await res.json();
+      if (missionRes.ok) {
+        const m = await missionRes.json();
+        setMissions((m.missions || []) as MissionPublic[]);
+      }
+      if (reminderRes.ok) {
+        const d = (await reminderRes.json()) as {
+          reminders?: { id: string; title: string; time: string; enabled: boolean }[];
+        };
+        setReminders((d.reminders || []).filter((x) => x.enabled));
+      }
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
       setStreaks(data.streaks);
@@ -257,12 +274,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         ),
       });
       setPulse(localPulse);
-      void fetch("/api/reminders")
-        .then((r) => r.json())
-        .then((d: { reminders?: { id: string; title: string; time: string; enabled: boolean }[] }) => {
-          setReminders((d.reminders || []).filter((x) => x.enabled));
-        })
-        .catch(() => undefined);
       onData?.({
         logs: data.logs || [],
         streaks: data.streaks,
@@ -405,15 +416,6 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     if (h.key === "sleepEarly") {
       if (done || bedRef.current) {
         setShowNightTally(true);
-        return;
-      }
-      if (!row.canSubmit) {
-        setBanner({
-          tone: "tip",
-          text: row.opensInMin
-            ? `${h.label} opens in ${formatDuration(row.opensInMin)} (${row.windowStart}–${row.windowEnd})`
-            : `${h.label} isn’t open yet. Window ${row.windowStart}–${row.windowEnd}.`,
-        });
         return;
       }
       setNightFlow(true);
@@ -604,6 +606,22 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         : "Morning habits done."
     : null;
 
+  const liveMissions = missions.filter((m) => m.active && !m.progress.ended);
+  const primary =
+    liveMissions.find((x) => x.kind === "manual") || liveMissions[0] || null;
+  const primaryMission = primary
+    ? {
+        title: primary.title,
+        day: primary.progress.day,
+        total: primary.progress.total,
+        daysLeft: primary.progress.daysLeft,
+        ongoing: primary.progress.ongoing,
+        kind: primary.kind,
+        stepsDone: (primary.steps || []).filter((s) => s.done).length,
+        stepsTotal: (primary.steps || []).length,
+      }
+    : null;
+
   const loopSteps: LoopStep[] = [
     {
       key: "wake",
@@ -648,6 +666,40 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       onRise={() => void wokeUp()}
     />
   ) : null;
+
+  if (nightFlow && !bedtime) {
+    return (
+      <>
+        <WakeHit
+          open={Boolean(hit)}
+          title={hit?.title || ""}
+          subtitle={hit?.subtitle}
+          xpGained={hit?.xpGained || 0}
+          labels={hit?.labels || []}
+          level={hit?.level || 1}
+          progress={hit?.progress || 0}
+          streak={hit?.streak || 0}
+          celebrate={profile?.celebrate || "chill"}
+          onClose={() => setHit(null)}
+        />
+        <NightCloseFlow
+          name={hello}
+          sleepGoal={sleepGoal}
+          wakeGoal={wakeGoal}
+          bedtimeLogged={false}
+          inSleepWindow={inSleepWindow}
+          sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
+          tally={todayTally}
+          onSleepNow={goingToSleep}
+          onSaved={() => {
+            setNightFlow(false);
+            void load();
+          }}
+          onCancel={() => setNightFlow(false)}
+        />
+      </>
+    );
+  }
 
   const morningSetup =
     wakeTime && morningFlow !== "done" ? (
@@ -748,39 +800,20 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     </section>
   );
 
-  if (nightFlow && !bedtime) {
-    return (
-      <>
-        <WakeHit
-          open={Boolean(hit)}
-          title={hit?.title || ""}
-          subtitle={hit?.subtitle}
-          xpGained={hit?.xpGained || 0}
-          labels={hit?.labels || []}
-          level={hit?.level || 1}
-          progress={hit?.progress || 0}
-          streak={hit?.streak || 0}
-          celebrate={profile?.celebrate || "chill"}
-          onClose={() => setHit(null)}
-        />
-        <NightCloseFlow
-          name={hello}
-          sleepGoal={sleepGoal}
-          wakeGoal={wakeGoal}
-          bedtimeLogged={false}
-          inSleepWindow={inSleepWindow}
-          sleepWindowLabel={`${sleepWin.start}–${sleepWin.end}`}
-          tally={todayTally}
-          onSleepNow={goingToSleep}
-          onSaved={() => {
-            setNightFlow(false);
-            void load();
-          }}
-          onCancel={() => setNightFlow(false)}
-        />
-      </>
-    );
-  }
+  const nightCard =
+    inSleepWindow && !bedtime ? (
+      <button
+        type="button"
+        onClick={() => setNightFlow(true)}
+        className="block w-full rounded-[1.1rem] border border-[var(--color-dawn)]/30 bg-[var(--color-dawn)]/[0.07] px-5 py-5 text-left"
+      >
+        <p className="ui-kicker">Night</p>
+        <p className="font-display mt-2 text-2xl text-white">Close the day</p>
+        <p className="mt-1 text-sm text-[var(--color-mist)]">
+          Remember anything, set tomorrow’s tasks, then sleep.
+        </p>
+      </button>
+    ) : null;
 
   return (
     <>
@@ -839,7 +872,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
             {wakeAction}
             <div className="flex min-h-0 flex-1 flex-col">
-              <StudyHoursCard />
+              <StudyHoursCard onMinutes={setStudyMinutes} />
             </div>
           </div>
         </div>
@@ -853,8 +886,11 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           intoLevel={profile?.intoLevel || 0}
           need={profile?.need || 80}
           challenge={challenge}
+          mission={primaryMission}
           onStartChallenge={(days) => void startChallenge(days)}
         />
+
+        <TodayMissions missions={missions} onChange={setMissions} />
 
         <div className="dash-work">
           {habitsPanel}
@@ -873,7 +909,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
           </div>
         </div>
 
-        <div className="dash-foot">{remindersPanel}</div>
+        <div className={`dash-foot${nightCard ? " is-split" : ""}`}>
+          {remindersPanel}
+          {nightCard}
+        </div>
 
         {!notifyReady ? (
           <button

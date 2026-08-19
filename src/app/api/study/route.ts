@@ -8,7 +8,6 @@ import {
   formatStudyDuration,
   lastNDates,
   MIN_SESSION_MS,
-  minutesOnLocalDate,
   parseStudyVoiceIds,
   sessionMinutes,
   startOfMonth,
@@ -59,6 +58,7 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
+  const lite = searchParams.get("lite") === "1";
   const range = Math.min(
     365,
     Math.max(7, Number(searchParams.get("days") || 7) || 7)
@@ -67,55 +67,47 @@ export async function GET(req: Request) {
   const tz = session.user.timezone || DEFAULT_TZ;
   const today = todayInZone(tz);
   const rangeDates = lastNDates(today, range);
-  const weekDates = rangeDates.slice(-7);
+  const weekDates = lastNDates(today, 7);
   const monthStart = startOfMonth(today);
   const yearStart = startOfYear(today);
   const weekStart = weekDates[0];
+  const since = rangeDates[0];
   const guildId = process.env.DISCORD_GUILD_ID?.trim() || null;
   const now = new Date();
+  const groupSince = lite ? weekStart : since < yearStart ? since : yearStart;
 
-  const [sessions, rooms, user, closedSums, open] = await Promise.all([
-    prisma.studySession.findMany({
-      where: {
-        userId: session.user.id,
-        OR: [{ date: { gte: weekStart } }, { endedAt: null }],
-      },
-      orderBy: { startedAt: "asc" },
-    }),
-    roomsForGuild(guildId),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        discordId: true,
-        accounts: {
-          where: { provider: "discord" },
-          select: { id: true },
-        },
-      },
-    }),
+  const [closedSums, allSum, open, rooms, roomCount] = await Promise.all([
     prisma.studySession.groupBy({
       by: ["date"],
       where: {
         userId: session.user.id,
         endedAt: { not: null },
+        date: { gte: groupSince },
       },
       _sum: { minutes: true },
     }),
+    lite
+      ? Promise.resolve({ _sum: { minutes: 0 } })
+      : prisma.studySession.aggregate({
+          where: { userId: session.user.id, endedAt: { not: null } },
+          _sum: { minutes: true },
+        }),
     prisma.studySession.findFirst({
       where: { userId: session.user.id, endedAt: null },
     }),
+    lite ? Promise.resolve([]) : roomsForGuild(guildId),
+    lite
+      ? prisma.studyRoom.count()
+      : Promise.resolve(0),
   ]);
 
   const closedByDate = new Map<string, number>();
   for (const row of closedSums) {
     closedByDate.set(row.date, row._sum.minutes || 0);
   }
-  let liveExtra = 0;
-  let liveDate = today;
   if (open) {
-    liveExtra = sessionMinutes(open.startedAt, now);
-    liveDate = open.date;
-    closedByDate.set(liveDate, (closedByDate.get(liveDate) || 0) + liveExtra);
+    const liveExtra = sessionMinutes(open.startedAt, now);
+    closedByDate.set(open.date, (closedByDate.get(open.date) || 0) + liveExtra);
   }
 
   function sumSince(gte: string | null) {
@@ -126,46 +118,32 @@ export async function GET(req: Request) {
     return n;
   }
 
-  const byDate = new Map<string, number>();
-  for (const d of rangeDates) byDate.set(d, 0);
-  for (const s of sessions) {
-    const end = s.endedAt || now;
-    for (const d of rangeDates) {
-      byDate.set(
-        d,
-        (byDate.get(d) || 0) +
-          minutesOnLocalDate({
-            startedAt: s.startedAt,
-            endedAt: end,
-            date: d,
-            timeZone: tz,
-          })
-      );
-    }
-  }
-
   const series = rangeDates.map((date) => ({
     date,
-    minutes: Math.round(
-      closedByDate.get(date) || byDate.get(date) || 0
-    ),
+    minutes: Math.round(closedByDate.get(date) || 0),
   }));
-  const week = series.slice(-7);
-  const todayMinutes = Math.round(
-    Math.max(closedByDate.get(today) || 0, byDate.get(today) || 0)
-  );
-  const weekMinutes = sumSince(weekStart);
+  const week = lastNDates(today, 7).map((date) => ({
+    date,
+    minutes: Math.round(closedByDate.get(date) || 0),
+  }));
+  const todayMinutes = Math.round(closedByDate.get(today) || 0);
+  const weekMinutes = week.reduce((n, d) => n + d.minutes, 0);
   const monthMinutes = sumSince(monthStart);
-  const yearMinutes = sumSince(yearStart);
-  const allMinutes = sumSince(null);
+  const yearMinutes = lite ? weekMinutes : sumSince(yearStart);
+  const allMinutes = lite
+    ? weekMinutes
+    : Math.round(allSum._sum.minutes || 0) +
+      (open ? sessionMinutes(open.startedAt, now) : 0);
   const live = open;
-  const configured = rooms.length > 0;
+  const configured = lite
+    ? roomCount > 0 || envStudyVoiceIds().length > 0
+    : rooms.length > 0;
   const weekDaysWithStudy = week.filter((d) => d.minutes > 0).length;
   const monthDaysWithStudy = [...closedByDate.entries()].filter(
     ([d, m]) => d >= monthStart && m > 0
   ).length;
   const best = [...week].sort((a, b) => b.minutes - a.minutes)[0];
-  const hasDiscord = Boolean(user?.discordId || user?.accounts?.length);
+  const hasDiscord = Boolean(session.user.discordId);
   const liveActivity = live ? studyActivityLabel(live) : null;
   const status = buildStudyStatus({
     configured,

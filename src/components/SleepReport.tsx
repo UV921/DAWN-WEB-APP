@@ -11,6 +11,7 @@ import {
   type SleepGrade,
 } from "@/lib/sleep-report";
 import type { HabitLogLike } from "@/lib/habits";
+import { SleepTimingChart } from "@/components/SleepTimingChart";
 
 type Props = {
   logs: HabitLogLike[];
@@ -263,6 +264,14 @@ export function SleepReport({ logs, today, sleepGoal, wakeGoal }: Props) {
       </section>
 
       <section className="ui-card">
+        <SleepTimingChart
+          nights={nights}
+          sleepGoal={sleepGoal}
+          wakeGoal={wakeGoal}
+        />
+      </section>
+
+      <section className="ui-card">
         <p className="ui-kicker">Report</p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -288,42 +297,6 @@ export function SleepReport({ logs, today, sleepGoal, wakeGoal }: Props) {
             {day.actions[0]}
           </p>
         )}
-
-        <p className="mt-6 text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
-          Last 7 nights
-        </p>
-        <ul className="mt-3 grid grid-cols-7 gap-1.5">
-          {nights.map((n) => {
-            const fill = n.hours == null ? 0 : pctOf(n.hours, barMax);
-            const color =
-              n.hours == null
-                ? "bg-white/15"
-                : n.metMin
-                  ? "bg-[var(--color-dawn)]"
-                  : "bg-[var(--color-ember)]";
-            return (
-              <li key={n.date} className="text-center">
-                <div className="flex h-16 items-end justify-center rounded-lg bg-white/[0.04] px-1 py-1">
-                  <div
-                    className={`w-full rounded-sm ${color}`}
-                    style={{ height: `${Math.max(n.hours == null ? 8 : 12, fill)}%` }}
-                    title={
-                      n.hours == null
-                        ? `${n.weekday}: not logged`
-                        : `${n.weekday}: ${n.hours}h`
-                    }
-                  />
-                </div>
-                <p className="mt-1 text-[10px] uppercase tracking-wide text-[var(--color-mist)]">
-                  {n.weekday.slice(0, 2)}
-                </p>
-                <p className="font-mono text-[10px] tabular-nums text-[var(--color-cloud)]">
-                  {n.hours == null ? "—" : n.hours}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
       </section>
 
       <section>
@@ -372,6 +345,10 @@ function NeedTakeBar({
 }) {
   const takePct = take == null ? 0 : pctOf(take, max);
   const short = take != null && take < min;
+  const sameMinPlan = Math.abs(plan - min) < 0.3;
+  const showTarget =
+    Math.abs(target - plan) >= 0.4 && Math.abs(target - min) >= 0.4;
+
   return (
     <div className="mt-5">
       <div className="relative h-3 overflow-hidden rounded-full bg-white/10">
@@ -386,12 +363,14 @@ function NeedTakeBar({
           style={{ left: `${pctOf(min, max)}%` }}
           aria-hidden
         />
-        <span
-          className="absolute top-0 h-full w-px bg-[var(--color-dawn)]/80"
-          style={{ left: `${pctOf(plan, max)}%` }}
-          aria-hidden
-        />
-        {Math.abs(target - plan) >= 0.4 ? (
+        {!sameMinPlan ? (
+          <span
+            className="absolute top-0 h-full w-px bg-[var(--color-dawn)]/80"
+            style={{ left: `${pctOf(plan, max)}%` }}
+            aria-hidden
+          />
+        ) : null}
+        {showTarget ? (
           <span
             className="absolute top-0 h-full w-px bg-white/40"
             style={{ left: `${pctOf(target, max)}%` }}
@@ -399,30 +378,36 @@ function NeedTakeBar({
           />
         ) : null}
       </div>
-      <div className="relative mt-1.5 h-4 text-[10px] uppercase tracking-wide text-[var(--color-mist)]">
-        <span
-          className="absolute -translate-x-1/2"
-          style={{ left: `${pctOf(min, max)}%` }}
-        >
-          {Math.abs(plan - min) < 0.3 ? `min/plan ${min}h` : `min ${min}h`}
-        </span>
-        {Math.abs(plan - min) >= 0.3 ? (
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-[var(--color-mist)]">
+        <li className="inline-flex items-center gap-1.5">
           <span
-            className="absolute -translate-x-1/2 text-[var(--color-dawn)]"
-            style={{ left: `${pctOf(plan, max)}%` }}
-          >
-            plan {plan}h
-          </span>
+            className={`h-2 w-2 rounded-full ${
+              take == null
+                ? "bg-white/25"
+                : short
+                  ? "bg-[var(--color-ember)]"
+                  : "bg-[var(--color-dawn)]"
+            }`}
+          />
+          Took {take == null ? "—" : `${take}h`}
+        </li>
+        <li className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-px bg-white/70" />
+          {sameMinPlan ? `Min / plan ${min}h` : `Min ${min}h`}
+        </li>
+        {!sameMinPlan ? (
+          <li className="inline-flex items-center gap-1.5 text-[var(--color-dawn)]">
+            <span className="h-2 w-px bg-[var(--color-dawn)]" />
+            Plan {plan}h
+          </li>
         ) : null}
-        {Math.abs(target - plan) >= 0.4 && Math.abs(target - min) >= 0.4 ? (
-          <span
-            className="absolute -translate-x-1/2"
-            style={{ left: `${pctOf(target, max)}%` }}
-          >
-            {target}h
-          </span>
+        {showTarget ? (
+          <li className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-px bg-white/40" />
+            Target {target}h
+          </li>
         ) : null}
-      </div>
+      </ul>
     </div>
   );
 }

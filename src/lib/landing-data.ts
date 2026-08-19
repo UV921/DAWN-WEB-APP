@@ -33,6 +33,8 @@ function lastNDates(n: number): string[] {
   return out;
 }
 
+let landingCache: { at: number; data: LandingSnapshot } | null = null;
+
 export async function getLandingSnapshot(): Promise<LandingSnapshot> {
   const empty: LandingSnapshot = {
     people: 0,
@@ -42,6 +44,9 @@ export async function getLandingSnapshot(): Promise<LandingSnapshot> {
     wakesToday: 0,
     series: [],
   };
+
+  const cached = landingCache;
+  if (cached && Date.now() - cached.at < 60_000) return cached.data;
 
   try {
     const dates = lastNDates(14);
@@ -107,7 +112,7 @@ export async function getLandingSnapshot(): Promise<LandingSnapshot> {
       };
     });
 
-    return {
+    const data: LandingSnapshot = {
       people,
       mornings: logs.filter((l) => Boolean(l.wakeTime) || Boolean(l.wakeEarly)).length,
       tasksDone: todos.filter((t) => t.done).length,
@@ -115,6 +120,8 @@ export async function getLandingSnapshot(): Promise<LandingSnapshot> {
       wakesToday: (logsByDate.get(today) || []).filter((l) => Boolean(l.wakeTime)).length,
       series,
     };
+    landingCache = { at: Date.now(), data };
+    return data;
   } catch {
     return empty;
   }

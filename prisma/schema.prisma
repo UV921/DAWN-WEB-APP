@@ -379,14 +379,18 @@ model AppOpen {
   @@index([userId, createdAt])
 }
 
-/// User-built 7-day mission (custom habits + task templates — not only AI defaults)
+/// User-built mission: a short habit run, or a long manual project (hackathon, exam, build).
 model Mission {
   id              String   @id @default(cuid())
   userId          String
   title           String   @default("7-day mission")
   startDate       String
+  /// Length in days. 0 = open-ended (track as long as it stays active).
   days            Int      @default(7)
   active          Boolean  @default(true)
+  /// run = habit sprint (one at a time). manual = long project; several can run together.
+  kind            String   @default("run")
+  note            String   @default("")
   /// JSON array of habit keys to track for this mission
   habitKeys       String   @default("[]")
   /// JSON array of daily task template strings
@@ -394,7 +398,38 @@ model Mission {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checks MissionCheck[]
+  steps  MissionStep[]
 
   @@index([userId, active])
+  @@index([userId, kind])
+}
+
+/// One calendar day the user marked they worked on a (usually manual) mission.
+model MissionCheck {
+  id        String   @id @default(cuid())
+  missionId String
+  date      String
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, date])
+  @@index([missionId, date])
+}
+
+/// One checklist step on a mission — same idea as a todo subtask.
+model MissionStep {
+  id        String   @id @default(cuid())
+  missionId String
+  text      String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@index([missionId, sortOrder])
 }

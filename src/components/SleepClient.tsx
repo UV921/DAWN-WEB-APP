@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
-import { DayTallyCard } from "@/components/DayTallyCard";
 import { SleepReport } from "@/components/SleepReport";
+import { DayTallyCard } from "@/components/DayTallyCard";
+import type { HabitLogLike } from "@/lib/habits";
 import {
   buildDayTally,
   emptyDayTally,
   type DayTally,
 } from "@/lib/day-tally";
-import type { HabitLogLike } from "@/lib/habits";
 
 type StudyToday = { today?: { minutes?: number } };
 
@@ -27,7 +27,7 @@ export function SleepClient({
   );
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  async function refresh() {
     const [d, study] = await Promise.all([
       fetch("/api/habits?days=42").then((r) => r.json()),
       fetch("/api/study")
@@ -42,18 +42,18 @@ export function SleepClient({
         wakeGoal: d.wakeGoal || wakeGoal,
         bedtime: d.todayLog?.bedtime,
         sleepGoal: d.sleepGoal || sleepGoal,
-        habits: d.habits || [],
+        habits: d.habits,
         checks: d.todayLog?.checks || {},
         todos: d.todayTodos,
         studyMinutes: study?.today?.minutes || 0,
         streak: d.profile?.earlyStreak,
       })
     );
-  }, [wakeGoal, sleepGoal]);
+  }
 
   useEffect(() => {
     void refresh().finally(() => setLoading(false));
-  }, [refresh]);
+  }, []);
 
   return (
     <main className="dawn-bg relative min-h-screen">
@@ -65,7 +65,7 @@ export function SleepClient({
             <h1 className="ui-title mt-2">Sleep report</h1>
             <p className="ui-sub mt-3">
               How much sleep you need, how much you took, and how the nights
-              behind you look. Close the night from the sleep habit on Today.
+              behind you look.
             </p>
           </div>
 
