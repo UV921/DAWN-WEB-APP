@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import {
   IconCheck,
@@ -20,7 +20,7 @@ import {
   renderTodoListCardPng,
   shareTodoListCard,
 } from "@/lib/share-todo-card";
-import { parseBotMessages } from "@/lib/bot-messages";
+import { parseBotMessages, TODOS_SEND_MODE_OPTIONS, type TodosSendMode } from "@/lib/bot-messages";
 import { postTodosFromBrowser } from "@/lib/post-todos-client";
 import { LIST_PRESETS, normalizeListTitle } from "@/lib/todo-lists";
 import {
@@ -135,6 +135,7 @@ export function TodayTasks({
   const [sendOpen, setSendOpen] = useState(false);
   const [pingText, setPingText] = useState("");
   const [sendTime, setSendTime] = useState("");
+  const [sendMode, setSendMode] = useState<TodosSendMode>("manual");
   const [savingTime, setSavingTime] = useState(false);
   const [listMenu, setListMenu] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -340,14 +341,19 @@ export function TodayTasks({
     }
   }
 
-  async function loadSendPrefs() {
+  const loadSendPrefs = useCallback(async () => {
     const res = await fetch("/api/settings");
     if (!res.ok) return;
     const data = await res.json().catch(() => null);
     const bot = parseBotMessages(data?.botMessages);
     setPingText(bot.todosPingText);
     setSendTime(bot.todosSendTime);
-  }
+    setSendMode(bot.todosSendMode);
+  }, []);
+
+  useEffect(() => {
+    void loadSendPrefs();
+  }, [loadSendPrefs]);
 
   async function openSendPanel() {
     setSendOpen((open) => !open);
@@ -377,9 +383,16 @@ export function TodayTasks({
     }
   }
 
-  async function saveSendTime() {
+  async function saveSendPrefs(next: {
+    pingText?: string;
+    sendTime?: string;
+    sendMode?: TodosSendMode;
+  }) {
     setSavingTime(true);
     setDiscordNote(null);
+    const nextPing = next.pingText ?? pingText;
+    const nextTime = next.sendTime ?? sendTime;
+    const nextMode = next.sendMode ?? sendMode;
     try {
       const res = await fetch("/api/settings");
       const data = await res.json().catch(() => null);
@@ -390,29 +403,52 @@ export function TodayTasks({
         body: JSON.stringify({
           botMessages: {
             ...bot,
-            todosPingText: pingText,
-            todosSendTime: sendTime,
+            todosPingText: nextPing,
+            todosSendTime: nextTime,
+            todosSendMode: nextMode,
           },
         }),
       });
       if (!save.ok) {
-        onError?.("Couldn’t save that send time.");
+        onError?.("Couldn’t save Discord send settings.");
         return;
       }
-      setDiscordNote(
-        sendTime
-          ? `Daily ping saved for ${sendTime}. Dawn will @ you with your message.`
-          : "Daily send time cleared — manual only."
-      );
+      if (nextMode === "off") {
+        setDiscordNote("Task messages are off — Dawn will not post this list.");
+      } else if (nextMode === "date") {
+        setDiscordNote(
+          nextTime
+            ? `Date-wise ping saved for ${nextTime}. Dawn posts that day’s list and @’s you.`
+            : "Date-wise is on — pick a send time so Dawn can auto-post."
+        );
+      } else {
+        setDiscordNote("Manual only — tap Send now when you want the list in Discord.");
+      }
     } catch {
-      onError?.("Couldn’t save that send time.");
+      onError?.("Couldn’t save Discord send settings.");
     } finally {
       setSavingTime(false);
     }
   }
 
+  async function saveSendTime() {
+    await saveSendPrefs({ pingText, sendTime, sendMode: "date" });
+  }
+
+  async function setTodosSendMode(mode: TodosSendMode) {
+    setSendMode(mode);
+    if (mode === "date") setSendOpen(true);
+    await saveSendPrefs({ sendMode: mode });
+  }
+
   async function sendToDiscord() {
     if (sendingDiscord || !todos.length) return;
+    if (sendMode === "off") {
+      onError?.(
+        "Task messages are off. Switch to Manual or Date-wise first."
+      );
+      return;
+    }
     setSendingDiscord(true);
     setDiscordNote(null);
     let image: File | undefined;
@@ -719,10 +755,10 @@ export function TodayTasks({
                   ? "bg-white/[0.08] text-white"
                   : "text-[var(--color-mist)]"
               }`}
-              title="Send this list to Discord, schedule a ping, or download a PNG"
+              title="Send this list to Discord, or turn Discord task messages off"
             >
               <IconDiscord size={13} />
-              Send
+              {sendMode === "off" ? "Discord" : "Send"}
             </button>
           ) : null}
           {!allowAdd && addHref && todos.length > 0 ? (
@@ -753,45 +789,75 @@ export function TodayTasks({
       {sendOpen && todos.length > 0 ? (
         <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-4">
           <p className="text-xs text-[var(--color-mist)]">
-            Send now posts the same card as Download PNG into your Discord
-            channel and @’s you. Daily send time is a text ping only.
+            Off never posts. Manual is Send now only. Date-wise posts this
+            date’s list at a time you pick.
           </p>
-          <textarea
-            value={pingText}
-            onChange={(e) => setPingText(e.target.value)}
-            rows={2}
-            maxLength={300}
-            placeholder="Ping message — Hey, here's today's work"
-            className="ui-field text-sm"
-          />
-          <label className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-mist)]">
-            <IconClock size={13} />
-            Daily send time
-            <input
-              type="time"
-              value={sendTime}
-              onChange={(e) => setSendTime(e.target.value)}
-              className="ui-field !inline-flex !w-auto !py-1.5"
-            />
-            <button
-              type="button"
-              disabled={savingTime}
-              onClick={() => void saveSendTime()}
-              className="rounded-full px-2.5 py-1 text-[12px] font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/10 disabled:opacity-50"
-            >
-              {savingTime ? "Saving…" : sendTime ? "Save time" : "Clear time"}
-            </button>
-          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {TODOS_SEND_MODE_OPTIONS.map((mode) => (
+              <button
+                key={mode.value}
+                type="button"
+                disabled={savingTime}
+                onClick={() => void setTodosSendMode(mode.value)}
+                className={`rounded-full border px-3 py-1.5 text-[12px] ${
+                  sendMode === mode.value
+                    ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                    : "border-white/20 text-white"
+                } disabled:opacity-50`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          {sendMode === "off" ? (
+            <p className="text-xs text-[var(--color-mist)]">
+              Discord will not get this list until you switch to Manual or
+              Date-wise.
+            </p>
+          ) : (
+            <>
+              <textarea
+                value={pingText}
+                onChange={(e) => setPingText(e.target.value)}
+                rows={2}
+                maxLength={300}
+                placeholder="Ping message — Hey, here's today's work"
+                className="ui-field text-sm"
+              />
+              {sendMode === "date" ? (
+                <label className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-mist)]">
+                  <IconClock size={13} />
+                  Send time
+                  <input
+                    type="time"
+                    value={sendTime}
+                    onChange={(e) => setSendTime(e.target.value)}
+                    className="ui-field !inline-flex !w-auto !py-1.5"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingTime}
+                    onClick={() => void saveSendTime()}
+                    className="rounded-full px-2.5 py-1 text-[12px] font-medium text-[var(--color-dawn)] hover:bg-[var(--color-dawn)]/10 disabled:opacity-50"
+                  >
+                    {savingTime ? "Saving…" : sendTime ? "Save time" : "Need a time"}
+                  </button>
+                </label>
+              ) : null}
+            </>
+          )}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={sendingDiscord}
-              onClick={() => void sendToDiscord()}
-              className="ui-btn ui-btn-primary !h-9 !px-4 text-[12px]"
-            >
-              <IconDiscord size={13} />
-              {sendingDiscord ? "Sending…" : "Send now"}
-            </button>
+            {sendMode !== "off" ? (
+              <button
+                type="button"
+                disabled={sendingDiscord}
+                onClick={() => void sendToDiscord()}
+                className="ui-btn ui-btn-primary !h-9 !px-4 text-[12px]"
+              >
+                <IconDiscord size={13} />
+                {sendingDiscord ? "Sending…" : "Send now"}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void downloadTasksPng()}

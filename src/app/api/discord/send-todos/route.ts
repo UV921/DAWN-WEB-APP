@@ -79,6 +79,16 @@ export async function POST(req: Request) {
   ]);
 
   const settings = parseBotMessages(user?.botMessagesJson);
+  if (settings.todosSendMode === "off") {
+    return NextResponse.json(
+      {
+        error:
+          "Task messages are off. Turn them on in Settings → Bot messages (Manual or Date-wise).",
+      },
+      { status: 400 }
+    );
+  }
+
   const { channelIds, hadConfiguredId } = await userTodoChannelIds(
     prisma,
     session.user.id,

@@ -115,22 +115,30 @@ export function StudyHoursCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className={`ui-kicker ${kicker}`}>
-            Study · today
-            {live ? " · live" : ""}
-            {doing ? ` · ${doing}` : ""}
+            Study{live ? " · live" : " · today"}
           </p>
-          <p className="font-display mt-1 text-[clamp(1.35rem,6vw,1.875rem)] leading-none tabular-nums text-white">
-            {todayLabel}
-          </p>
-          <p className="mt-1.5 truncate text-sm text-[var(--color-mist)]">
-            {data.status.tone === "setup"
-              ? data.status.body
-                  : live
-                ? doing
-                  ? "Counting now — change it here or in the Discord ping."
-                  : "Dawn pinged you in Discord. Tap Coding, or write what you’re doing."
-                : "Join a study VC and Dawn will ask. Or start here."}
-          </p>
+          {live ? (
+            <>
+              <p className="font-display mt-1 break-words text-[clamp(1.35rem,6vw,1.875rem)] leading-[1.15] text-white">
+                {doing || "What are you doing?"}
+              </p>
+              <p className="mt-1.5 text-sm text-[var(--color-mist)]">
+                {todayLabel} today
+                {doing ? "" : " · pick on this card"}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-display mt-1 text-[clamp(1.35rem,6vw,1.875rem)] leading-none tabular-nums text-white">
+                {todayLabel}
+              </p>
+              <p className="mt-1.5 truncate text-sm text-[var(--color-mist)]">
+                {data.status.tone === "setup"
+                  ? data.status.body
+                  : "Start on this card, or join a study VC."}
+              </p>
+            </>
+          )}
         </div>
         <Link
           href="/progress"

@@ -27,6 +27,46 @@ export type ChannelPing = {
   channelId: string;
 };
 
+export type TodosSendMode = "off" | "manual" | "date";
+
+export const TODOS_SEND_MODE_OPTIONS: {
+  value: TodosSendMode;
+  label: string;
+  help: string;
+}[] = [
+  {
+    value: "off",
+    label: "Off",
+    help: "Dawn will not post your task list to Discord.",
+  },
+  {
+    value: "manual",
+    label: "Manual",
+    help: "Only when you tap Send now.",
+  },
+  {
+    value: "date",
+    label: "Date-wise",
+    help: "Auto-post that day's list at a time you pick.",
+  },
+];
+
+const TODOS_SEND_MODES = new Set<TodosSendMode>(
+  TODOS_SEND_MODE_OPTIONS.map((o) => o.value)
+);
+
+/** Infer Off / Manual / Date-wise. A saved time used to mean daily auto-send. */
+export function normalizeTodosSendMode(
+  raw: unknown,
+  sendTime = ""
+): TodosSendMode {
+  const s = String(raw ?? "")
+    .trim()
+    .toLowerCase();
+  if (TODOS_SEND_MODES.has(s as TodosSendMode)) return s as TodosSendMode;
+  return sendTime ? "date" : "manual";
+}
+
 export type BotMessages = {
   morningPing: BotMessage;
   nightReview: BotMessage;
@@ -36,7 +76,9 @@ export type BotMessages = {
   todosChannelId: string;
   /** Custom ping text when posting the day's tasks. */
   todosPingText: string;
-  /** HH:MM local — auto-post the day's tasks. Empty = manual only. */
+  /** off = never, manual = Send now only, date = that day's list at todosSendTime. */
+  todosSendMode: TodosSendMode;
+  /** HH:MM local — used when todosSendMode is date. */
   todosSendTime: string;
   /** Prevents double-send: YYYY-MM-DD-HH:MM */
   lastTodosSendKey: string;
@@ -194,6 +236,11 @@ function normPing(raw: unknown, index: number): ChannelPing | null {
   };
 }
 
+/** True when Dawn should auto-post that calendar day's list. */
+export function isDateWiseTodosSend(settings: BotMessages): boolean {
+  return settings.todosSendMode === "date" && Boolean(settings.todosSendTime);
+}
+
 export function defaultBotMessages(): BotMessages {
   return {
     morningPing: { enabled: true, text: "" },
@@ -202,6 +249,7 @@ export function defaultBotMessages(): BotMessages {
     channelPings: [],
     todosChannelId: "",
     todosPingText: "",
+    todosSendMode: "manual",
     todosSendTime: "",
     lastTodosSendKey: "",
   };
@@ -218,6 +266,7 @@ export function parseBotMessages(json: unknown): BotMessages {
     }
   }
   const v = (raw ?? {}) as Partial<BotMessages>;
+  const todosSendTime = normTime(v.todosSendTime);
   return {
     morningPing: normMessage(v.morningPing, true),
     nightReview: normMessage(v.nightReview, true),
@@ -230,7 +279,8 @@ export function parseBotMessages(json: unknown): BotMessages {
       : [],
     todosChannelId: normChannelId(v.todosChannelId),
     todosPingText: normText(v.todosPingText, 300),
-    todosSendTime: normTime(v.todosSendTime),
+    todosSendTime,
+    todosSendMode: normalizeTodosSendMode(v.todosSendMode, todosSendTime),
     lastTodosSendKey: /^\d{4}-\d{2}-\d{2}-\d{2}:\d{2}$/.test(
       String(v.lastTodosSendKey || "")
     )

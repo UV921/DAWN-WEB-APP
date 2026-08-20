@@ -13,6 +13,7 @@ import {
   PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
+  MessageFlags,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type ModalSubmitInteraction,
@@ -177,8 +178,60 @@ function activityAskEmbed(name?: string | null) {
     .setColor(0xf0b45a)
     .setTitle("What are you doing?")
     .setDescription(
-      `${who}tap **Coding** or write it. Same options are on Today in Dawn.`
+      `${who}tap **Coding** or write it. Same options are on the study card in Dawn.`
     );
+}
+
+/** Button/modal replies must stay private — never edit a public VC ping. */
+async function replyActivityOnlyToUser(
+  interaction: ButtonInteraction,
+  payload: {
+    content: string;
+    components?: ActionRowBuilder<ButtonBuilder>[];
+  }
+) {
+  const body = {
+    content: payload.content,
+    embeds: [],
+    components: payload.components,
+  };
+
+  const flags = interaction.message.flags;
+  const alreadyPrivate =
+    !interaction.inGuild() ||
+    (typeof flags?.has === "function" && flags.has(MessageFlags.Ephemeral));
+
+  if (!alreadyPrivate) {
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.followUp({ ...body, ephemeral: true });
+      } else {
+        await interaction.reply({ ...body, ephemeral: true });
+      }
+    } catch {
+      /* interaction expired */
+    }
+    await interaction.message.delete().catch(() => undefined);
+    return;
+  }
+
+  try {
+    if (interaction.message && !interaction.replied && !interaction.deferred) {
+      await interaction.update(body);
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.followUp({ ...body, ephemeral: true });
+    } else {
+      await interaction.reply({ ...body, ephemeral: true });
+    }
+  } catch {
+    /* interaction expired */
+  }
 }
 
 async function askWhatYouDoing(
@@ -205,29 +258,17 @@ async function askWhatYouDoing(
   const embed = activityAskEmbed(name);
 
   const ch = await client.channels.fetch(session.channelId).catch(() => null);
-  if (ch && "send" in ch && typeof ch.send === "function") {
-    try {
-      await ch.send({
-        content: `<@${discordId}> what are you doing?`,
-        embeds: [embed],
-        components: rows,
-        allowedMentions: { users: [discordId] },
-      });
-      return;
-    } catch {
-      /* text-in-voice may be off — DM instead */
-    }
-  }
+  if (!ch || !("send" in ch) || typeof ch.send !== "function") return;
 
   try {
-    const user = await client.users.fetch(discordId);
-    await user.send({
-      content: "You joined a study room — what are you doing?",
+    await ch.send({
+      content: `<@${discordId}> what are you doing?`,
       embeds: [embed],
       components: rows,
+      allowedMentions: { users: [discordId] },
     });
   } catch {
-    /* DMs closed */
+    /* text-in-voice may be off — they can set it on the study card */
   }
 }
 
@@ -664,7 +705,7 @@ export async function handleStudiedCommand(
     )
     .setFooter({
       text: live
-        ? "Tap the ping buttons, /doing, or set it on Today in Dawn."
+        ? "Change what you’re doing on the study card in Dawn, or /doing."
         : "Dawn tracks marked study VCs — not LionBot. Bot must stay online.",
     });
 
@@ -737,8 +778,8 @@ export async function handleDoingCommand(
     await safeRespond(
       interaction,
       current
-        ? `This session is **${current}**. Use the buttons in the study room ping, or set it on Today in Dawn.`
-        : "Join ping didn’t stick — set what you’re doing on Today in Dawn."
+        ? `This session is **${current}**. Change it on the study card in Dawn, or /doing.`
+        : "Set what you’re doing on the study card in Dawn, or /doing.";
     );
   }
 }
@@ -795,29 +836,10 @@ export async function handleStudyActivityButton(
     return;
   }
 
-  const next = {
-    content: `<@${interaction.user.id}> is **${parsed.label}**.`,
-    embeds: [],
+  await replyActivityOnlyToUser(interaction, {
+    content: `This session is **${parsed.label}**. Only you can see this.`,
     components: activityAskRows(interaction.user.id, parsed.key),
-    allowedMentions: { users: [interaction.user.id] },
-  };
-
-  try {
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(next);
-    } else if (interaction.message) {
-      await interaction.update(next);
-    } else {
-      await interaction.reply({ ...next, ephemeral: true });
-    }
-  } catch {
-    await interaction
-      .reply({
-        content: `Logged **${parsed.label}**.`,
-        ephemeral: true,
-      })
-      .catch(() => undefined);
-  }
+  });
 }
 
 export async function handleStudyActivityModal(
@@ -855,8 +877,11 @@ export async function handleStudyActivityModal(
   const saved = await applyLiveActivity(prisma, user.id, parsed);
   await interaction.reply({
     content: saved
-      ? `Logged **${parsed.label}**. You can change it anytime — same options are on Today in Dawn.`
+      ? `Logged **${parsed.label}**. Only you can see this.`
       : "No live session. Join a study voice channel, or start one on Today in Dawn.",
     ephemeral: true,
   });
+  if (interaction.message?.inGuild()) {
+    await interaction.message.delete().catch(() => undefined);
+  }
 }
