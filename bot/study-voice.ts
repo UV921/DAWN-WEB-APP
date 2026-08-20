@@ -889,7 +889,7 @@ export async function handleDoingCommand(
       interaction,
       current
         ? `This session is **${current}**. Change it on the study card in Dawn, or /doing.`
-        : "Set what you’re doing on the study card in Dawn, or /doing.";
+        : "Set what you’re doing on the study card in Dawn, or /doing."
     );
   }
 }
