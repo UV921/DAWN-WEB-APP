@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IconPlus, IconX } from "@/components/icons";
 import { UiMessage } from "@/components/UiMessage";
 import {
+  BOT_DM_MODE_OPTIONS,
   BOT_MESSAGE_META,
   MAX_CHANNEL_PINGS,
   TODOS_SEND_MODE_OPTIONS,
@@ -12,6 +13,7 @@ import {
   type BotMessageKey,
   type BotMessages,
   type ChannelPing,
+  type TodosSendMode,
   channelIdFromInput,
 } from "@/lib/bot-messages";
 
@@ -23,6 +25,8 @@ export function BotMessagesSettings() {
   const [settings, setSettings] = useState<BotMessages>(defaultBotMessages());
   const [habits, setHabits] = useState<HabitOption[]>([]);
   const [channelId, setChannelId] = useState<string | null>(null);
+  const [wakeGoal, setWakeGoal] = useState("06:00");
+  const [sleepGoal, setSleepGoal] = useState("23:00");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{
@@ -38,6 +42,8 @@ export function BotMessagesSettings() {
     if (s) {
       setSettings(parseBotMessages(s.botMessages));
       setChannelId(s.user?.discordChannelId || null);
+      if (s.user?.wakeGoal) setWakeGoal(s.user.wakeGoal);
+      if (s.user?.sleepGoal) setSleepGoal(s.user.sleepGoal);
     }
     if (h?.all) {
       setHabits(
@@ -138,8 +144,9 @@ export function BotMessagesSettings() {
           What the bot says
         </h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Turn each message off, or write your own. Leave the text blank to keep
-          Dawn’s default wording.
+          You are in control. Each Discord DM can be Off, Manual (only when you
+          ask), or Date-wise at a time you pick. Mode saves as soon as you tap
+          it.
         </p>
         <p className="mt-2 text-xs text-[var(--color-mist)]">
           You can use{" "}
@@ -151,40 +158,88 @@ export function BotMessagesSettings() {
       <div className="space-y-3">
         {BOT_MESSAGE_META.map((meta) => {
           const value = settings[meta.key];
+          const fallbackTime =
+            meta.key === "windDown"
+              ? sleepGoal
+              : meta.key === "morningPing"
+                ? wakeGoal
+                : "21:00";
           return (
             <div
               key={meta.key}
               className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-white">{meta.label}</p>
-                  <p className="mt-0.5 text-sm text-[var(--color-mist)]">
-                    {meta.help}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={value.enabled}
-                  aria-label={`${meta.label} ${value.enabled ? "on" : "off"}`}
-                  onClick={() =>
-                    patchMessage(meta.key, { enabled: !value.enabled })
-                  }
-                  className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-                    value.enabled
-                      ? "bg-[var(--color-dawn)]"
-                      : "bg-white/15"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${
-                      value.enabled ? "left-6" : "left-1"
-                    }`}
-                  />
-                </button>
+              <div className="min-w-0">
+                <p className="font-medium text-white">{meta.label}</p>
+                <p className="mt-0.5 text-sm text-[var(--color-mist)]">
+                  {meta.help}
+                </p>
               </div>
-              {value.enabled ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {BOT_DM_MODE_OPTIONS.map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      const next: BotMessages = {
+                        ...settings,
+                        [meta.key]: {
+                          ...value,
+                          mode: mode.value,
+                          enabled: mode.value !== "off",
+                        },
+                      };
+                      void save(next);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-[12px] ${
+                      value.mode === mode.value
+                        ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/15 text-[var(--color-dawn)]"
+                        : "border-white/20 text-white"
+                    } disabled:opacity-50`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+              {value.mode === "off" ? (
+                <p className="mt-3 text-xs text-[var(--color-mist)]">
+                  Dawn will not send this Discord DM.
+                </p>
+              ) : null}
+              {value.mode === "manual" ? (
+                <p className="mt-3 text-xs text-[var(--color-mist)]">
+                  {meta.manualHint}
+                </p>
+              ) : null}
+              {value.mode === "date" ? (
+                <label className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-mist)]">
+                  Send time
+                  <input
+                    type="time"
+                    value={value.sendTime || fallbackTime}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        [meta.key]: {
+                          ...prev[meta.key],
+                          sendTime: e.target.value,
+                          mode: "date" as TodosSendMode,
+                          enabled: true,
+                        },
+                      }))
+                    }
+                    className="ui-field !w-auto !py-1.5 text-sm"
+                  />
+                  <span className="text-xs">
+                    Your timezone
+                    {!value.sendTime
+                      ? ` · using ${fallbackTime} until you save a time`
+                      : ""}
+                  </span>
+                </label>
+              ) : null}
+              {value.mode !== "off" ? (
                 <textarea
                   value={value.text}
                   onChange={(e) =>

@@ -8,9 +8,14 @@
 export type BotMessageKey = "morningPing" | "nightReview" | "windDown";
 
 export type BotMessage = {
+  /** Derived: true unless mode is off. Kept so older bot builds still read it. */
   enabled: boolean;
+  /** off = never, manual = only when you ask, date = at sendTime. */
+  mode: TodosSendMode;
   /** Empty means "use the built-in text". */
   text: string;
+  /** HH:MM local — used when mode is date. Empty = Dawn’s usual time. */
+  sendTime: string;
 };
 
 /** A recurring nudge the user writes themselves, posted to their channel. */
@@ -89,25 +94,51 @@ export const BOT_MESSAGE_META: {
   label: string;
   help: string;
   defaultText: string;
+  manualHint: string;
 }[] = [
   {
     key: "morningPing",
     label: "Morning wake ping",
-    help: "DM at your channel's ping time asking if you're awake.",
+    help: "Discord DM asking if you’re awake. You control whether it sends.",
     defaultText: "Hey {name} — time to check in. Wake goal {wake}.",
+    manualHint: "Dawn will not ping you in the morning.",
   },
   {
     key: "nightReview",
-    label: "Night task check",
-    help: "DM in the evening asking which tasks you finished.",
+    label: "Night check-in",
+    help: "The Discord DM titled Night check-in — did you finish today’s tasks?",
     defaultText: "Hey {name} — did you finish today's tasks?",
+    manualHint: "Use /review in Discord when you want this DM.",
   },
   {
     key: "windDown",
-    label: "Wind-down",
-    help: "DM at your sleep goal to plan tomorrow.",
+    label: "Before you sleep",
+    help: "The Discord DM titled Before you sleep — plan tomorrow in 30 seconds.",
     defaultText:
       "Hey {name} — sleep goal is {sleep}. Plan tomorrow in 30 seconds.",
+    manualHint: "Use /sleep in Discord when you want this DM.",
+  },
+];
+
+export const BOT_DM_MODE_OPTIONS: {
+  value: TodosSendMode;
+  label: string;
+  help: string;
+}[] = [
+  {
+    value: "off",
+    label: "Off",
+    help: "Dawn will not send this Discord DM.",
+  },
+  {
+    value: "manual",
+    label: "Manual",
+    help: "Only when you ask for it.",
+  },
+  {
+    value: "date",
+    label: "Date-wise",
+    help: "Auto-send at a time you pick.",
   },
 ];
 
@@ -121,10 +152,21 @@ function normText(raw: unknown, max = 400): string {
 }
 
 function normMessage(raw: unknown, fallbackEnabled: boolean): BotMessage {
-  const v = (raw ?? {}) as Partial<BotMessage>;
+  const v = (raw ?? {}) as Partial<BotMessage> & { enabled?: boolean };
+  const sendTime = normTime(v.sendTime);
+  let mode: TodosSendMode;
+  if (v.mode) {
+    mode = normalizeTodosSendMode(v.mode, sendTime);
+  } else if (typeof v.enabled === "boolean") {
+    mode = v.enabled ? "date" : "off";
+  } else {
+    mode = fallbackEnabled ? "date" : "off";
+  }
   return {
-    enabled: typeof v.enabled === "boolean" ? v.enabled : fallbackEnabled,
+    enabled: mode !== "off",
+    mode,
     text: normText(v.text),
+    sendTime,
   };
 }
 
@@ -243,9 +285,9 @@ export function isDateWiseTodosSend(settings: BotMessages): boolean {
 
 export function defaultBotMessages(): BotMessages {
   return {
-    morningPing: { enabled: true, text: "" },
-    nightReview: { enabled: true, text: "" },
-    windDown: { enabled: true, text: "" },
+    morningPing: { enabled: true, mode: "date", text: "", sendTime: "" },
+    nightReview: { enabled: true, mode: "date", text: "", sendTime: "" },
+    windDown: { enabled: true, mode: "date", text: "", sendTime: "" },
     channelPings: [],
     todosChannelId: "",
     todosPingText: "",
@@ -327,5 +369,18 @@ export function isMessageEnabled(
   settings: BotMessages,
   key: BotMessageKey
 ): boolean {
-  return settings[key].enabled;
+  return settings[key].mode !== "off";
+}
+
+/** Auto-send this Discord DM at the user's local time. */
+export function shouldAutoSendBotMessage(
+  settings: BotMessages,
+  key: BotMessageKey
+): boolean {
+  return settings[key].mode === "date";
+}
+
+/** Date-wise time, or Dawn’s usual fallback (sleep / wake / channel time). */
+export function botMessageDueTime(msg: BotMessage, fallback: string): string {
+  return msg.sendTime || fallback;
 }

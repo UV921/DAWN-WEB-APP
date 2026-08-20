@@ -15,10 +15,13 @@ import {
 } from "discord.js";
 import type { PrismaClient, TrackedChannel, User, HabitLog, Habit } from "@prisma/client";
 import { resolveDisplayName, resolveManyNames } from "./names";
+import { zonedClock } from "../src/lib/clock";
 import {
+  botMessageDueTime,
   isMessageEnabled,
   messageText,
   parseBotMessages,
+  shouldAutoSendBotMessage,
 } from "../src/lib/bot-messages";
 
 type LogLike = HabitLog & { checks?: string | null };
@@ -67,9 +70,6 @@ export async function sendMorningDms(
   prisma: PrismaClient,
   opts?: { channelDbId?: string; force?: boolean }
 ) {
-  const today = todayStr();
-  const now = nowHHMM();
-
   const channels = opts?.channelDbId
     ? await prisma.trackedChannel.findMany({
         where: { id: opts.channelDbId },
@@ -87,23 +87,31 @@ export async function sendMorningDms(
   let skipped = 0;
 
   for (const ch of channels) {
-    const due =
-      opts?.force ||
-      (ch.pingTime === now && ch.lastPingDate !== today);
-    if (!due) continue;
-
     for (const m of ch.members) {
       const u = m.user;
       if (!u.discordId) {
         skipped += 1;
         continue;
       }
-      if (!opts?.force && m.lastPingDate === today) {
+      const settings = parseBotMessages(u.botMessagesJson);
+      if (!isMessageEnabled(settings, "morningPing")) {
         skipped += 1;
         continue;
       }
-      const settings = parseBotMessages(u.botMessagesJson);
-      if (!opts?.force && !isMessageEnabled(settings, "morningPing")) {
+      if (!opts?.force && !shouldAutoSendBotMessage(settings, "morningPing")) {
+        skipped += 1;
+        continue;
+      }
+      const clock = zonedClock(u.timezone);
+      if (!opts?.force && m.lastPingDate === clock.date) {
+        skipped += 1;
+        continue;
+      }
+      const due = botMessageDueTime(
+        settings.morningPing,
+        u.wakeGoal || ch.pingTime || "06:00"
+      );
+      if (!opts?.force && clock.hhmm !== due) {
         skipped += 1;
         continue;
       }
@@ -112,12 +120,12 @@ export async function sendMorningDms(
         const discordUser = await client.users.fetch(u.discordId);
         const name = await resolveDisplayName(client, prisma, u);
         const todos = await prisma.todo.findMany({
-          where: { userId: u.id, date: today },
+          where: { userId: u.id, date: clock.date },
           orderBy: { createdAt: "asc" },
           take: 8,
         });
         const plan = await prisma.dayPlan.findUnique({
-          where: { userId_date: { userId: u.id, date: today } },
+          where: { userId_date: { userId: u.id, date: clock.date } },
         });
         const cons = {
           streak: u.consistencyStreak,
@@ -191,7 +199,7 @@ export async function sendMorningDms(
 
         await prisma.trackedMember.update({
           where: { id: m.id },
-          data: { lastPingDate: today },
+          data: { lastPingDate: clock.date },
         });
         sent += 1;
       } catch (e) {
@@ -199,14 +207,9 @@ export async function sendMorningDms(
         skipped += 1;
       }
     }
-
-    await prisma.trackedChannel.update({
-      where: { id: ch.id },
-      data: { lastPingDate: today },
-    });
   }
 
-  return { sent, skipped, now, today };
+  return { sent, skipped };
 }
 
 export async function recordWakeFromDm(
