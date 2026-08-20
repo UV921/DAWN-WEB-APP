@@ -22,6 +22,7 @@ import {
   WEB_STUDY_GUILD,
   studyActivityLabel,
 } from "@/lib/study-activity";
+import { minutesByHourByDate, serializeHourly } from "@/lib/study-cycle";
 
 function snowflake(raw: unknown): string {
   return String(raw || "").replace(/\D/g, "").slice(0, 32);
@@ -76,30 +77,38 @@ export async function GET(req: Request) {
   const now = new Date();
   const groupSince = lite ? weekStart : since < yearStart ? since : yearStart;
 
-  const [closedSums, allSum, open, rooms, roomCount] = await Promise.all([
-    prisma.studySession.groupBy({
-      by: ["date"],
-      where: {
-        userId: session.user.id,
-        endedAt: { not: null },
-        date: { gte: groupSince },
-      },
-      _sum: { minutes: true },
-    }),
-    lite
-      ? Promise.resolve({ _sum: { minutes: 0 } })
-      : prisma.studySession.aggregate({
-          where: { userId: session.user.id, endedAt: { not: null } },
-          _sum: { minutes: true },
-        }),
-    prisma.studySession.findFirst({
-      where: { userId: session.user.id, endedAt: null },
-    }),
-    lite ? Promise.resolve([]) : roomsForGuild(guildId),
-    lite
-      ? prisma.studyRoom.count()
-      : Promise.resolve(0),
-  ]);
+  const [closedSums, allSum, open, rooms, roomCount, hourSessions] =
+    await Promise.all([
+      prisma.studySession.groupBy({
+        by: ["date"],
+        where: {
+          userId: session.user.id,
+          endedAt: { not: null },
+          date: { gte: groupSince },
+        },
+        _sum: { minutes: true },
+      }),
+      lite
+        ? Promise.resolve({ _sum: { minutes: 0 } })
+        : prisma.studySession.aggregate({
+            where: { userId: session.user.id, endedAt: { not: null } },
+            _sum: { minutes: true },
+          }),
+      prisma.studySession.findFirst({
+        where: { userId: session.user.id, endedAt: null },
+      }),
+      lite ? Promise.resolve([]) : roomsForGuild(guildId),
+      lite ? prisma.studyRoom.count() : Promise.resolve(0),
+      lite
+        ? Promise.resolve([])
+        : prisma.studySession.findMany({
+            where: {
+              userId: session.user.id,
+              OR: [{ date: { gte: since } }, { endedAt: null }],
+            },
+            select: { startedAt: true, endedAt: true },
+          }),
+    ]);
 
   const closedByDate = new Map<string, number>();
   for (const row of closedSums) {
@@ -145,6 +154,9 @@ export async function GET(req: Request) {
   const best = [...week].sort((a, b) => b.minutes - a.minutes)[0];
   const hasDiscord = Boolean(session.user.discordId);
   const liveActivity = live ? studyActivityLabel(live) : null;
+  const hourly = lite
+    ? []
+    : serializeHourly(minutesByHourByDate(hourSessions, tz, now));
   const status = buildStudyStatus({
     configured,
     hasDiscord,
@@ -194,6 +206,7 @@ export async function GET(req: Request) {
     allLabel: periods.all.label,
     periods,
     streak: studyStreak(series),
+    hourly,
     bestDay: best
       ? { date: best.date, minutes: best.minutes, label: formatStudyDuration(best.minutes) }
       : null,
