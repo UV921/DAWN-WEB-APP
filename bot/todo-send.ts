@@ -1,11 +1,12 @@
 /**
- * Daily auto-send of the user's task list to their Discord channel.
- * Time + ping text live on User.botMessagesJson (todosSendTime / todosPingText).
+ * Date-wise auto-send of that day's task list to Discord.
+ * Mode + time + ping text live on User.botMessagesJson.
  */
 
 import type { PrismaClient } from "@prisma/client";
 import { zonedClock } from "../src/lib/clock";
 import {
+  isDateWiseTodosSend,
   parseBotMessages,
   serializeBotMessages,
 } from "../src/lib/bot-messages";
@@ -33,7 +34,7 @@ export async function postScheduledTodoSends(prisma: PrismaClient) {
   let sent = 0;
   for (const u of users) {
     const settings = parseBotMessages(u.botMessagesJson);
-    if (!settings.todosSendTime) continue;
+    if (!isDateWiseTodosSend(settings)) continue;
 
     const clock = zonedClock(u.timezone);
     if (clock.hhmm !== settings.todosSendTime) continue;

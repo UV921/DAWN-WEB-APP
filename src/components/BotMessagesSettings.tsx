@@ -6,6 +6,7 @@ import { UiMessage } from "@/components/UiMessage";
 import {
   BOT_MESSAGE_META,
   MAX_CHANNEL_PINGS,
+  TODOS_SEND_MODE_OPTIONS,
   defaultBotMessages,
   parseBotMessages,
   type BotMessageKey,
@@ -325,7 +326,8 @@ export function BotMessagesSettings() {
           Where your task list goes
         </h3>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          The Send button on your tasks posts here. Leave blank to use{" "}
+          Choose Off, Manual, or Date-wise below. The Send button on your
+          tasks posts here. Leave the channel blank to use{" "}
           {channelId ? (
             <code className="text-[var(--color-dawn)]">{channelId}</code>
           ) : (
@@ -362,25 +364,65 @@ export function BotMessagesSettings() {
           placeholder="Here's today's list — you've got this."
           className="ui-field mt-2 text-sm"
         />
-        <label className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-mist)]">
-          Daily send time
-          <input
-            type="time"
-            value={settings.todosSendTime}
-            onChange={(e) =>
-              setSettings((prev) => ({
-                ...prev,
-                todosSendTime: e.target.value,
-              }))
-            }
-            className="ui-field !w-auto !py-1.5 text-sm"
-          />
-          <span className="text-xs">
-            {settings.todosSendTime
-              ? `Auto-posts at ${settings.todosSendTime} (your timezone)`
-              : "Blank = Send now only"}
-          </span>
-        </label>
+        <p className="mt-4 text-sm font-medium text-white">
+          When to send the task list
+        </p>
+        <p className="mt-1 text-sm text-[var(--color-mist)]">
+          Off never posts it. Manual is Send now only. Date-wise posts that
+          day’s list at the time you pick.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {TODOS_SEND_MODE_OPTIONS.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              onClick={() =>
+                setSettings((prev) => ({
+                  ...prev,
+                  todosSendMode: mode.value,
+                }))
+              }
+              className={`rounded-2xl border px-3 py-3 text-left transition ${
+                settings.todosSendMode === mode.value
+                  ? "border-[var(--color-dawn)] bg-[var(--color-dawn)]/10"
+                  : "border-white/10 hover:border-white/25"
+              }`}
+            >
+              <p className="text-sm font-medium text-white">{mode.label}</p>
+              <p className="mt-1 text-xs text-[var(--color-mist)]">
+                {mode.help}
+              </p>
+            </button>
+          ))}
+        </div>
+        {settings.todosSendMode === "date" ? (
+          <label className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-mist)]">
+            Send time
+            <input
+              type="time"
+              value={settings.todosSendTime}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  todosSendTime: e.target.value,
+                  todosSendMode: "date",
+                }))
+              }
+              className="ui-field !w-auto !py-1.5 text-sm"
+            />
+            <span className="text-xs">
+              {settings.todosSendTime
+                ? `Posts that day’s list at ${settings.todosSendTime} (your timezone)`
+                : "Pick a time or Dawn won’t auto-post"}
+            </span>
+          </label>
+        ) : (
+          <p className="mt-3 text-xs text-[var(--color-mist)]">
+            {settings.todosSendMode === "off"
+              ? "The Send button on Tasks will not post to Discord."
+              : "Use Send now on Today or Tasks whenever you want the list in Discord."}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
