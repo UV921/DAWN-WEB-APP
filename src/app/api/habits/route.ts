@@ -10,7 +10,6 @@ import {
   isHabitComplete,
   isHabitDone,
   isPerfectDay,
-  isSleepEarly,
   legacyFieldsFromChecks,
   mergeLogChecks,
   serializeChecks,
@@ -24,6 +23,7 @@ import {
   isHonestClockTime,
   resolveHabitWindow,
   isInWindow,
+  isLeftoverOvernightSleep,
   nowMins,
 } from "@/lib/habit-windows";
 import {
@@ -390,7 +390,17 @@ export async function POST(req: Request) {
         reason: "Bedtime can only be logged today.",
       });
     } else if (existing?.bedtime) {
-      bedtime = existing.bedtime;
+      const leftover = isLeftoverOvernightSleep(existing.bedtime, win, now);
+      if (
+        leftover &&
+        isInWindow(now, win.start, win.end) &&
+        isHonestClockTime(bedtime, now, 20, tz)
+      ) {
+        bedAccepted = true;
+        checks.sleepEarly = true;
+      } else {
+        bedtime = existing.bedtime;
+      }
     } else if (!isInWindow(now, win.start, win.end)) {
       bedtime = null;
       rejected.push({
@@ -405,18 +415,16 @@ export async function POST(req: Request) {
       });
     } else {
       bedAccepted = true;
-      checks.sleepEarly = isSleepEarly(bedtime, sleepGoal);
+      checks.sleepEarly = true;
     }
   } else if (existing?.bedtime) {
     bedtime = existing.bedtime;
   }
 
-  // If wake already set, keep wakeEarly consistent with goal
+  // Wake already set: keep on-time flag in sync. Do not rewrite sleepEarly
+  // from a leftover bedtime — that auto-ticks Sleep early in the morning.
   if (wakeTime && !wakeAccepted) {
     checks.wakeEarly = isBeforeOrAt(wakeTime, wakeGoal);
-  }
-  if (bedtime && !bedAccepted) {
-    checks.sleepEarly = isSleepEarly(bedtime, sleepGoal);
   }
 
   const legacy = legacyFieldsFromChecks(checks);
@@ -435,9 +443,22 @@ export async function POST(req: Request) {
     wakeTime: existing?.wakeTime || null,
     bedtime: existing?.bedtime || null,
   };
+  const sleepHabitDef =
+    habits.find((h) => h.key === "sleepEarly") || {
+      key: "sleepEarly",
+      label: "Sleep",
+      windowStart: null as string | null,
+      windowEnd: null as string | null,
+    };
+  const sleepWinNow = resolveHabitWindow(sleepHabitDef, wakeGoal, sleepGoal);
+  const completeOpts = {
+    now,
+    sleepWindow: { start: sleepWinNow.start, end: sleepWinNow.end },
+  };
   const newlyDone = habitKeys.filter(
     (k) =>
-      isHabitComplete(snapshot, k) && !isHabitComplete(prevSnapshot, k)
+      isHabitComplete(snapshot, k, completeOpts) &&
+      !isHabitComplete(prevSnapshot, k, completeOpts)
   );
 
   const userRow = await prisma.user.findUnique({
@@ -451,11 +472,11 @@ export async function POST(req: Request) {
   });
   const focusKey = userRow?.focusHabitKey || "wakeEarly";
   const focusDoneNew =
-    isHabitComplete(snapshot, focusKey) &&
-    !isHabitComplete(prevSnapshot, focusKey) &&
+    isHabitComplete(snapshot, focusKey, completeOpts) &&
+    !isHabitComplete(prevSnapshot, focusKey, completeOpts) &&
     newlyDone.includes(focusKey);
-  const perfectNow = isPerfectDay(snapshot, habitKeys);
-  const perfectPrev = isPerfectDay(prevSnapshot, habitKeys);
+  const perfectNow = isPerfectDay(snapshot, habitKeys, completeOpts);
+  const perfectPrev = isPerfectDay(prevSnapshot, habitKeys, completeOpts);
   const perfectNew = perfectNow && !perfectPrev;
 
   const log = await prisma.habitLog.upsert({
@@ -500,7 +521,7 @@ export async function POST(req: Request) {
 
   const awardHabits = newlyDone.filter((k) => k !== "wakeEarly" || wakeAccepted);
   const habitsDoneNow = habitKeys.filter((k) =>
-    isHabitComplete(snapshot, k)
+    isHabitComplete(snapshot, k, completeOpts)
   ).length;
   const loopComplete =
     firstBedToday &&
