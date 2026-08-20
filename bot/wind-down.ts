@@ -15,10 +15,13 @@ import {
 } from "discord.js";
 import type { PrismaClient } from "@prisma/client";
 import { resolveDisplayName } from "./names";
+import { zonedClock } from "../src/lib/clock";
 import {
+  botMessageDueTime,
   isMessageEnabled,
   messageText,
   parseBotMessages,
+  shouldAutoSendBotMessage,
 } from "../src/lib/bot-messages";
 
 function todayStr() {
@@ -30,11 +33,6 @@ function tomorrowStr() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function nowHHMM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 const WAKE_OPTS = ["05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00"];
@@ -102,13 +100,13 @@ export async function sendWindDownDms(
   prisma: PrismaClient,
   opts?: { forceUserId?: string; force?: boolean }
 ) {
-  const today = todayStr();
-  const now = nowHHMM();
   let sent = 0;
 
   if (opts?.forceUserId) {
     const user = await prisma.user.findUnique({ where: { id: opts.forceUserId } });
     if (!user?.discordId) return { sent: 0 };
+    const settings = parseBotMessages(user.botMessagesJson);
+    if (!isMessageEnabled(settings, "windDown")) return { sent: 0 };
     const name = await resolveDisplayName(client, prisma, user);
     try {
       const du = await client.users.fetch(user.discordId);
@@ -116,9 +114,13 @@ export async function sendWindDownDms(
         embeds: [
           new EmbedBuilder()
             .setColor(0x3d5a80)
-            .setTitle("Wind-down")
+            .setTitle("Before you sleep")
             .setDescription(
-              `Hey **${name}** — before you sleep:\nWhat time will you wake tomorrow? What's the goal? Todos?`
+              messageText(settings, "windDown", {
+                name: `**${name}**`,
+                wake: `**${user.wakeGoal}**`,
+                sleep: `**${user.sleepGoal}**`,
+              })
             ),
         ],
         components: windDownStartRows(),
@@ -134,15 +136,26 @@ export async function sendWindDownDms(
     include: { user: true },
   });
 
+  const seen = new Set<string>();
   for (const m of members) {
     const u = m.user;
     if (!u.discordId) continue;
-    if (!opts?.force && m.lastWindDownDate === today) continue;
-    // Fire at user's sleep goal minute
-    if (!opts?.force && u.sleepGoal !== now) continue;
+    if (seen.has(u.id)) continue;
+    seen.add(u.id);
 
     const settings = parseBotMessages(u.botMessagesJson);
+    if (!opts?.force && !shouldAutoSendBotMessage(settings, "windDown")) continue;
     if (!opts?.force && !isMessageEnabled(settings, "windDown")) continue;
+
+    const clock = zonedClock(u.timezone);
+    if (
+      !opts?.force &&
+      members.some((x) => x.userId === u.id && x.lastWindDownDate === clock.date)
+    ) {
+      continue;
+    }
+    const due = botMessageDueTime(settings.windDown, u.sleepGoal || "23:00");
+    if (!opts?.force && clock.hhmm !== due) continue;
 
     const name = await resolveDisplayName(client, prisma, u);
     try {
@@ -162,9 +175,9 @@ export async function sendWindDownDms(
         ],
         components: windDownStartRows(),
       });
-      await prisma.trackedMember.update({
-        where: { id: m.id },
-        data: { lastWindDownDate: today },
+      await prisma.trackedMember.updateMany({
+        where: { userId: u.id },
+        data: { lastWindDownDate: clock.date },
       });
       sent += 1;
     } catch (e) {
