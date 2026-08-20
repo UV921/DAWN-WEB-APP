@@ -21,7 +21,7 @@ import {
 import { HabitCharts } from "@/components/HabitCharts";
 import type { StudyStats } from "@/components/StudyStatusPanel";
 import { MissionStats } from "@/components/MissionStats";
-import type { MissionPublic } from "@/lib/missions";
+import { missionDoing, type MissionPublic } from "@/lib/missions";
 
 export type TodoStat = { date: string; total: number; done: number };
 
@@ -42,6 +42,7 @@ type Props = {
   onRange: (range: ReportRange) => void;
   missions?: MissionPublic[];
   missionHistory?: MissionPublic[];
+  missionToday?: string;
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -163,6 +164,7 @@ export function ProgressDetail({
   onRange,
   missions = [],
   missionHistory = [],
+  missionToday,
 }: Props) {
   const { data: session } = useSession();
   const habitKeys = useMemo(() => habits.map((h) => h.key), [habits]);
@@ -404,6 +406,16 @@ export function ProgressDetail({
               : `Bedtime logged on ${nightPct}% of days in this window.`,
         };
 
+  const todayIso =
+    missionToday || todayRow?.date || formatLocalDate(new Date());
+  const liveMissions = missions.filter((m) => m.active);
+  const missionScores = liveMissions.map((m) => missionDoing(m, todayIso));
+  const missionPct = missionScores.length
+    ? Math.round(
+        missionScores.reduce((a, s) => a + s.pct, 0) / missionScores.length
+      )
+    : null;
+
   return (
     <section className="space-y-10">
       <div>
@@ -531,8 +543,9 @@ export function ProgressDetail({
       <div>
         <h2 className="font-display text-2xl text-white">The numbers</h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Four scores for {rangeHint.toLowerCase()}. Percentages are how much you
-          finished, not a grade.
+          Four scores for {rangeHint.toLowerCase()}
+          {missionPct != null ? " — plus your missions" : ""}. Percentages are
+          how much you finished, not a grade.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat
@@ -595,6 +608,21 @@ export function ProgressDetail({
             }
           />
           <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
+          {missionPct != null ? (
+            <Stat
+              label={
+                liveMissions.length === 1
+                  ? liveMissions[0].title
+                  : "Missions"
+              }
+              value={`${missionPct}%`}
+              hint={
+                liveMissions.length === 1
+                  ? missionScores[0].detail
+                  : `${liveMissions.length} live · steps and days you showed up.`
+              }
+            />
+          ) : null}
         </div>
       </div>
 
@@ -602,6 +630,7 @@ export function ProgressDetail({
         missions={missions}
         history={missionHistory}
         range={range}
+        today={todayIso}
       />
 
       {perHabit.length ? (

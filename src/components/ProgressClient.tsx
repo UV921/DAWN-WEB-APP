@@ -20,6 +20,7 @@ export function ProgressClient() {
   const [study, setStudy] = useState<StudyStats | null>(null);
   const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [missionHistory, setMissionHistory] = useState<MissionPublic[]>([]);
+  const [missionToday, setMissionToday] = useState("");
   const [range, setRange] = useState<ReportRange>("week");
   const [loading, setLoading] = useState(true);
   const [readyDays, setReadyDays] = useState(0);
@@ -49,6 +50,7 @@ export function ProgressClient() {
         {
           missions?: MissionPublic[];
           history?: MissionPublic[];
+          today?: string;
         } | null,
       ]) => {
         if (cancelled) return;
@@ -60,6 +62,7 @@ export function ProgressClient() {
         if (m) {
           setMissions(m.missions || []);
           setMissionHistory(m.history || []);
+          if (typeof m.today === "string") setMissionToday(m.today);
         }
         setReadyDays(days);
       })
@@ -109,6 +112,7 @@ export function ProgressClient() {
                 onRange={setRange}
                 missions={missions}
                 missionHistory={missionHistory}
+                missionToday={missionToday}
               />
             </div>
           )}

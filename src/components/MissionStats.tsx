@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { formatMissionDay, missionEndDate, type MissionPublic } from "@/lib/missions";
+import { motion, useReducedMotion } from "motion/react";
+import { MissionPctRing, MISSION_RING_EASE } from "@/components/MissionRing";
+import {
+  formatMissionRemaining,
+  missionDoing,
+  missionEndDate,
+  type MissionPublic,
+} from "@/lib/missions";
 import { formatLocalDate } from "@/lib/habits";
 import type { ReportRange } from "@/lib/progress-brief";
 
@@ -9,6 +16,7 @@ type Props = {
   missions: MissionPublic[];
   history?: MissionPublic[];
   range: ReportRange;
+  today?: string;
 };
 
 function windowSize(range: ReportRange) {
@@ -18,9 +26,11 @@ function windowSize(range: ReportRange) {
   return 365;
 }
 
-function lastNDates(n: number): string[] {
+function lastNDates(n: number, today?: string): string[] {
   const out: string[] = [];
-  const now = new Date();
+  const now = today
+    ? new Date(today + "T12:00:00")
+    : new Date();
   now.setHours(12, 0, 0, 0);
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now);
@@ -48,11 +58,17 @@ function rangeLabel(range: ReportRange) {
   return "this year";
 }
 
-export function MissionStats({ missions, history = [], range }: Props) {
+export function MissionStats({
+  missions,
+  history = [],
+  range,
+  today,
+}: Props) {
   const size = windowSize(range);
-  const dates = lastNDates(size);
+  const dates = lastNDates(size, today);
   const live = missions.filter((m) => m.active);
   const past = history.filter((m) => !m.active).slice(0, 6);
+  const day = today || dates[dates.length - 1] || formatLocalDate(new Date());
 
   if (!live.length && !past.length) {
     return (
@@ -74,12 +90,12 @@ export function MissionStats({ missions, history = [], range }: Props) {
     <div>
       <h2 className="font-display text-2xl text-white">Missions</h2>
       <p className="mt-1 text-sm text-[var(--color-mist)]">
-        Days you marked you worked, for {rangeLabel(range)}. Habit runs also
-        count the habits tied to them.
+        How each mission is going — steps closed and days you showed up — not
+        just the {rangeLabel(range)} window.
       </p>
       <ul className="mt-4 space-y-3">
         {live.map((m) => (
-          <MissionStatCard key={m.id} mission={m} dates={dates} />
+          <MissionStatCard key={m.id} mission={m} dates={dates} today={day} />
         ))}
       </ul>
       {past.length ? (
@@ -88,18 +104,20 @@ export function MissionStats({ missions, history = [], range }: Props) {
             Ended
           </p>
           <ul className="mt-2 space-y-2">
-            {past.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between text-sm text-[var(--color-mist)]"
-              >
-                <span className="text-[var(--color-cloud)]">{m.title}</span>
-                <span>
-                  {m.daysWorked} day{m.daysWorked === 1 ? "" : "s"} worked
-                  {m.days ? ` · ${m.days}d` : ""}
-                </span>
-              </li>
-            ))}
+            {past.map((m) => {
+              const doing = missionDoing(m, day);
+              return (
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 text-sm text-[var(--color-mist)]"
+                >
+                  <span className="text-[var(--color-cloud)]">{m.title}</span>
+                  <span className="shrink-0 tabular-nums">
+                    {doing.pct}% · {doing.detail}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}
@@ -110,96 +128,88 @@ export function MissionStats({ missions, history = [], range }: Props) {
 function MissionStatCard({
   mission: m,
   dates,
+  today,
 }: {
   mission: MissionPublic;
   dates: string[];
+  today: string;
 }) {
+  const reduce = useReducedMotion();
+  const doing = missionDoing(m, today);
   const windowDays = overlapDays(m, dates);
   const checks = new Set(m.checkDates);
-  const worked = windowDays.filter((d) => checks.has(d)).length;
-  const denom = Math.max(1, windowDays.length);
-  const pct = Math.round((worked / denom) * 100);
-  const habitHits = m.habitStats.length
-    ? Math.round(
-        (m.habitStats.reduce((a, h) => a + h.daysDone, 0) /
-          Math.max(1, m.habitStats.length * Math.max(1, m.progress.day))) *
-          100
-      )
-    : null;
-  const showDots = dates.length <= 30;
+  const workedInRange = windowDays.filter((d) => checks.has(d)).length;
+  const showDots = dates.length <= 30 && m.kind === "manual";
+  const p = m.progress;
 
   return (
     <li className="ui-card ui-card-compact !text-left">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex items-center gap-3">
+        <MissionPctRing
+          fill={doing.pct}
+          value={doing.pct}
+          caption="done"
+          ariaLabel={`${m.title} ${doing.pct} percent done. ${doing.detail}`}
+        />
+        <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
             {m.kind === "manual" ? "Manual" : "Habit run"}
             {m.doneToday ? " · today" : ""}
           </p>
-          <p className="font-display mt-1 text-xl text-white">{m.title}</p>
-          <p className="mt-0.5 text-sm text-[var(--color-mist)]">
-            {formatMissionDay(m.progress)}
-            {m.kind === "manual"
-              ? ` · ${worked}/${windowDays.length || 0} days worked in this window`
-              : ""}
-            {(m.steps || []).length
-              ? ` · ${m.steps.filter((s) => s.done).length}/${m.steps.length} steps`
-              : ""}
+          <p className="font-display mt-1 truncate text-xl text-white">
+            {m.title}
+          </p>
+          <p className="mt-0.5 text-sm tabular-nums text-[var(--color-mist)]">
+            {formatMissionRemaining(p)}
+          </p>
+          <p className="mt-0.5 text-sm text-[var(--color-cloud)]">
+            {doing.detail}
           </p>
         </div>
-        <p className="font-display text-2xl tabular-nums text-white">
-          {m.kind === "manual" ? `${pct}%` : `${m.progress.day}${m.progress.ongoing ? "" : `/${m.progress.total}`}`}
-        </p>
       </div>
-      {showDots && m.kind === "manual" ? (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {dates.map((d) => {
-            const inWindow = windowDays.includes(d);
-            const on = checks.has(d);
-            return (
-              <span
-                key={d}
-                title={d}
-                className={`h-2 w-2 rounded-full ${
-                  on
-                    ? "bg-[var(--color-dawn)]"
-                    : inWindow
-                      ? "bg-white/20"
-                      : "bg-white/8"
-                }`}
-              />
-            );
-          })}
+
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <motion.div
+          className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-dawn)]"
+          initial={reduce ? false : { width: 0 }}
+          animate={{ width: `${doing.pct}%` }}
+          transition={{ duration: reduce ? 0 : 0.9, ease: MISSION_RING_EASE }}
+        />
+      </div>
+
+      {showDots ? (
+        <div className="mt-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-mist)]">
+            Shown up {workedInRange}/{windowDays.length || 0} in this window
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {dates.map((d) => {
+              const inWindow = windowDays.includes(d);
+              const on = checks.has(d);
+              return (
+                <span
+                  key={d}
+                  title={d}
+                  className={`h-2 w-2 rounded-full ${
+                    on
+                      ? "bg-[var(--color-dawn)]"
+                      : inWindow
+                        ? "bg-white/20"
+                        : "bg-white/8"
+                  }`}
+                />
+              );
+            })}
+          </div>
         </div>
-      ) : (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-[var(--color-dawn)]"
-            style={{
-              width: `${
-                m.kind === "manual"
-                  ? pct
-                  : m.progress.ongoing
-                    ? 8
-                    : Math.min(
-                        100,
-                        Math.round(
-                          (m.progress.day / Math.max(1, m.progress.total)) * 100
-                        )
-                      )
-              }%`,
-            }}
-          />
-        </div>
-      )}
-      {habitHits != null ? (
+      ) : null}
+
+      {m.habitStats.length ? (
         <p className="mt-2 text-xs text-[var(--color-mist)]">
-          Linked habits {habitHits}% over the mission so far
-          {m.habitStats.length
-            ? ` · ${m.habitStats.map((h) => `${h.label} ${h.daysDone}`).join(" · ")}`
-            : ""}
+          {m.habitStats.map((h) => `${h.label} ${h.daysDone}`).join(" · ")}
         </p>
       ) : null}
+
       {(m.steps || []).length ? (
         <ul className="mt-3 space-y-1">
           {m.steps.map((s) => (

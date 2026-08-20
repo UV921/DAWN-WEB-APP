@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MissionSteps } from "@/components/MissionSteps";
+import { MissionPctRing } from "@/components/MissionRing";
 import { IconChevronDown, IconSettings } from "@/components/icons";
 import {
   formatMissionRemaining,
@@ -258,10 +259,16 @@ function TodayMissionCard({
           aria-expanded={open}
           className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left sm:gap-4 sm:px-4"
         >
-          <MissionRemainRing
-            remain={remain}
-            day={p.day}
-            ongoing={p.ongoing}
+          <MissionPctRing
+            fill={p.ongoing ? 100 : remain ?? 0}
+            value={p.ongoing ? String(p.day) : remain ?? 0}
+            caption={p.ongoing ? "day" : "left"}
+            pulse={p.ongoing}
+            ariaLabel={
+              p.ongoing
+                ? `Day ${p.day}, ongoing`
+                : `${remain ?? 0} percent remaining, day ${p.day}`
+            }
           />
           <div className="min-w-0 flex-1">
             <p className="font-display truncate text-[1.35rem] leading-tight text-white">
@@ -323,96 +330,6 @@ function TodayMissionCard({
         ) : null}
       </AnimatePresence>
     </motion.div>
-  );
-}
-
-function MissionRemainRing({
-  remain,
-  day,
-  ongoing,
-}: {
-  remain: number | null;
-  day: number;
-  ongoing: boolean;
-}) {
-  const reduce = useReducedMotion();
-  const uid = useId().replace(/:/g, "");
-  const size = 64;
-  const stroke = 5;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const pct = ongoing ? 100 : remain ?? 0;
-  const offset = c * (1 - pct / 100);
-  const gid = `mission-remain-${uid}`;
-
-  return (
-    <div
-      className="relative h-16 w-16 shrink-0"
-      aria-label={
-        ongoing
-          ? `Day ${day}, ongoing`
-          : `${pct} percent remaining, day ${day}`
-      }
-    >
-      <svg viewBox={`0 0 ${size} ${size}`} className="h-16 w-16 -rotate-90">
-        <defs>
-          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--color-ember)" />
-            <stop offset="100%" stopColor="var(--color-dawn)" />
-          </linearGradient>
-        </defs>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth={stroke}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={`url(#${gid})`}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={reduce ? false : { strokeDashoffset: c }}
-          animate={{
-            strokeDashoffset: offset,
-            opacity: ongoing ? [0.45, 1, 0.45] : 1,
-          }}
-          transition={
-            ongoing && !reduce
-              ? { opacity: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }
-              : { duration: 0.9, ease: EASE }
-          }
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        {ongoing ? (
-          <>
-            <span className="font-display text-[0.95rem] tabular-nums text-white">
-              {day}
-            </span>
-            <span className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[var(--color-mist)]">
-              day
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="font-display text-[0.95rem] tabular-nums text-white">
-              {pct}
-              <span className="text-[0.6rem]">%</span>
-            </span>
-            <span className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-[var(--color-mist)]">
-              left
-            </span>
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 

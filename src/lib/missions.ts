@@ -241,6 +241,94 @@ export function missionRemainPct(progress: MissionProgress): number | null {
   );
 }
 
+export type MissionDoing = {
+  pct: number;
+  elapsedDays: number;
+  workedDays: number;
+  stepsDone: number;
+  stepsTotal: number;
+  habitPct: number | null;
+  detail: string;
+};
+
+function datesThrough(start: string, end: string): string[] {
+  const out: string[] = [];
+  const d = new Date(start + "T12:00:00");
+  const last = new Date(end + "T12:00:00");
+  if (Number.isNaN(d.getTime()) || Number.isNaN(last.getTime()) || last < d) {
+    return out;
+  }
+  while (d.getTime() <= last.getTime()) {
+    out.push(formatLocalDate(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+/**
+ * How the mission is going — steps closed, days shown up, and linked habits.
+ * Scored against the mission itself, not the Progress page's 7/30-day window.
+ */
+export function missionDoing(m: MissionPublic, today: string): MissionDoing {
+  const steps = m.steps || [];
+  const stepsDone = steps.filter((s) => s.done).length;
+  const stepsTotal = steps.length;
+
+  const missionEnd = m.progress.ongoing
+    ? today
+    : missionEndDate(m.startDate, m.days) || today;
+  const through = missionEnd < today ? missionEnd : today;
+  const elapsedList =
+    !today || through < m.startDate
+      ? []
+      : datesThrough(m.startDate, through);
+  const elapsedDays = Math.max(1, elapsedList.length || m.progress.day || 1);
+  const checks = new Set(m.checkDates || []);
+  const workedDays = elapsedList.filter((d) => checks.has(d)).length;
+
+  const dayPct = Math.round((workedDays / elapsedDays) * 100);
+  const stepPct = stepsTotal
+    ? Math.round((stepsDone / stepsTotal) * 100)
+    : null;
+  const habitPct = m.habitStats.length
+    ? Math.round(
+        (m.habitStats.reduce((a, h) => a + h.daysDone, 0) /
+          Math.max(1, m.habitStats.length * elapsedDays)) *
+          100
+      )
+    : null;
+
+  let pct = 0;
+  if (m.kind === "run" && habitPct != null) {
+    pct = habitPct;
+  } else if (stepPct != null && workedDays === 0) {
+    pct = stepPct;
+  } else if (stepPct != null) {
+    pct = Math.round((stepPct + dayPct) / 2);
+  } else {
+    pct = dayPct;
+  }
+
+  const bits: string[] = [];
+  if (stepsTotal) bits.push(`${stepsDone}/${stepsTotal} steps`);
+  if (m.kind === "manual") {
+    bits.push(
+      `${workedDays}/${elapsedDays} day${elapsedDays === 1 ? "" : "s"} shown up`
+    );
+  }
+  if (habitPct != null) bits.push(`habits ${habitPct}%`);
+
+  return {
+    pct: Math.max(0, Math.min(100, pct)),
+    elapsedDays,
+    workedDays,
+    stepsDone,
+    stepsTotal,
+    habitPct,
+    detail: bits.join(" · ") || "Nothing marked yet",
+  };
+}
+
 type LogLike = {
   date: string;
   checks?: Record<string, boolean> | string;
