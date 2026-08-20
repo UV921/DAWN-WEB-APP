@@ -178,7 +178,7 @@ function activityAskEmbed(name?: string | null) {
     .setColor(0xf0b45a)
     .setTitle("What are you doing?")
     .setDescription(
-      `${who}tap **Coding** or write it. Only you can see this. Same options are on the study card in Dawn.`
+      `${who}tap **Coding** or write it. Same options are on the study card in Dawn.`
     );
 }
 
@@ -257,16 +257,18 @@ async function askWhatYouDoing(
   const rows = activityAskRows(discordId);
   const embed = activityAskEmbed(name);
 
+  const ch = await client.channels.fetch(session.channelId).catch(() => null);
+  if (!ch || !("send" in ch) || typeof ch.send !== "function") return;
+
   try {
-    const user = await client.users.fetch(discordId);
-    await user.send({
-      content:
-        "You joined a study room — what are you doing? Only you can see this.",
+    await ch.send({
+      content: `<@${discordId}> what are you doing?`,
       embeds: [embed],
       components: rows,
+      allowedMentions: { users: [discordId] },
     });
   } catch {
-    /* DMs closed — they can set it on the Today study card */
+    /* text-in-voice may be off — they can set it on the study card */
   }
 }
 
@@ -835,7 +837,7 @@ export async function handleStudyActivityButton(
   }
 
   await replyActivityOnlyToUser(interaction, {
-    content: `This session is **${parsed.label}**. Only you can see this — change it here or on the study card in Dawn.`,
+    content: `This session is **${parsed.label}**. Only you can see this.`,
     components: activityAskRows(interaction.user.id, parsed.key),
   });
 }
@@ -875,7 +877,7 @@ export async function handleStudyActivityModal(
   const saved = await applyLiveActivity(prisma, user.id, parsed);
   await interaction.reply({
     content: saved
-      ? `Logged **${parsed.label}**. Only you can see this. Change it anytime on the study card in Dawn.`
+      ? `Logged **${parsed.label}**. Only you can see this.`
       : "No live session. Join a study voice channel, or start one on Today in Dawn.",
     ephemeral: true,
   });
