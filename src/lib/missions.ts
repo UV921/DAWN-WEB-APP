@@ -232,6 +232,15 @@ export function formatMissionRemaining(progress: MissionProgress): string {
   return `Day ${progress.day} of ${progress.total} · ${progress.daysLeft} days left`;
 }
 
+/** Share of the mission still left (null when open-ended). */
+export function missionRemainPct(progress: MissionProgress): number | null {
+  if (progress.ongoing || progress.ended || !progress.total) return null;
+  return Math.max(
+    0,
+    Math.min(100, Math.round((progress.daysLeft / progress.total) * 100))
+  );
+}
+
 type LogLike = {
   date: string;
   checks?: Record<string, boolean> | string;
