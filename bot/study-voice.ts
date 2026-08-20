@@ -38,6 +38,10 @@ import {
   STUDY_ACTIVITY_PRESETS,
   studyActivityLabel,
 } from "../src/lib/study-activity";
+import {
+  collectChannelIds,
+  parseBotMessages,
+} from "../src/lib/bot-messages";
 import { safeRespond } from "./respond";
 
 type RoomCache = { ids: Set<string>; at: number };
@@ -82,7 +86,14 @@ async function findDawnUser(prisma: PrismaClient, discordId: string) {
         },
       ],
     },
-    select: { id: true, timezone: true, discordId: true, name: true },
+    select: {
+      id: true,
+      timezone: true,
+      discordId: true,
+      name: true,
+      discordChannelId: true,
+      botMessagesJson: true,
+    },
   });
 }
 
@@ -234,6 +245,45 @@ async function replyActivityOnlyToUser(
   }
 }
 
+async function sendActivityAskToChannel(
+  client: Client,
+  channelId: string,
+  discordId: string,
+  embed: EmbedBuilder,
+  rows: ReturnType<typeof activityAskRows>
+): Promise<boolean> {
+  const ch = await client.channels.fetch(channelId).catch((err) => {
+    console.error("[study] channel fetch failed", channelId, err);
+    return null;
+  });
+  if (!ch || !("send" in ch) || typeof ch.send !== "function") return false;
+  const payload = {
+    content: `<@${discordId}> what are you doing?`,
+    embeds: [embed],
+    components: rows,
+    allowedMentions: { users: [discordId] },
+  };
+  try {
+    await ch.send(payload);
+    return true;
+  } catch (err) {
+    console.error("[study] ping with buttons failed", channelId, err);
+    try {
+      await ch.send({
+        content: `<@${discordId}> what are you doing? Set it on the study card in Dawn, or /doing.`,
+        allowedMentions: { users: [discordId] },
+      });
+      return true;
+    } catch (err2) {
+      console.error("[study] ping text failed", channelId, err2);
+      return false;
+    }
+  }
+}
+
+const pingFailAt = new Map<string, number>();
+const PING_RETRY_MS = 2 * 60 * 1000;
+
 async function askWhatYouDoing(
   client: Client,
   prisma: PrismaClient,
@@ -245,30 +295,68 @@ async function askWhatYouDoing(
     activityKey?: string | null;
     activityAskedAt?: Date | null;
   },
-  name?: string | null
+  user: {
+    name?: string | null;
+    discordChannelId?: string | null;
+    botMessagesJson?: string | null;
+  }
 ) {
   if (studyActivityLabel(session)) return;
   if (session.activityAskedAt) return;
-  await prisma.studySession.update({
-    where: { id: session.id },
-    data: { activityAskedAt: new Date() },
-  });
+  const lastFail = pingFailAt.get(session.id) || 0;
+  if (lastFail && Date.now() - lastFail < PING_RETRY_MS) return;
 
   const rows = activityAskRows(discordId);
-  const embed = activityAskEmbed(name);
+  const embed = activityAskEmbed(user.name);
+  const settings = parseBotMessages(user.botMessagesJson);
+  const channelIds = collectChannelIds(
+    session.channelId,
+    settings.todosChannelId,
+    user.discordChannelId,
+    process.env.DISCORD_CHANNEL_ID
+  );
 
-  const ch = await client.channels.fetch(session.channelId).catch(() => null);
-  if (!ch || !("send" in ch) || typeof ch.send !== "function") return;
+  let delivered = false;
+  for (const channelId of channelIds) {
+    delivered = await sendActivityAskToChannel(
+      client,
+      channelId,
+      discordId,
+      embed,
+      rows
+    );
+    if (delivered) break;
+  }
 
-  try {
-    await ch.send({
-      content: `<@${discordId}> what are you doing?`,
-      embeds: [embed],
-      components: rows,
-      allowedMentions: { users: [discordId] },
-    });
-  } catch {
-    /* text-in-voice may be off — they can set it on the study card */
+  if (!delivered) {
+    try {
+      const discordUser = await client.users.fetch(discordId);
+      await discordUser.send({
+        content: "You joined a study room — what are you doing?",
+        embeds: [embed],
+        components: rows,
+      });
+      delivered = true;
+    } catch (err) {
+      console.error("[study] join ping DM failed", discordId, err);
+    }
+  }
+
+  if (delivered) {
+    pingFailAt.delete(session.id);
+    await prisma.studySession
+      .update({
+        where: { id: session.id },
+        data: { activityAskedAt: new Date() },
+      })
+      .catch((err) =>
+        console.error("[study] mark asked failed", session.id, err)
+      );
+  } else {
+    pingFailAt.set(session.id, Date.now());
+    console.error(
+      `[study] join ping did not land session=${session.id} vc=${session.channelId}`
+    );
   }
 }
 
@@ -432,7 +520,11 @@ export async function handleVoiceStateUpdate(
   if (joinedStudy && newCh) {
     const session = await openSession(prisma, user, guildId, newCh);
     console.log(`[study] joined user=${user.id} ch=${newCh}`);
-    await askWhatYouDoing(client, prisma, discordId, session, user.name);
+    try {
+      await askWhatYouDoing(client, prisma, discordId, session, user);
+    } catch (err) {
+      console.error("[study] join ping failed", user.id, err);
+    }
   }
 }
 
@@ -518,7 +610,11 @@ export async function reconcileOpenSessions(
     const session = await openSession(prisma, user, loc.guildId, loc.channelId);
     counted.add(user.id);
     console.log(`[study] recovered occupant user=${user.id} ch=${loc.channelId}`);
-    await askWhatYouDoing(client, prisma, discordId, session, user.name);
+    try {
+      await askWhatYouDoing(client, prisma, discordId, session, user);
+    } catch (err) {
+      console.error("[study] recover ping failed", user.id, err);
+    }
   }
 }
 
@@ -534,12 +630,26 @@ export function attachStudyVoice(client: Client, prisma: PrismaClient) {
       console.error("study voice reconcile failed", e)
     );
 
-  if (client.isReady()) sweep();
-  client.on("ready", () => {
+  const boot = () => {
     console.log("Study voice tracking ready");
-    sweep();
-    setTimeout(sweep, 8_000);
-  });
+    void prisma.studySession
+      .updateMany({
+        where: {
+          endedAt: null,
+          activity: null,
+          activityKey: null,
+        },
+        data: { activityAskedAt: null },
+      })
+      .catch((err) => console.error("[study] reset asked-at failed", err))
+      .finally(() => {
+        sweep();
+        setTimeout(sweep, 8_000);
+      });
+  };
+
+  if (client.isReady()) boot();
+  client.on("ready", boot);
   setInterval(sweep, 60_000);
 }
 
