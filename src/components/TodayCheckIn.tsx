@@ -11,6 +11,7 @@ import {
   effectiveWakeGoal,
   formatDuration,
   isInWindow,
+  isLeftoverOvernightSleep,
   nowMins,
   defaultWindowForKey,
 } from "@/lib/habit-windows";
@@ -100,6 +101,18 @@ function nowHHMM(timeZone?: string) {
   if (timeZone) return zonedClock(timeZone).hhmm;
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function sleepWindowOf(
+  defs: HabitRow[],
+  wake: string,
+  sleep: string
+) {
+  const h = defs.find((x) => x.key === "sleepEarly");
+  if (h?.windowStart && h.windowEnd) {
+    return { start: h.windowStart, end: h.windowEnd };
+  }
+  return defaultWindowForKey("sleepEarly", wake, sleep);
 }
 
 function emptyChecks(defs: HabitDef[]): Record<string, boolean> {
@@ -249,6 +262,29 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       const nextChecks = tlog
         ? { ...emptyChecks(defs), ...(tlog.checks || {}) }
         : emptyChecks(defs);
+      const pulseSleep = defs.find((h) => h.key === "sleepEarly");
+      const pulseWin =
+        pulseSleep?.windowStart && pulseSleep?.windowEnd
+          ? { start: pulseSleep.windowStart, end: pulseSleep.windowEnd }
+          : defaultWindowForKey(
+              "sleepEarly",
+              effectiveWakeGoal(data.todayPlan?.wakeGoal, wakeGoal),
+              sleepGoal
+            );
+      const pulseOpts = {
+        now: nowMins(new Date(), tzRef.current),
+        sleepWindow: pulseWin,
+      };
+      const pulseLog = {
+        checks: nextChecks,
+        wakeTime: tlog?.wakeTime,
+        bedtime: tlog?.bedtime,
+      };
+      const leftoverPulse = isLeftoverOvernightSleep(
+        tlog?.bedtime,
+        pulseWin,
+        pulseOpts.now
+      );
       const localPulse = buildMorningPulse({
         week: (data.weekPulse as WeekPulse) || {
           days: 0,
@@ -260,45 +296,21 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         },
         todayWake: Boolean(tlog?.wakeTime),
         habitsDone: defs.filter((h) =>
-          isHabitComplete(
-            {
-              checks: nextChecks,
-              wakeTime: tlog?.wakeTime,
-              bedtime: tlog?.bedtime,
-            },
-            h.key
-          )
+          isHabitComplete(pulseLog, h.key, pulseOpts)
         ).length,
         habitsTotal: defs.length || 1,
         tasksDone: todos.filter((x) => x.done).length,
         tasksTotal: todos.length,
-        nightClosed: Boolean(tlog?.bedtime),
+        nightClosed: Boolean(tlog?.bedtime) && !leftoverPulse,
         streak: data.profile?.earlyStreak || 0,
         runDay: data.challenge?.active ? data.challenge.day : undefined,
         runTotal: data.challenge?.total,
         nextHabit:
           defs.find(
-            (h) =>
-              !isHabitComplete(
-                {
-                  checks: nextChecks,
-                  wakeTime: tlog?.wakeTime,
-                  bedtime: tlog?.bedtime,
-                },
-                h.key
-              ) && h.canSubmit
+            (h) => !isHabitComplete(pulseLog, h.key, pulseOpts) && h.canSubmit
           )?.label ||
-          defs.find(
-            (h) =>
-              !isHabitComplete(
-                {
-                  checks: nextChecks,
-                  wakeTime: tlog?.wakeTime,
-                  bedtime: tlog?.bedtime,
-                },
-                h.key
-              )
-          )?.label,
+          defs.find((h) => !isHabitComplete(pulseLog, h.key, pulseOpts))
+            ?.label,
         tasksLeft: Math.max(
           0,
           todos.length - todos.filter((x) => x.done).length
@@ -313,9 +325,14 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       });
       if (data.todayLog) {
         const t = data.todayLog as HabitLogLike;
+        const leftover = leftoverPulse;
         setWakeTime(t.wakeTime || "");
-        setBedtime(t.bedtime || "");
-        setChecks({ ...emptyChecks(defs), ...(t.checks || {}) });
+        setBedtime(leftover ? "" : t.bedtime || "");
+        setChecks({
+          ...emptyChecks(defs),
+          ...(t.checks || {}),
+          ...(leftover ? { sleepEarly: false } : {}),
+        });
       } else {
         setChecks(emptyChecks(defs));
       }
@@ -422,11 +439,22 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         }
         if (saved.log) {
           const t = saved.log as HabitLogLike;
+          const win = sleepWindowOf(
+            defsRef.current,
+            effectiveWakeGoal(todayPlanRef.current?.wakeGoal, wakeGoal),
+            sleepGoal
+          );
+          const leftover = isLeftoverOvernightSleep(
+            t.bedtime,
+            win,
+            nowMins(new Date(), tzRef.current)
+          );
           setWakeTime(t.wakeTime || "");
-          setBedtime(t.bedtime || "");
+          setBedtime(leftover ? "" : t.bedtime || "");
           setChecks({
             ...emptyChecks(defsRef.current),
             ...(t.checks || {}),
+            ...(leftover ? { sleepEarly: false } : {}),
           });
         }
         setStatus("saved");
@@ -438,7 +466,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         return false;
       }
     },
-    [load]
+    [load, wakeGoal, sleepGoal]
   );
 
   const closeNightTally = useCallback(() => setShowNightTally(false), []);
@@ -458,12 +486,27 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         wakeTime: wakeRef.current || null,
         bedtime: bedRef.current || null,
       },
-      h.key
+      h.key,
+      row.windowStart && row.windowEnd
+        ? {
+            now: nowMins(new Date(), tzRef.current),
+            sleepWindow: { start: row.windowStart, end: row.windowEnd },
+          }
+        : undefined
     );
     if (h.key === "wakeEarly" && (done || wakeRef.current)) {
       return;
     }
     if (h.key === "sleepEarly") {
+      if (!row.canSubmit) {
+        setBanner({
+          tone: "tip",
+          text: row.opensInMin
+            ? `${h.label} opens in ${formatDuration(row.opensInMin)} (${row.windowStart}–${row.windowEnd})`
+            : `${h.label} isn’t open yet. Window ${row.windowStart}–${row.windowEnd}.`,
+        });
+        return;
+      }
       if (done || bedRef.current) {
         setShowNightTally(true);
         return;
@@ -490,7 +533,17 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   }
 
   async function goingToSleep() {
-    if (bedRef.current) return;
+    const win = sleepWindowOf(
+      defsRef.current,
+      effectiveWakeGoal(todayPlanRef.current?.wakeGoal, wakeGoal),
+      sleepGoal
+    );
+    const leftover = isLeftoverOvernightSleep(
+      bedRef.current || null,
+      win,
+      nowMins(new Date(), tzRef.current)
+    );
+    if (bedRef.current && !leftover) return;
     const t = nowHHMM(tzRef.current);
     const prevChecks = checksRef.current;
     const next = { ...prevChecks, sleepEarly: true };
@@ -570,6 +623,14 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     wakeTime: wakeTime || null,
     bedtime: bedtime || null,
   };
+  const nowM = nowMins(new Date(), tzRef.current || timezone);
+  const sleepWinPreview = sleepWindowOf(
+    liveHabits,
+    todayWakeGoal,
+    sleepGoal
+  );
+  const completeOpts = { now: nowM, sleepWindow: sleepWinPreview };
+  const habitDone = (key: string) => isHabitComplete(logNow, key, completeOpts);
 
   if (loading) {
     return (
@@ -615,12 +676,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     );
   }
 
-  const done = liveHabits.filter((h) => isHabitComplete(logNow, h.key)).length;
-  const openNow = liveHabits.filter(
-    (h) => h.canSubmit && !isHabitComplete(logNow, h.key)
-  );
+  const done = liveHabits.filter((h) => habitDone(h.key)).length;
+  const openNow = liveHabits.filter((h) => h.canSubmit && !habitDone(h.key));
   const nextLocked = liveHabits
-    .filter((h) => !isHabitComplete(logNow, h.key) && !h.canSubmit)
+    .filter((h) => !habitDone(h.key) && !h.canSubmit)
     .sort((a, b) => (a.opensInMin || 99_999) - (b.opensInMin || 99_999))[0];
   const focusKey = profile?.focusHabitKey || "wakeEarly";
   const sortedHabits = [...liveHabits].sort((a, b) => {
@@ -631,15 +690,12 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   });
   const wakeHabit = liveHabits.find((h) => h.key === "wakeEarly");
   const wakeWindowOpen = Boolean(wakeHabit?.canSubmit);
-  const sleepHabit = liveHabits.find((h) => h.key === "sleepEarly");
-  const sleepWin =
-    sleepHabit?.windowStart && sleepHabit?.windowEnd
-      ? { start: sleepHabit.windowStart, end: sleepHabit.windowEnd }
-      : defaultWindowForKey("sleepEarly", todayWakeGoal, sleepGoal);
-  const inSleepWindow = isInWindow(
-    nowMins(new Date(), tzRef.current || timezone),
-    sleepWin.start,
-    sleepWin.end
+  const sleepWin = sleepWinPreview;
+  const inSleepWindow = isInWindow(nowM, sleepWin.start, sleepWin.end);
+  const leftoverNight = isLeftoverOvernightSleep(
+    bedtime || null,
+    sleepWin,
+    nowM
   );
 
   const tasksDone = todayTodos.filter((t) => t.done).length;
@@ -647,13 +703,15 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const todayTally = buildDayTally({
     wakeTime,
     wakeGoal: todayWakeGoal,
-    bedtime,
+    bedtime: leftoverNight ? null : bedtime,
     sleepGoal,
     habits: liveHabits,
     checks,
     todos: todayTodos,
     studyMinutes,
     streak: profile?.earlyStreak,
+    now: nowM,
+    sleepWindow: sleepWin,
   });
   const nextLine = wakeTime
     ? openNow[0]
@@ -704,8 +762,8 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
     {
       key: "night",
       label: "Sleep",
-      detail: bedtime || `by ${sleepGoal}`,
-      done: Boolean(bedtime),
+      detail: leftoverNight ? `by ${sleepGoal}` : bedtime || `by ${sleepGoal}`,
+      done: Boolean(bedtime) && !leftoverNight,
       href: "/sleep",
     },
   ];
@@ -787,7 +845,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       </div>
       <ul className="flex flex-1 flex-col gap-2">
         {sortedHabits.map((h) => {
-          const isDone = isHabitComplete(logNow, h.key);
+          const isDone = habitDone(h.key);
           const locked = !isDone && !h.canSubmit;
           return (
             <li key={h.key}>

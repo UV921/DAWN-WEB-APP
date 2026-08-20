@@ -1,4 +1,5 @@
 import { formatDateInZone } from "@/lib/clock";
+import { isLeftoverOvernightSleep } from "@/lib/habit-windows";
 
 export const DEFAULT_HABITS = [
   {
@@ -129,27 +130,41 @@ export function isHabitDone(
   return Boolean(log[key]);
 }
 
+export type HabitCompleteOpts = {
+  now?: number;
+  sleepWindow?: { start: string; end: string };
+};
+
 /**
  * Whether the habit counts as done for today’s tally.
- * Wake / sleep are completed by logging time in the check-in window
- * (“I’m awake” / “Going to sleep”). The stored wakeEarly / sleepEarly
- * flags stay “on time vs goal” for streaks and XP.
+ * Wake is completed by logging “I’m awake” in the wake window.
+ * Sleep early only counts when the sleep check is set — and not when last
+ * night’s after-midnight close is still sitting on this calendar date.
  */
 export function isHabitComplete(
   log: Pick<HabitLogLike, "checks"> & {
     wakeTime?: string | null;
     bedtime?: string | null;
   } & Record<string, unknown>,
-  key: string
+  key: string,
+  opts?: HabitCompleteOpts
 ): boolean {
   if (key === "wakeEarly" && log.wakeTime) return true;
-  if (key === "sleepEarly" && log.bedtime) return true;
+  if (
+    key === "sleepEarly" &&
+    opts?.sleepWindow &&
+    typeof opts.now === "number" &&
+    isLeftoverOvernightSleep(log.bedtime, opts.sleepWindow, opts.now)
+  ) {
+    return false;
+  }
   return isHabitDone(log, key);
 }
 
 export function completedCount(
   log: HabitLogLike,
-  habitKeys?: string[]
+  habitKeys?: string[],
+  opts?: HabitCompleteOpts
 ): number {
   const checks = log.checks ?? {};
   const keys =
@@ -158,7 +173,7 @@ export function completedCount(
       : Object.keys(checks).length > 0
         ? Object.keys(checks)
         : [...LEGACY_KEYS];
-  return keys.filter((k) => isHabitComplete(log, k)).length;
+  return keys.filter((k) => isHabitComplete(log, k, opts)).length;
 }
 
 export function isPerfectDay(
@@ -166,10 +181,11 @@ export function isPerfectDay(
     wakeTime?: string | null;
     bedtime?: string | null;
   },
-  habitKeys: string[]
+  habitKeys: string[],
+  opts?: HabitCompleteOpts
 ): boolean {
   if (habitKeys.length === 0) return false;
-  return habitKeys.every((k) => isHabitComplete(log, k));
+  return habitKeys.every((k) => isHabitComplete(log, k, opts));
 }
 
 export function timeToMinutes(time: string): number {

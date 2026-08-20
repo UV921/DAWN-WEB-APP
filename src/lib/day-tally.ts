@@ -1,5 +1,5 @@
 import { formatStudyDuration } from "@/lib/study-time";
-import { isHabitComplete } from "@/lib/habits";
+import { isHabitComplete, type HabitCompleteOpts } from "@/lib/habits";
 
 export type DayTally = {
   wakeTime: string | null;
@@ -60,10 +60,16 @@ export function buildDayTally(opts: {
   todos?: { done?: boolean; parentId?: string | null }[];
   studyMinutes?: number;
   streak?: number;
+  now?: number;
+  sleepWindow?: { start: string; end: string };
 }): DayTally {
   const habits = opts.habits || [];
   const checks = opts.checks || {};
   const todos = (opts.todos || []).filter((t) => !t.parentId);
+  const completeOpts: HabitCompleteOpts | undefined =
+    opts.sleepWindow && typeof opts.now === "number"
+      ? { now: opts.now, sleepWindow: opts.sleepWindow }
+      : undefined;
   return {
     wakeTime: opts.wakeTime || null,
     wakeGoal: opts.wakeGoal,
@@ -72,7 +78,8 @@ export function buildDayTally(opts: {
     habitsDone: habits.filter((h) =>
       isHabitComplete(
         { checks, wakeTime: opts.wakeTime, bedtime: opts.bedtime },
-        h.key
+        h.key,
+        completeOpts
       )
     ).length,
     habitsTotal: habits.length,
