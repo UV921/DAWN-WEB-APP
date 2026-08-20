@@ -52,6 +52,35 @@ export function isInWindow(t: string | number, start: string, end: string): bool
   return tm >= s || tm <= e;
 }
 
+/** After-midnight side of an overnight window (e.g. 00:20 in 22:30–01:00). */
+export function isOvernightTail(
+  t: string | number,
+  start: string,
+  end: string
+): boolean {
+  const tm = typeof t === "number" ? t : parseMins(t);
+  const s = parseMins(start);
+  const e = parseEndMins(end, s);
+  if (s <= e) return false;
+  return tm <= e;
+}
+
+/**
+ * Bedtime saved after midnight on this calendar date, but that night
+ * window has already ended — last night’s close, not tonight’s sleep.
+ */
+export function isLeftoverOvernightSleep(
+  bedtime: string | null | undefined,
+  win: { start: string; end: string },
+  now: number
+): boolean {
+  if (!bedtime) return false;
+  if (!isOvernightTail(bedtime, win.start, win.end)) return false;
+  // Same after-midnight close session (e.g. logged 00:20, still 00:40).
+  if (isOvernightTail(now, win.start, win.end)) return false;
+  return true;
+}
+
 export function minutesUntilOpen(now: number, start: string, end: string): number {
   if (isInWindow(now, start, end)) return 0;
   const s = parseMins(start);

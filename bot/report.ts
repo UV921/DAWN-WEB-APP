@@ -174,16 +174,12 @@ export async function buildConsistencyReport(
     const wakeTime = log?.wakeTime || null;
     const habitLines = userHabits.map((h) => {
       const done =
-        Boolean(checks[h.key]) ||
-        (h.key === "wakeEarly" && Boolean(wakeTime)) ||
-        (h.key === "sleepEarly" && Boolean(log?.bedtime));
+        Boolean(checks[h.key]) || (h.key === "wakeEarly" && Boolean(wakeTime));
       return `${done ? "✅" : "⬜"}${h.label}`;
     });
     const habitsDone = userHabits.filter(
       (h) =>
-        Boolean(checks[h.key]) ||
-        (h.key === "wakeEarly" && Boolean(wakeTime)) ||
-        (h.key === "sleepEarly" && Boolean(log?.bedtime))
+        Boolean(checks[h.key]) || (h.key === "wakeEarly" && Boolean(wakeTime))
     ).length;
     const todosDone = userTodos.filter((t) => t.done).length;
     const todosTotal = userTodos.length || plan?.todosTotal || 0;
