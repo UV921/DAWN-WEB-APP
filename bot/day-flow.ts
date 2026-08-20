@@ -14,10 +14,13 @@ import {
 } from "discord.js";
 import type { PrismaClient, Todo, User } from "@prisma/client";
 import { resolveDisplayName } from "./names";
+import { zonedClock } from "../src/lib/clock";
 import {
+  botMessageDueTime,
   isMessageEnabled,
   messageText,
   parseBotMessages,
+  shouldAutoSendBotMessage,
 } from "../src/lib/bot-messages";
 import { todayStr, tomorrowStr } from "./wind-down";
 import {
@@ -25,11 +28,6 @@ import {
   formatTodoLines,
   listTodosForDate,
 } from "./todos";
-
-function nowHHMM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
 
 export function normalizeHHMM(raw: string): string | null {
   const t = raw.trim().replace(".", ":");
@@ -326,8 +324,6 @@ export async function sendNightReviewDms(
   prisma: PrismaClient,
   opts?: { forceUserId?: string; force?: boolean }
 ) {
-  const today = todayStr();
-  const now = nowHHMM();
   let sent = 0;
 
   const members = opts?.forceUserId
@@ -339,16 +335,33 @@ export async function sendNightReviewDms(
         include: { user: true, channel: true },
       });
 
+  const seen = new Set<string>();
   for (const m of members) {
     const u = m.user;
     if (!u.discordId) continue;
-    if (!opts?.force && m.lastReviewDate === today) continue;
-    if (!opts?.force && m.channel.reviewTime !== now) continue;
+    if (seen.has(u.id)) continue;
+    seen.add(u.id);
 
     const settings = parseBotMessages(u.botMessagesJson);
-    if (!opts?.force && !isMessageEnabled(settings, "nightReview")) continue;
+    if (!isMessageEnabled(settings, "nightReview")) continue;
+    if (!opts?.force && !shouldAutoSendBotMessage(settings, "nightReview")) {
+      continue;
+    }
 
-    const todos = await listTodosForDate(prisma, u.id, today);
+    const clock = zonedClock(u.timezone);
+    if (
+      !opts?.force &&
+      members.some((x) => x.userId === u.id && x.lastReviewDate === clock.date)
+    ) {
+      continue;
+    }
+    const due = botMessageDueTime(
+      settings.nightReview,
+      m.channel.reviewTime || "21:00"
+    );
+    if (!opts?.force && clock.hhmm !== due) continue;
+
+    const todos = await listTodosForDate(prisma, u.id, clock.date);
     const name = await resolveDisplayName(client, prisma, u);
     const cons = await consistencySummary(prisma, u.id);
 
@@ -381,9 +394,9 @@ export async function sendNightReviewDms(
         ],
         components: nightReviewStartRows(),
       });
-      await prisma.trackedMember.update({
-        where: { id: m.id },
-        data: { lastReviewDate: today },
+      await prisma.trackedMember.updateMany({
+        where: { userId: u.id },
+        data: { lastReviewDate: clock.date },
       });
       sent += 1;
     } catch (e) {

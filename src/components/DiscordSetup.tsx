@@ -375,6 +375,16 @@ export function DiscordSetup() {
             </button>
           ))}
         </div>
+        <p className="mt-4 text-sm text-[var(--color-mist)]">
+          Night check-in and Before you sleep DMs are on{" "}
+          <a
+            href="/settings?tab=bot"
+            className="text-[var(--color-dawn)] underline-offset-2 hover:underline"
+          >
+            Settings → Bot messages
+          </a>
+          — Off, Manual, or Date-wise. You control those.
+        </p>
       </div>
 
       {/* Study voice rooms */}

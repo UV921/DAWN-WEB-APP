@@ -1616,11 +1616,17 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       },
     });
 
+    const wind = await sendWindDownDms(client, prisma, {
+      forceUserId: user.id,
+      force: true,
+    });
     await interaction.reply({
-      content: `Good night **${name}**. I DMed you — plan tomorrow's wake, goal, reminder & todos.`,
+      content:
+        wind.sent > 0
+          ? `Good night **${name}**. I DMed you — plan tomorrow's wake, goal, reminder & todos.`
+          : `Good night **${name}**. Before you sleep is off — turn it on in Dawn → Settings → Bot messages, or plan on Today.`,
       flags: MessageFlags.Ephemeral,
     });
-    await sendWindDownDms(client, prisma, { forceUserId: user.id, force: true });
     return;
   }
 
