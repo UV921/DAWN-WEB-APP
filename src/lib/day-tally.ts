@@ -1,4 +1,5 @@
 import { formatStudyDuration } from "@/lib/study-time";
+import { isHabitComplete } from "@/lib/habits";
 
 export type DayTally = {
   wakeTime: string | null;
@@ -68,7 +69,12 @@ export function buildDayTally(opts: {
     wakeGoal: opts.wakeGoal,
     bedtime: opts.bedtime || null,
     sleepGoal: opts.sleepGoal,
-    habitsDone: habits.filter((h) => Boolean(checks[h.key])).length,
+    habitsDone: habits.filter((h) =>
+      isHabitComplete(
+        { checks, wakeTime: opts.wakeTime, bedtime: opts.bedtime },
+        h.key
+      )
+    ).length,
     habitsTotal: habits.length,
     tasksDone: todos.filter((t) => t.done).length,
     tasksTotal: todos.length,

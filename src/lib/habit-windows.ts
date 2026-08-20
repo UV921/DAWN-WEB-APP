@@ -114,6 +114,16 @@ export function defaultWindowForKey(
   };
 }
 
+/** Today’s planned wake, if set, else the settings goal. */
+export function effectiveWakeGoal(
+  planWake: string | null | undefined,
+  settingsWake: string | null | undefined
+): string {
+  if (planWake && /^\d{2}:\d{2}$/.test(planWake)) return planWake;
+  if (settingsWake && /^\d{2}:\d{2}$/.test(settingsWake)) return settingsWake;
+  return "06:00";
+}
+
 export function resolveHabitWindow(
   habit: HabitWithWindow,
   wakeGoal: string,

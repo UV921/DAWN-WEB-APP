@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { mergeLogChecks } from "@/lib/habits";
+import { isHabitComplete, mergeLogChecks } from "@/lib/habits";
 import { formatDateInZone } from "@/lib/clock";
 import { nextCalendarDate, prevCalendarDate } from "@/lib/daily-loop";
 import { normalizePriority } from "@/lib/todo-weight";
@@ -46,7 +46,14 @@ export async function GET(
   const habits = habitDefs.map((h) => ({
     key: h.key,
     label: h.label,
-    done: Boolean(checks[h.key]),
+    done: isHabitComplete(
+      {
+        checks,
+        wakeTime: log?.wakeTime || null,
+        bedtime: log?.bedtime || null,
+      },
+      h.key
+    ),
   }));
 
   const roots = todos.filter((t) => !t.parentId);
