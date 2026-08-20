@@ -39,7 +39,7 @@ export function StudyActivityControls({
   return (
     <div className="mt-3 space-y-2">
       <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-mist)]">
-        {live ? "What you’re doing" : "Start here, or join Discord"}
+        What you’re doing
       </p>
       <div className="flex flex-wrap gap-1.5">
         {STUDY_ACTIVITY_PRESETS.map((p) => {
@@ -109,7 +109,7 @@ export function StudyActivityControls({
             </button>
           ) : (
             <p className="text-xs text-[var(--color-mist)]">
-              Leave the study VC to stop. Discord pinged you too.
+              Leave the study VC to stop. Change what you’re doing on this card.
             </p>
           )
         ) : (

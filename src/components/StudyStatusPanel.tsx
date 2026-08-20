@@ -159,9 +159,9 @@ export function StudyStatusPanel({
       <p className="mt-2 text-sm leading-relaxed text-[var(--color-cloud)]">
         {data.status.body}
       </p>
-      {data.today.live && data.today.activity ? (
-        <p className="mt-2 text-sm text-[var(--color-leaf)]">
-          Doing {data.today.activity}
+      {data.today.live ? (
+        <p className="mt-3 inline-flex max-w-full items-center rounded-full border border-[var(--color-leaf)]/35 bg-[var(--color-leaf)]/10 px-3 py-1 text-sm text-[var(--color-leaf)]">
+          {data.today.activity || "What are you doing?"}
         </p>
       ) : null}
 

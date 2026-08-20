@@ -384,10 +384,10 @@ export function DiscordSetup() {
         </p>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           Dawn counts time you spend in these voice channels (its own timer —
-          not LionBot). When you join, the bot pings you:{" "}
+          not LionBot). When you join, Dawn DMs you — only you can see it:{" "}
           <strong className="text-white">what are you doing?</strong> Tap
-          Coding or write it. Same options are on Today in the app. In Discord
-          Developer Portal → Bot, turn on{" "}
+          Coding or write it. The same question lives on the study card on
+          Today. In Discord Developer Portal → Bot, turn on{" "}
           <strong className="text-white">Server Voice States</strong>. Then
           either run{" "}
           <code className="text-[var(--color-dawn)]">/study-room add</code> or
