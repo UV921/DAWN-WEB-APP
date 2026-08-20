@@ -171,15 +171,24 @@ export async function buildConsistencyReport(
     const userTodos = todosByUser.get(m.userId) || [];
     const userHabits = habitsByUser.get(m.userId) || [];
     const checks = mergeChecks(log);
-    const habitLines = userHabits.map(
-      (h) => `${checks[h.key] ? "✅" : "⬜"}${h.label}`
-    );
-    const habitsDone = userHabits.filter((h) => checks[h.key]).length;
+    const wakeTime = log?.wakeTime || null;
+    const habitLines = userHabits.map((h) => {
+      const done =
+        Boolean(checks[h.key]) ||
+        (h.key === "wakeEarly" && Boolean(wakeTime)) ||
+        (h.key === "sleepEarly" && Boolean(log?.bedtime));
+      return `${done ? "✅" : "⬜"}${h.label}`;
+    });
+    const habitsDone = userHabits.filter(
+      (h) =>
+        Boolean(checks[h.key]) ||
+        (h.key === "wakeEarly" && Boolean(wakeTime)) ||
+        (h.key === "sleepEarly" && Boolean(log?.bedtime))
+    ).length;
     const todosDone = userTodos.filter((t) => t.done).length;
     const todosTotal = userTodos.length || plan?.todosTotal || 0;
     const doneCount =
       userTodos.length > 0 ? todosDone : plan?.todosDone ?? 0;
-    const wakeTime = log?.wakeTime || null;
     const wakeEarly = Boolean(log?.wakeEarly || checks.wakeEarly);
     const reviewed = Boolean(plan?.reviewed);
     const streak = m.user.consistencyStreak;

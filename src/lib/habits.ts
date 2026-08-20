@@ -121,6 +121,32 @@ export function legacyFieldsFromChecks(checks: Record<string, boolean>) {
   };
 }
 
+export function isHabitDone(
+  log: Pick<HabitLogLike, "checks"> & Record<string, unknown>,
+  key: string
+): boolean {
+  if (log.checks && key in log.checks) return Boolean(log.checks[key]);
+  return Boolean(log[key]);
+}
+
+/**
+ * Whether the habit counts as done for today’s tally.
+ * Wake / sleep are completed by logging time in the check-in window
+ * (“I’m awake” / “Going to sleep”). The stored wakeEarly / sleepEarly
+ * flags stay “on time vs goal” for streaks and XP.
+ */
+export function isHabitComplete(
+  log: Pick<HabitLogLike, "checks"> & {
+    wakeTime?: string | null;
+    bedtime?: string | null;
+  } & Record<string, unknown>,
+  key: string
+): boolean {
+  if (key === "wakeEarly" && log.wakeTime) return true;
+  if (key === "sleepEarly" && log.bedtime) return true;
+  return isHabitDone(log, key);
+}
+
 export function completedCount(
   log: HabitLogLike,
   habitKeys?: string[]
@@ -132,23 +158,18 @@ export function completedCount(
       : Object.keys(checks).length > 0
         ? Object.keys(checks)
         : [...LEGACY_KEYS];
-  return keys.filter((k) => {
-    if (checks[k] !== undefined) return checks[k];
-    return Boolean((log as Record<string, unknown>)[k]);
-  }).length;
+  return keys.filter((k) => isHabitComplete(log, k)).length;
 }
 
-export function isHabitDone(
-  log: Pick<HabitLogLike, "checks"> & Record<string, unknown>,
-  key: string
+export function isPerfectDay(
+  log: Pick<HabitLogLike, "checks"> & {
+    wakeTime?: string | null;
+    bedtime?: string | null;
+  },
+  habitKeys: string[]
 ): boolean {
-  if (log.checks && key in log.checks) return Boolean(log.checks[key]);
-  return Boolean(log[key]);
-}
-
-export function isPerfectDay(log: HabitLogLike, habitKeys: string[]): boolean {
   if (habitKeys.length === 0) return false;
-  return habitKeys.every((k) => isHabitDone(log, k));
+  return habitKeys.every((k) => isHabitComplete(log, k));
 }
 
 export function timeToMinutes(time: string): number {

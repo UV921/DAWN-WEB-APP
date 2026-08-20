@@ -7,6 +7,7 @@ import {
   computeStreak,
   formatLocalDate,
   isBeforeOrAt,
+  isHabitComplete,
   isHabitDone,
   isPerfectDay,
   isSleepEarly,
@@ -19,6 +20,7 @@ import { notifyCircleCheckIn } from "@/lib/discord";
 import { awardCheckInXp, levelFromXp } from "@/lib/xp";
 import {
   enrichHabitsWithWindows,
+  effectiveWakeGoal,
   isHonestClockTime,
   resolveHabitWindow,
   isInWindow,
@@ -69,7 +71,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const wakeGoal = session.user.wakeGoal || "06:00";
+  const settingsWake = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
   const tz = session.user.timezone || DEFAULT_TZ;
   const userId = session.user.id;
@@ -142,6 +144,7 @@ export async function GET(req: Request) {
           }),
     ]);
 
+  const wakeGoal = effectiveWakeGoal(todayPlan?.wakeGoal, settingsWake);
   const habits = enrichHabitsWithWindows(
     habitsRaw,
     wakeGoal,
@@ -156,7 +159,7 @@ export async function GET(req: Request) {
     perfect: computeStreak(logs, (l) => isPerfectDay(l, habitKeys)),
   };
   for (const h of habits) {
-    streaks[h.key] = computeStreak(logs, (l) => isHabitDone(l, h.key));
+    streaks[h.key] = computeStreak(logs, (l) => isHabitComplete(l, h.key));
   }
 
   const todayLog = logs.find((l) => l.date === today) || null;
@@ -187,7 +190,8 @@ export async function GET(req: Request) {
     today,
     tomorrow: nextCalendarDate(today),
     habits,
-    wakeGoal,
+    wakeGoal: settingsWake,
+    todayWakeGoal: wakeGoal,
     sleepGoal,
     timezone: tz,
     dayMode: resolveDayMode(wakeGoal, sleepGoal),
@@ -249,7 +253,6 @@ export async function POST(req: Request) {
   let bedtime = body.bedtime ? String(body.bedtime) : null;
   const notes = body.notes ? String(body.notes) : null;
 
-  const wakeGoal = session.user.wakeGoal || "06:00";
   const sleepGoal = session.user.sleepGoal || "23:00";
   const tz = session.user.timezone || DEFAULT_TZ;
   const tzNow = nowMins(new Date(), tz);
@@ -262,9 +265,16 @@ export async function POST(req: Request) {
       : null;
   const now = clientNow ?? tzNow;
 
-  const existing = await prisma.habitLog.findUnique({
-    where: { userId_date: { userId: session.user.id, date } },
-  });
+  const [existing, plan] = await Promise.all([
+    prisma.habitLog.findUnique({
+      where: { userId_date: { userId: session.user.id, date } },
+    }),
+    prisma.dayPlan.findUnique({
+      where: { userId_date: { userId: session.user.id, date } },
+      select: { wakeGoal: true },
+    }),
+  ]);
+  const wakeGoal = effectiveWakeGoal(plan?.wakeGoal, session.user.wakeGoal);
   const prevChecks = mergeLogChecks(existing || {});
   const checks = { ...prevChecks };
 
@@ -352,6 +362,8 @@ export async function POST(req: Request) {
       });
     } else {
       wakeAccepted = true;
+      // On-time vs today's planned wake. The Wake habit still counts
+      // from logging in the window (isHabitComplete uses wakeTime).
       checks.wakeEarly = isBeforeOrAt(wakeTime, wakeGoal);
     }
   } else if (existing?.wakeTime) {
@@ -417,8 +429,15 @@ export async function POST(req: Request) {
   const wakeEarlyNew =
     wakeEarlyNow && !prevChecks.wakeEarly && (wakeAccepted || firstWakeToday);
 
+  const snapshot = { checks, wakeTime, bedtime };
+  const prevSnapshot = {
+    checks: prevChecks,
+    wakeTime: existing?.wakeTime || null,
+    bedtime: existing?.bedtime || null,
+  };
   const newlyDone = habitKeys.filter(
-    (k) => Boolean(checks[k]) && !Boolean(prevChecks[k])
+    (k) =>
+      isHabitComplete(snapshot, k) && !isHabitComplete(prevSnapshot, k)
   );
 
   const userRow = await prisma.user.findUnique({
@@ -432,11 +451,11 @@ export async function POST(req: Request) {
   });
   const focusKey = userRow?.focusHabitKey || "wakeEarly";
   const focusDoneNew =
-    Boolean(checks[focusKey]) &&
-    !prevChecks[focusKey] &&
+    isHabitComplete(snapshot, focusKey) &&
+    !isHabitComplete(prevSnapshot, focusKey) &&
     newlyDone.includes(focusKey);
-  const perfectNow = habitKeys.every((k) => Boolean(checks[k]));
-  const perfectPrev = habitKeys.every((k) => Boolean(prevChecks[k]));
+  const perfectNow = isPerfectDay(snapshot, habitKeys);
+  const perfectPrev = isPerfectDay(prevSnapshot, habitKeys);
   const perfectNew = perfectNow && !perfectPrev;
 
   const log = await prisma.habitLog.upsert({
@@ -480,7 +499,9 @@ export async function POST(req: Request) {
   } | null = null;
 
   const awardHabits = newlyDone.filter((k) => k !== "wakeEarly" || wakeAccepted);
-  const habitsDoneNow = habitKeys.filter((k) => Boolean(checks[k])).length;
+  const habitsDoneNow = habitKeys.filter((k) =>
+    isHabitComplete(snapshot, k)
+  ).length;
   const loopComplete =
     firstBedToday &&
     Boolean(wakeTime) &&
