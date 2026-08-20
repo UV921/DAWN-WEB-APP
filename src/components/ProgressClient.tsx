@@ -84,11 +84,14 @@ export function ProgressClient() {
           <p className="ui-sub mt-3 max-w-xl">
             Pick a window. You’ll see what you finished, what you missed, and
             one next step. Study time is from Discord rooms or a session you
-            start on Today (last 30 days).
+            start on Today — including a 24-hour cycle of when you sit down.
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
-          ) : logs.length === 0 && todoStats.length === 0 && missions.length === 0 ? (
+          ) : logs.length === 0 &&
+            todoStats.length === 0 &&
+            missions.length === 0 &&
+            !(study?.hourly?.length || study?.weekMinutes || study?.today?.minutes) ? (
             <div className="mt-8 space-y-6">
               <p className="max-w-md text-[var(--color-mist)]">
                 Nothing to score yet. Go to{" "}

@@ -21,7 +21,9 @@ import {
 import { HabitCharts } from "@/components/HabitCharts";
 import type { StudyStats } from "@/components/StudyStatusPanel";
 import { MissionStats } from "@/components/MissionStats";
+import { StudyCycleChart } from "@/components/StudyCycleChart";
 import { missionDoing, type MissionPublic } from "@/lib/missions";
+import { emptyHours, sumHourlyRows } from "@/lib/study-cycle";
 
 export type TodoStat = { date: string; total: number; done: number };
 
@@ -364,6 +366,13 @@ export function ProgressDetail({
     strongestWeekday !== weakestWeekday
       ? `${prettyWeekdayLong(strongestWeekday)} are your strongest. ${prettyWeekdayLong(weakestWeekday)} are the weakest — that’s the day to lock in.`
       : "Log a few more mornings and this chart will show which weekday usually breaks.";
+
+  const cycleHours = useMemo(() => {
+    const dates = new Set(windowDays.map((d) => d.date));
+    if (!study?.hourly?.length) return emptyHours();
+    return sumHourlyRows(study.hourly, dates);
+  }, [study?.hourly, windowDays]);
+  const nowHour = range === "today" ? new Date().getHours() : null;
 
   const todayRow = windowDays[windowDays.length - 1];
   const wakePct =
@@ -737,6 +746,8 @@ export function ProgressDetail({
           </div>
         </div>
       ) : null}
+
+      <StudyCycleChart hours={cycleHours} range={range} nowHour={nowHour} />
 
       {range !== "today" ? (
         <HabitCharts

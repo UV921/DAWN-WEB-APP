@@ -42,6 +42,8 @@ export type StudyStats = {
     all: { minutes: number; label: string };
   };
   streak?: number;
+  /** Minutes studied in each local hour, keyed by calendar date. */
+  hourly?: { date: string; hours: number[] }[];
   bestDay?: { date: string; minutes: number; label: string } | null;
   status: StudyStatus;
 };
