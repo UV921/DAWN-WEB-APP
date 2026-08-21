@@ -5,13 +5,16 @@ import { useSession } from "next-auth/react";
 import {
   completedCount,
   formatLocalDate,
+  isHabitComplete,
   isHabitDone,
   timeToMinutes,
   type HabitDef,
   type HabitLogLike,
 } from "@/lib/habits";
 import { ShareCardButton } from "@/components/ShareCardButton";
+import { TodayFinishedReport } from "@/components/TodayFinishedReport";
 import { shareProgressCard } from "@/lib/share-progress-card";
+import { shareDayReportCard } from "@/lib/share-day-report-card";
 import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
 import {
@@ -24,15 +27,15 @@ import { MissionStats } from "@/components/MissionStats";
 import { StudyCycleChart } from "@/components/StudyCycleChart";
 import { missionDoing, type MissionPublic } from "@/lib/missions";
 import { emptyHours, sumHourlyRows } from "@/lib/study-cycle";
+import {
+  closedTaskNames,
+  splitTodayTasks,
+  type ReportTodo,
+} from "@/lib/today-task-report";
 
 export type TodoStat = { date: string; total: number; done: number };
 
-export type ReportTodo = {
-  text: string;
-  done: boolean;
-  priority?: string | null;
-  parentId?: string | null;
-};
+export type { ReportTodo };
 
 type Props = {
   logs: HabitLogLike[];
@@ -288,6 +291,8 @@ export function ProgressDetail({
   const leftoverHigh = todayTodos
     .filter((t) => !t.done && t.priority === "high" && !t.parentId)
     .map((t) => t.text);
+  const todaySplit = splitTodayTasks(todayTodos);
+  const closedNames = closedTaskNames(todaySplit.done);
 
   const studyMinutes =
     range === "today"
@@ -322,6 +327,8 @@ export function ProgressDetail({
     prevHabitPct: prev ? prev.habitPct : null,
     prevTaskPct: prev ? prev.taskPct : null,
     leftoverHigh,
+    closedTasks: range === "today" ? closedNames : [],
+    todayTaskTotal: range === "today" ? todaySplit.total : 0,
   });
 
   const briefTone =
@@ -425,6 +432,40 @@ export function ProgressDetail({
       )
     : null;
 
+  const shareDate = todayIso;
+  const makeDayShare = () =>
+    shareDayReportCard({
+      name: session?.user?.name || undefined,
+      date: shareDate,
+      kicker: range === "today" ? report.kicker : "Today",
+      headline:
+        range === "today"
+          ? report.headline
+          : todaySplit.total
+            ? `Closed ${todaySplit.doneCount} of ${todaySplit.total} tasks.`
+            : "Today’s report",
+      next:
+        range === "today"
+          ? report.next
+          : leftoverHigh[0]
+            ? `Finish “${leftoverHigh[0]}” before you add another task.`
+            : undefined,
+      wakeValue: todayRow?.wake || "—",
+      habitValue: `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`,
+      taskValue: todayRow?.tasksTotal
+        ? `${todayRow?.tasksDone || 0}/${todayRow.tasksTotal}`
+        : "none",
+      studyValue: study?.today.label || "0m",
+      habits: habits.map((h) => {
+        const l = todayRow ? logMap.get(todayRow.date) : undefined;
+        return {
+          label: h.label,
+          done: l ? isHabitComplete(l, h.key) : false,
+        };
+      }),
+      tasks: todayTodos,
+    });
+
   return (
     <section className="space-y-10">
       <div>
@@ -444,50 +485,45 @@ export function ProgressDetail({
           <ShareCardButton
             label="Share report"
             make={() =>
-              shareProgressCard({
-                name: session?.user?.name || undefined,
-                date:
-                  windowDays[windowDays.length - 1]?.date ||
-                  formatLocalDate(new Date()),
-                range,
-                kicker: report.kicker,
-                headline: report.headline,
-                next: report.next,
-                wakeValue:
-                  range === "today"
-                    ? todayRow?.wake || "—"
-                    : `${cur.wakeOnTimeDays}/${cur.wakeLoggedDays || 0}`,
-                habitValue:
-                  range === "today"
-                    ? `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`
-                    : `${cur.habitPct}%`,
-                taskValue:
-                  range === "today"
-                    ? `${todayRow?.tasksDone || 0}/${todayRow?.tasksTotal || 0}`
-                    : `${cur.taskPct}%`,
-                studyValue:
-                  studyLabel ||
-                  study?.monthLabel ||
-                  study?.weekLabel ||
-                  "0m",
-                habits: perHabit.map((h) => ({
-                  label: h.label,
-                  pct: range === "today" ? (h.hits ? 100 : 0) : h.pct,
-                  hits: h.hits,
-                  sample: h.sample,
-                })),
-                days: windowDays.slice(-14).map((d) => ({
-                  label: d.weekday.slice(0, 1),
-                  habitPct: d.habitPct,
-                  logged: d.logged || d.studyMins > 0 || d.hasTasks,
-                })),
-              })
+              range === "today"
+                ? makeDayShare()
+                : shareProgressCard({
+                    name: session?.user?.name || undefined,
+                    date:
+                      windowDays[windowDays.length - 1]?.date ||
+                      formatLocalDate(new Date()),
+                    range,
+                    kicker: report.kicker,
+                    headline: report.headline,
+                    next: report.next,
+                    wakeValue: `${cur.wakeOnTimeDays}/${cur.wakeLoggedDays || 0}`,
+                    habitValue: `${cur.habitPct}%`,
+                    taskValue: `${cur.taskPct}%`,
+                    studyValue:
+                      studyLabel ||
+                      study?.monthLabel ||
+                      study?.weekLabel ||
+                      "0m",
+                    habits: perHabit.map((h) => ({
+                      label: h.label,
+                      pct: h.pct,
+                      hits: h.hits,
+                      sample: h.sample,
+                    })),
+                    days: windowDays.slice(-14).map((d) => ({
+                      label: d.weekday.slice(0, 1),
+                      habitPct: d.habitPct,
+                      logged: d.logged || d.studyMins > 0 || d.hasTasks,
+                    })),
+                  })
             }
           />
         </div>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Showing {rangeHint.toLowerCase()}. {compareHint} Share the full
-          report as a PNG.
+          Showing {rangeHint.toLowerCase()}. {compareHint}{" "}
+          {range === "today"
+            ? "Share today’s full report as a PNG — tasks you closed, plus wake, habits, and study."
+            : "Share the full report as a PNG."}
         </p>
       </div>
 
@@ -548,6 +584,40 @@ export function ProgressDetail({
           <p className="mt-1 text-sm font-medium text-white">{report.next}</p>
         </div>
       </div>
+
+      <TodayFinishedReport
+        todos={todayTodos}
+        onShare={makeDayShare}
+        loops={[
+          {
+            label: "Wake",
+            value: todayRow?.wake || "—",
+            done: Boolean(todayRow?.wake),
+          },
+          {
+            label: "Habits",
+            value: `${todayRow?.habitsDone || 0}/${todayRow?.habitsTotal || habitCount}`,
+            done: Boolean(todayRow?.allHabits),
+          },
+          {
+            label: "Tasks",
+            value: todayRow?.tasksTotal
+              ? `${todayRow.tasksDone}/${todayRow.tasksTotal}`
+              : "none",
+            done: Boolean(todayRow?.allTasks),
+          },
+          {
+            label: "Study",
+            value: study?.today.label || "0m",
+            done: Boolean(study?.today.minutes),
+          },
+          {
+            label: "Night",
+            value: todayRow?.night ? "closed" : "open",
+            done: Boolean(todayRow?.night),
+          },
+        ]}
+      />
 
       <div>
         <h2 className="font-display text-2xl text-white">The numbers</h2>
@@ -677,46 +747,6 @@ export function ProgressDetail({
         </div>
       ) : null}
 
-      {range === "today" && todayRow ? (
-        <div>
-          <h2 className="font-display text-2xl text-white">Today’s checklist</h2>
-          <p className="mt-1 text-sm text-[var(--color-mist)]">
-            Green means done. Dash or “open” means it still needs you.
-          </p>
-          <ul className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-            <LoopRow
-              label="Wake"
-              value={todayRow.wake || "—"}
-              done={Boolean(todayRow.wake)}
-            />
-            <LoopRow
-              label="Habits"
-              value={`${todayRow.habitsDone}/${todayRow.habitsTotal}`}
-              done={todayRow.allHabits}
-            />
-            <LoopRow
-              label="Tasks"
-              value={
-                todayRow.tasksTotal
-                  ? `${todayRow.tasksDone}/${todayRow.tasksTotal}`
-                  : "no list"
-              }
-              done={todayRow.allTasks}
-            />
-            <LoopRow
-              label="Night"
-              value={todayRow.night ? "closed" : "open"}
-              done={todayRow.night}
-            />
-            <LoopRow
-              label="Study"
-              value={study?.today.label || "0m"}
-              done={Boolean(study?.today.minutes)}
-            />
-          </ul>
-        </div>
-      ) : null}
-
       {range === "week" ? (
         <div>
           <h2 className="font-display text-2xl text-white">Which weekday is weakest?</h2>
@@ -827,28 +857,5 @@ function Stat({
       <p className="font-display mt-1 text-2xl text-white">{value}</p>
       <p className="mt-1 text-xs text-[var(--color-mist)]">{hint}</p>
     </div>
-  );
-}
-
-function LoopRow({
-  label,
-  value,
-  done,
-}: {
-  label: string;
-  value: string;
-  done: boolean;
-}) {
-  return (
-    <li className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-[var(--color-mist)]">{label}</span>
-      <span
-        className={`text-sm font-medium tabular-nums ${
-          done ? "text-[var(--color-leaf)]" : "text-white"
-        }`}
-      >
-        {value}
-      </span>
-    </li>
   );
 }
