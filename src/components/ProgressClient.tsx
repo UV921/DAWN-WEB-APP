@@ -82,14 +82,17 @@ export function ProgressClient() {
           <p className="ui-kicker">Progress</p>
           <h1 className="ui-title mt-2">How you’re doing</h1>
           <p className="ui-sub mt-3 max-w-xl">
-            Pick a window. You’ll see what you finished, what you missed, and
-            one next step. Study time is from Discord rooms or a session you
-            start on Today — including a 24-hour cycle of when you sit down.
+            Pick a window. You’ll see what you finished — including the tasks
+            you closed today — what you missed, and one next step. Share
+            today’s report as a PNG. Study time is from Discord rooms or a
+            session you start on Today — including a 24-hour cycle of when you
+            sit down.
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
           ) : logs.length === 0 &&
             todoStats.length === 0 &&
+            todayTodos.length === 0 &&
             missions.length === 0 &&
             !(study?.hourly?.length || study?.weekMinutes || study?.today?.minutes) ? (
             <div className="mt-8 space-y-6">

@@ -167,6 +167,10 @@ export function buildProgressReport(opts: {
   prevHabitPct: number | null;
   prevTaskPct: number | null;
   leftoverHigh: string[];
+  /** Names of tasks closed today — used on the Today report. */
+  closedTasks?: string[];
+  /** Top-level tasks on today’s list, including open ones. */
+  todayTaskTotal?: number;
 }): ProgressReport {
   const {
     range,
@@ -188,6 +192,8 @@ export function buildProgressReport(opts: {
     prevHabitPct,
     prevTaskPct,
     leftoverHigh,
+    closedTasks = [],
+    todayTaskTotal = 0,
   } = opts;
 
   const window = rangeLabel(range);
@@ -210,12 +216,26 @@ export function buildProgressReport(opts: {
         : `Habits: ${habitPct}% done. Full mornings (every habit closed): ${fullHabitDays} of ${windowDays} days.`
     );
   }
-  if (allTaskDays > 0 || taskPct > 0) {
-    happened.push(
-      range === "today"
-        ? `Tasks: ${taskPct}% of today’s list is done.`
-        : `Tasks: ${taskPct}% done. You cleared the whole list on ${allTaskDays} day${allTaskDays === 1 ? "" : "s"}.`
-    );
+  if (
+    allTaskDays > 0 ||
+    taskPct > 0 ||
+    (range === "today" && (closedTasks.length || todayTaskTotal > 0))
+  ) {
+    if (range === "today" && closedTasks.length) {
+      const shown = closedTasks.slice(0, 4);
+      const extra = closedTasks.length - shown.length;
+      const names =
+        extra > 0 ? `${shown.join(", ")} (+${extra} more)` : shown.join(", ");
+      happened.push(`Tasks closed: ${names}. ${taskPct}% of today’s list.`);
+    } else if (range === "today" && todayTaskTotal > 0 && !closedTasks.length) {
+      happened.push(`Tasks: none closed yet of ${todayTaskTotal} on the list.`);
+    } else {
+      happened.push(
+        range === "today"
+          ? `Tasks: ${taskPct}% of today’s list is done.`
+          : `Tasks: ${taskPct}% done. You cleared the whole list on ${allTaskDays} day${allTaskDays === 1 ? "" : "s"}.`
+      );
+    }
   }
   if (studyMinutes != null && studyMinutes > 0 && studyLabel) {
     happened.push(
