@@ -83,3 +83,46 @@ export async function requestAndSubscribeWebPush(): Promise<{
   const sub = await subscribeWebPush();
   return { ok: sub.ok, permission, reason: sub.reason };
 }
+
+export type DawnPushPreview = {
+  title: string;
+  body: string;
+};
+
+export function announceDawnPush(preview: DawnPushPreview) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("dawn-push", { detail: preview }));
+}
+
+/** Show a system banner even while Dawn is the focused tab. */
+export async function showLocalDawnNotification(preview: DawnPushPreview) {
+  announceDawnPush(preview);
+  if (
+    typeof window === "undefined" ||
+    !("Notification" in window) ||
+    Notification.permission !== "granted"
+  ) {
+    return;
+  }
+  const opts: NotificationOptions = {
+    body: preview.body,
+    icon: "/icons/icon-192.png",
+    tag: "dawn-push-test",
+    requireInteraction: true,
+    data: { url: "/dashboard" },
+  };
+  try {
+    if (navigator.serviceWorker?.ready) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(preview.title, opts);
+    } else {
+      new Notification(preview.title, opts);
+    }
+  } catch {
+    try {
+      new Notification(preview.title, opts);
+    } catch {
+      /* ignore */
+    }
+  }
+}
