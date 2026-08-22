@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GraduationCapIcon } from "@/components/ui/graduation-cap";
 import type { GraduationCapIconHandle } from "@/components/ui/graduation-cap";
 import { StudyActivityControls } from "@/components/StudyActivityControls";
+import { StudyCareControls } from "@/components/StudyCareControls";
 import { type StudyStats } from "@/components/StudyStatusPanel";
 
 export function StudyHoursCard({
@@ -167,6 +168,7 @@ export function StudyHoursCard({
           onStart={() => void act("start")}
           onStop={() => void act("stop")}
         />
+        <StudyCareControls live={live} />
       </div>
     </section>
   );

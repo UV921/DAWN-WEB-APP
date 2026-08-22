@@ -173,8 +173,9 @@ export function RemindersManager() {
       <div>
         <h2 className="font-display text-3xl text-white">Reminders</h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Browser notifications when Dawn is open/installed. Discord pings go to
-          your channel and/or DM when the bot is running.
+          Clock-time alerts. Browser when Dawn is open/installed. Discord when
+          the bot is running. Study care pings (water, eyes, interval) are
+          below — those follow a live session, not the clock.
         </p>
       </div>
 

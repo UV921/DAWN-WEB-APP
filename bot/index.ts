@@ -8,6 +8,7 @@
  *
  * Auto: at channel pingTime → DM all members
  *       at leaderboardTime → post public leaderboard
+ *       while a study session is live → interval care pings (water, eyes, …)
  *
  * Run: npm run bot
  */
@@ -875,6 +876,7 @@ client.once("ready", () => {
     );
   }, 30_000);
   runJob("reminders", () => fireDueReminders());
+  runJob("study-nudges", () => fireDueStudyNudges());
   runJob("morning", () => runMorningScheduler(client, prisma));
   runJob("wind-down", () => sendWindDownDms(client, prisma));
   runJob("night-review", () => sendNightReviewDms(client, prisma));
@@ -882,6 +884,7 @@ client.once("ready", () => {
   runJob("channel-pings", () => postChannelPings(client, prisma));
   runJob("todo-sends", () => fireScheduledTodoSends());
   setInterval(() => runJob("reminders", () => fireDueReminders()), 30_000);
+  setInterval(() => runJob("study-nudges", () => fireDueStudyNudges()), 30_000);
   setInterval(() => {
     runJob("morning", () => runMorningScheduler(client, prisma));
     runJob("wind-down", () => sendWindDownDms(client, prisma));
@@ -911,6 +914,19 @@ async function fireDueReminders() {
     if (due.length) console.log(`Fired ${due.length} reminder(s)`);
   } catch (e) {
     console.error("Reminder tick failed", e);
+  }
+}
+
+async function fireDueStudyNudges() {
+  try {
+    const { processDueStudyNudges } = await import("../src/lib/study-nudges");
+    const { studyNudgeDiscordSender } = await import("../src/lib/discord-notify");
+    const { due } = await processDueStudyNudges(prisma, {
+      discord: studyNudgeDiscordSender(),
+    });
+    if (due.length) console.log(`Fired ${due.length} study care ping(s)`);
+  } catch (e) {
+    console.error("Study care tick failed", e);
   }
 }
 

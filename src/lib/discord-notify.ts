@@ -339,3 +339,22 @@ export function reminderDiscordSender() {
       discordSendDm(discordUserId, { title, body }),
   };
 }
+
+/** Study care pings mention you in the channel so they land while you’re in VC. */
+export function studyNudgeDiscordSender() {
+  return {
+    sendChannel: (
+      channelId: string,
+      title: string,
+      body: string,
+      mentionUserId?: string | null
+    ) =>
+      discordSendChannelMessage(channelId, {
+        title,
+        body,
+        mentionUserId,
+      }),
+    sendDm: (discordUserId: string, title: string, body: string) =>
+      discordSendDm(discordUserId, { title, body }),
+  };
+}
