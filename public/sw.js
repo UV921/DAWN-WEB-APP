@@ -3,7 +3,7 @@
    cache.addAll() then fails the whole install — the old worker keeps serving
    hashed /_next chunks from a previous deploy and the app white-screens.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v7";
+const CACHE = "dawn-v9";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
@@ -83,9 +83,36 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+self.addEventListener("push", (event) => {
+  let data = { title: "Dawn", body: "", url: "/dashboard", tag: "dawn" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    try {
+      const text = event.data && event.data.text();
+      if (text) data.body = text;
+    } catch {
+      /* ignore */
+    }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Dawn", {
+      body: data.body || "Open Dawn.",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || "dawn",
+      data: { url: data.url || "/dashboard" },
+    })
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = "/dashboard?ritual=1";
+  const fromData =
+    event.notification.data && typeof event.notification.data.url === "string"
+      ? event.notification.data.url
+      : "";
+  const target = fromData || "/dashboard?ritual=1";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const c of clients) {

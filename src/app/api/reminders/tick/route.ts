@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { processDueReminders } from "@/lib/reminders";
-import { reminderDiscordSender } from "@/lib/discord-notify";
+import { processDueStudyNudges } from "@/lib/study-nudges";
+import {
+  reminderDiscordSender,
+  studyNudgeDiscordSender,
+} from "@/lib/discord-notify";
 
 /**
  * Fire due Discord reminders.
@@ -19,10 +23,21 @@ export async function POST(req: Request) {
       new URL(req.url).searchParams.get("secret") === secret);
 
   if (isCron) {
-    const { due, now } = await processDueReminders(prisma, {
-      discord: reminderDiscordSender(),
+    const [reminders, study] = await Promise.all([
+      processDueReminders(prisma, {
+        discord: reminderDiscordSender(),
+      }),
+      processDueStudyNudges(prisma, {
+        discord: studyNudgeDiscordSender(),
+      }),
+    ]);
+    return NextResponse.json({
+      ok: true,
+      fired: reminders.due.length + study.due.length,
+      now: reminders.now,
+      due: reminders.due,
+      studyDue: study.due,
     });
-    return NextResponse.json({ ok: true, fired: due.length, now, due });
   }
 
   const session = await getServerSession(authOptions);
@@ -30,10 +45,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { due, now } = await processDueReminders(prisma, {
-    userId: session.user.id,
-    discord: reminderDiscordSender(),
-  });
+  const [reminders, study] = await Promise.all([
+    processDueReminders(prisma, {
+      userId: session.user.id,
+      discord: reminderDiscordSender(),
+    }),
+    processDueStudyNudges(prisma, {
+      userId: session.user.id,
+      discord: studyNudgeDiscordSender(),
+    }),
+  ]);
 
-  return NextResponse.json({ ok: true, now, due, fired: due.length });
+  return NextResponse.json({
+    ok: true,
+    now: reminders.now,
+    due: reminders.due,
+    studyDue: study.due,
+    fired: reminders.due.length + study.due.length,
+  });
 }

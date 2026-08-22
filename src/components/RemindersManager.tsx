@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { IconChevronRight } from "@/components/icons";
+import { requestAndSubscribeWebPush } from "@/lib/web-push-client";
 
 type Reminder = {
   id: string;
@@ -61,13 +62,12 @@ export function RemindersManager() {
   }, [load]);
 
   async function enableBrowser() {
-    if (!("Notification" in window)) return;
-    const p = await Notification.requestPermission();
-    setPerm(p);
+    const result = await requestAndSubscribeWebPush();
+    setPerm(result.permission);
     setMsg(
-      p === "granted"
-        ? "Browser notifications on. Keep Dawn open or installed."
-        : "Permission denied."
+      result.ok
+        ? "Web Push on. Browser alerts keep going after Dawn is closed."
+        : result.reason || "Could not enable Web Push."
     );
   }
 
@@ -173,8 +173,9 @@ export function RemindersManager() {
       <div>
         <h2 className="font-display text-3xl text-white">Reminders</h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
-          Browser notifications when Dawn is open/installed. Discord pings go to
-          your channel and/or DM when the bot is running.
+          Clock-time alerts. Discord and Web Push both fire after Dawn is
+          closed (allow notifications once on this device). Study care pings
+          (water, eyes, interval) are below — those follow a live session.
         </p>
       </div>
 

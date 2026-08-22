@@ -8,6 +8,7 @@ import { AppNav } from "@/components/AppNav";
 import { HabitStudio } from "@/components/HabitStudio";
 import { GoalsManager } from "@/components/GoalsManager";
 import { RemindersManager } from "@/components/RemindersManager";
+import { StudyCareManager } from "@/components/StudyCareManager";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { DiscordSetup } from "@/components/DiscordSetup";
 import { BotMessagesSettings } from "@/components/BotMessagesSettings";
@@ -150,7 +151,12 @@ export function SettingsClient() {
                 </div>
               ) : null}
 
-              {tab === "reminders" ? <RemindersManager /> : null}
+              {tab === "reminders" ? (
+                <>
+                  <RemindersManager />
+                  <StudyCareManager />
+                </>
+              ) : null}
 
               {tab === "goals" ? (
                 <div className="space-y-8">

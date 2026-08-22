@@ -5,6 +5,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "./providers";
 import { PwaRegister } from "@/components/PwaRegister";
 import { ReminderWatcher } from "@/components/ReminderWatcher";
+import { StudyCareWatcher } from "@/components/StudyCareWatcher";
+import { PushSubscriber } from "@/components/PushSubscriber";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -64,12 +66,14 @@ export default function RootLayout({
         }
       >
         <Script id="dawn-stale-chunk" strategy="beforeInteractive">
-          {`(function(){function r(m){if(!/Loading chunk|ChunkLoadError|Failed to fetch dynamically imported module/i.test(m||""))return;try{if(sessionStorage.getItem("dawn-chunk-reloaded")==="7")return;sessionStorage.setItem("dawn-chunk-reloaded","7")}catch(e){}location.reload()}window.addEventListener("error",function(e){r(e.message)});window.addEventListener("unhandledrejection",function(e){var x=e.reason;r(typeof x==="string"?x:(x&&x.message)||"")});})();`}
+          {`(function(){function r(m){if(!/Loading chunk|ChunkLoadError|Failed to fetch dynamically imported module/i.test(m||""))return;try{if(sessionStorage.getItem("dawn-chunk-reloaded")==="9")return;sessionStorage.setItem("dawn-chunk-reloaded","9")}catch(e){}location.reload()}window.addEventListener("error",function(e){r(e.message)});window.addEventListener("unhandledrejection",function(e){var x=e.reason;r(typeof x==="string"?x:(x&&x.message)||"")});})();`}
         </Script>
         <Providers>
           {children}
           <PwaRegister />
+          <PushSubscriber />
           <ReminderWatcher />
+          <StudyCareWatcher />
         </Providers>
         <SpeedInsights />
       </body>

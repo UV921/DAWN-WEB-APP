@@ -1,9 +1,11 @@
 import type { PrismaClient, Reminder, User } from "@prisma/client";
 import { normChannelId } from "./bot-messages";
+import { sendWebPushToUser, type WebPushSendResult } from "./web-push";
 
 export type ReminderFireResult = {
   reminderId: string;
   discord: { channel?: boolean; dm?: boolean; error?: string };
+  push?: WebPushSendResult;
 };
 
 function hhmmNow(timezone?: string): string {
@@ -109,7 +111,12 @@ export async function processDueReminders(
     ? await prisma.user.findMany({ where: { id: userId } })
     : await prisma.user.findMany({
         where: {
-          reminders: { some: { enabled: true, notifyDiscord: true } },
+          reminders: {
+            some: {
+              enabled: true,
+              OR: [{ notifyDiscord: true }, { notifyBrowser: true }],
+            },
+          },
         },
       });
 
@@ -121,9 +128,11 @@ export async function processDueReminders(
       where: {
         userId: user.id,
         enabled: true,
-        notifyDiscord: true,
         time,
-        OR: [{ lastFiredKey: null }, { lastFiredKey: { not: key } }],
+        AND: [
+          { OR: [{ notifyDiscord: true }, { notifyBrowser: true }] },
+          { OR: [{ lastFiredKey: null }, { lastFiredKey: { not: key } }] },
+        ],
       },
       include: { todo: { select: { done: true, date: true } } },
     });
@@ -157,6 +166,20 @@ export async function processDueReminders(
       const body =
         reminder.message ||
         "Time for your Dawn check-in — open the app and log habits.";
+
+      if (reminder.notifyBrowser) {
+        result.push = await sendWebPushToUser(prisma, user.id, {
+          title,
+          body,
+          url: "/dashboard?ritual=1",
+          tag: `dawn-${reminder.id}`,
+        });
+      }
+
+      if (!reminder.notifyDiscord) {
+        results.push(result);
+        continue;
+      }
 
       if (target === "channel" || target === "both") {
         const channelId = await resolveChannelId(prisma, user, reminder);

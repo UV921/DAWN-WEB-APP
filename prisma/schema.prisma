@@ -70,6 +70,8 @@ model User {
   appOpens AppOpen[]
   missions Mission[]
   studySessions StudySession[]
+  studyNudges   StudyNudge[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Goal {
@@ -311,6 +313,33 @@ model StudySession {
   @@index([userId, endedAt])
 }
 
+/// Interval care ping during a live study session (water, eyes, custom).
+/// Fires while a StudySession is open — Discord even if Dawn is closed.
+model StudyNudge {
+  id              String    @id @default(cuid())
+  userId          String
+  title           String
+  message         String    @default("")
+  /// Minutes between pings while a session is live (1–720).
+  intervalMinutes Int
+  enabled         Boolean   @default(true)
+  notifyBrowser   Boolean   @default(true)
+  notifyDiscord   Boolean   @default(true)
+  /// channel | dm | both
+  discordTarget   String    @default("channel")
+  /// water | eyes | stretch — null for a custom nudge
+  presetKey       String?
+  /// Last successful Discord + Web Push fire
+  lastFiredAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled])
+  @@unique([userId, presetKey])
+}
+
 /// Plan for a specific calendar day (set the night before)
 model DayPlan {
   id         String   @id @default(cuid())
@@ -432,4 +461,29 @@ model MissionStep {
   mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
   @@index([missionId, sortOrder])
+}
+
+/// Browser Web Push endpoint (works after Dawn is fully closed).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Singleton row for generated VAPID keys when env vars are not set.
+model AppConfig {
+  id           String   @id @default("app")
+  vapidPublic  String   @default("")
+  vapidPrivate String   @default("")
+  vapidSubject String   @default("")
+  updatedAt    DateTime @updatedAt
 }
