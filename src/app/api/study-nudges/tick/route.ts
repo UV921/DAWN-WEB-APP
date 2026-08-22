@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { processDueStudyNudges } from "@/lib/study-nudges";
+import { processDueStudyNudges } from "@/lib/study-nudge-send";
 import { studyNudgeDiscordSender } from "@/lib/discord-notify";
 
 /**
