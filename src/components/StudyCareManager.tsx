@@ -7,7 +7,12 @@ import {
   STUDY_NUDGE_PRESETS,
   type StudyNudgeRow,
 } from "@/lib/study-nudges";
-import { requestAndSubscribeWebPush } from "@/lib/web-push-client";
+import {
+  requestAndSubscribeWebPush,
+  showLocalDawnNotification,
+  subscribeWebPush,
+} from "@/lib/web-push-client";
+import { UiMessage } from "@/components/UiMessage";
 
 type Live = {
   id: string;
@@ -64,6 +69,40 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         ? "Web Push on. Browser alerts keep going after Dawn is closed."
         : result.reason || "Could not enable Web Push."
     );
+  }
+
+  async function sendTestPush() {
+    setBusy(true);
+    setMsg("");
+    try {
+      const sub = await subscribeWebPush();
+      if (!sub.ok) {
+        setMsg(sub.reason || "Could not subscribe this Mac for push.");
+        return;
+      }
+      const preview = {
+        title: "Dawn Web Push",
+        body: "This reaches you even if Dawn is closed.",
+      };
+      const res = await fetch("/api/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      await showLocalDawnNotification(preview);
+      setMsg(
+        res.ok
+          ? "Test ping is on this page and in Notification Center (top-right). Chrome hides the system banner while Dawn is open."
+          : typeof data.error === "string"
+            ? data.error
+            : "Test push failed."
+      );
+    } catch {
+      setMsg("Could not send a test ping.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function addNudge(patch?: Record<string, unknown>) {
@@ -170,25 +209,7 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            void fetch("/api/push", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ test: true }),
-            })
-              .then(async (res) => {
-                const data = await res.json().catch(() => ({}));
-                setMsg(
-                  res.ok
-                    ? "Test push sent. Close Dawn and you should still see it."
-                    : typeof data.error === "string"
-                      ? data.error
-                      : "Test push failed."
-                );
-              })
-              .finally(() => setBusy(false));
-          }}
+          onClick={() => void sendTestPush()}
           className="rounded-full border border-white/20 px-4 py-2 text-sm text-white"
         >
           Send test push
@@ -196,14 +217,20 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
       ) : null}
 
       {nudges.length === 0 ? (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void seedPresets()}
-          className="rounded-full border border-white/20 px-4 py-2 text-sm text-white"
-        >
-          Add water + eyes + stretch
-        </button>
+        <UiMessage tone="warn" title="Nothing is set yet">
+          Live session is on, but there is no water / eyes ping until you add
+          one. Tap the button, or fill Custom ping and tap Add care ping.
+          <div className="mt-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void seedPresets()}
+              className="ui-btn ui-btn-primary ui-btn-sm"
+            >
+              Add water + eyes + stretch
+            </button>
+          </div>
+        </UiMessage>
       ) : null}
 
       <ul className="space-y-2">

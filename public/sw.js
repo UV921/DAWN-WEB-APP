@@ -3,7 +3,7 @@
    cache.addAll() then fails the whole install — the old worker keeps serving
    hashed /_next chunks from a previous deploy and the app white-screens.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v9";
+const CACHE = "dawn-v10";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
@@ -95,14 +95,30 @@ self.addEventListener("push", (event) => {
       /* ignore */
     }
   }
+  const title = data.title || "Dawn";
+  const body = data.body || "Open Dawn.";
   event.waitUntil(
-    self.registration.showNotification(data.title || "Dawn", {
-      body: data.body || "Open Dawn.",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || "dawn",
-      data: { url: data.url || "/dashboard" },
-    })
+    Promise.all([
+      self.registration.showNotification(title, {
+        body,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: data.tag || "dawn",
+        requireInteraction: data.tag === "dawn-push-test",
+        data: { url: data.url || "/dashboard" },
+      }),
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((clients) => {
+          for (const client of clients) {
+            client.postMessage({
+              type: "dawn-push",
+              title,
+              body,
+            });
+          }
+        }),
+    ])
   );
 });
 
