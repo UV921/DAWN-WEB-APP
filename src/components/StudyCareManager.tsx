@@ -169,6 +169,18 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
     await load();
   }
 
+  async function setAll(enabled: boolean) {
+    setBusy(true);
+    await fetch("/api/study-nudges", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allEnabled: enabled }),
+    });
+    setBusy(false);
+    setMsg(enabled ? "Study care pings on." : "Study care pings off.");
+    await load();
+  }
+
   async function removeNudge(id: string) {
     setBusy(true);
     await fetch(`/api/study-nudges?id=${encodeURIComponent(id)}`, {
@@ -180,6 +192,7 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
 
   const haveKeys = new Set(nudges.map((n) => n.presetKey).filter(Boolean));
   const missingPresets = STUDY_NUDGE_PRESETS.filter((p) => !haveKeys.has(p.key));
+  const anyOn = nudges.some((n) => n.enabled);
 
   return (
     <section className={compact ? "space-y-3" : "mt-10 space-y-6 border-t border-white/10 pt-10"}>
@@ -223,6 +236,17 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
           className="rounded-full border border-white/20 px-4 py-2 text-sm text-white"
         >
           Send test push
+        </button>
+      ) : null}
+
+      {nudges.length > 0 ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void setAll(!anyOn)}
+          className={`ui-btn ui-btn-sm ${anyOn ? "ui-btn-ghost" : "ui-btn-primary"}`}
+        >
+          {anyOn ? "Turn all study care off" : "Turn all study care on"}
         </button>
       ) : null}
 

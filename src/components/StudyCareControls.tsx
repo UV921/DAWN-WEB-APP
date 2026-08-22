@@ -42,6 +42,18 @@ export function StudyCareControls({ live }: { live: boolean }) {
     await load();
   }
 
+  async function setAll(enabled: boolean) {
+    setBusy(true);
+    await fetch("/api/study-nudges", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allEnabled: enabled }),
+    });
+    setBusy(false);
+    setOpen(true);
+    await load();
+  }
+
   async function toggle(id: string, enabled: boolean) {
     setBusy(true);
     await fetch("/api/study-nudges", {
@@ -94,9 +106,21 @@ export function StudyCareControls({ live }: { live: boolean }) {
         <div className="mt-2 space-y-2">
           <p className="text-xs text-[var(--color-mist)]">
             {live
-              ? "Pings only while this session is live. Stop the session to silence them."
+              ? "Pings only while this session is live. Turn all off to silence them without stopping the session."
               : "Set these now. They send only after you start a session or join a study VC."}
           </p>
+          {nudges.length > 0 ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void setAll(on.length === 0)}
+              className={`ui-btn !min-h-9 !px-4 text-[12px] ${
+                on.length === 0 ? "ui-btn-primary" : "ui-btn-ghost"
+              }`}
+            >
+              {on.length === 0 ? "Turn all on" : "Turn all off"}
+            </button>
+          ) : null}
           {nudges.length === 0 ? (
             <button
               type="button"
@@ -120,6 +144,7 @@ export function StudyCareControls({ live }: { live: boolean }) {
                     className={`ui-chip ${n.enabled ? "is-on" : ""}`}
                   >
                     {n.title}
+                    {n.enabled ? "" : " · off"}
                   </button>
                   <CareIntervalField
                     minutes={n.intervalMinutes}
