@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { hasWebPushSubscription } from "@/lib/web-push-client";
+import { showOsNotification } from "@/lib/web-push-client";
 import { studyNudgeBrowserSlot } from "@/lib/study-nudges";
 
 type NudgeRow = {
@@ -17,8 +17,9 @@ type NudgeRow = {
 type Live = { id: string; startedAt: string } | null;
 
 /**
- * While Dawn is open: tick the server (Discord + Web Push) and fall back
- * to a local notification only if this device is not push-subscribed.
+ * While Dawn is still loaded (tab can be in the background): fire a native
+ * OS notification. Web Push covers the fully-closed case. We always show
+ * the OS banner — skipping it when push is subscribed left Mac with nothing.
  */
 export function StudyCareWatcher() {
   const { status } = useSession();
@@ -49,7 +50,6 @@ export function StudyCareWatcher() {
       ) {
         return;
       }
-      if (await hasWebPushSubscription()) return;
       const key = `dawn-study-${n.id}-${sessionId}-${slot}`;
       try {
         if (sessionStorage.getItem(key)) return;
@@ -57,23 +57,14 @@ export function StudyCareWatcher() {
       } catch {
         /* private mode */
       }
-      const body = n.message || "Take a short break, then back to it.";
-      const opts: NotificationOptions = {
-        body,
-        icon: "/icons/icon-192.png",
+      const hidden = document.visibilityState === "hidden";
+      await showOsNotification({
+        title: n.title,
+        body: n.message || "Take a short break, then back to it.",
         tag: `dawn-study-${n.id}`,
-        data: { url: "/dashboard" },
-      };
-      try {
-        if (navigator.serviceWorker?.ready) {
-          const reg = await navigator.serviceWorker.ready;
-          await reg.showNotification(n.title, opts);
-        } else {
-          new Notification(n.title, opts);
-        }
-      } catch {
-        /* ignore */
-      }
+        url: "/dashboard",
+        sticky: hidden,
+      });
     }
 
     async function tick() {
@@ -107,9 +98,7 @@ export function StudyCareWatcher() {
     const listId = window.setInterval(() => void refresh(), 90_000);
     const tickId = window.setInterval(() => void tick(), 30_000);
     const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void refresh().then(() => void tick());
-      }
+      void refresh().then(() => void tick());
     };
     document.addEventListener("visibilitychange", onVis);
     return () => {

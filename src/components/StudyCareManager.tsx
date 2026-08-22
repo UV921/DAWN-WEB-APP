@@ -181,8 +181,9 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           While you study — Discord voice or Start session — Dawn pings you
           after an interval you set. Discord and Web Push both fire after Dawn
-          is closed. Allow notifications once on this device. On iPhone, add
-          Dawn to the Home Screen first.
+          is closed. Allow notifications once on this device. On a Mac: System
+          Settings → Notifications → Chrome or Safari → Allow Notifications →
+          Alerts (not None). On iPhone, add Dawn to the Home Screen first.
         </p>
         {live ? (
           <p className="mt-2 text-xs text-[var(--color-leaf)]">

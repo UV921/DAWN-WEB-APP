@@ -97,6 +97,31 @@ export function announceDawnPush(preview: DawnPushPreview) {
 /** Show a system banner even while Dawn is the focused tab. */
 export async function showLocalDawnNotification(preview: DawnPushPreview) {
   announceDawnPush(preview);
+  await showOsNotification({
+    title: preview.title,
+    body: preview.body,
+    tag: "dawn-push-test",
+    url: "/dashboard",
+    sticky: true,
+  });
+}
+
+export function notificationAssetUrl(path: string) {
+  if (typeof window === "undefined") return path;
+  return new URL(path, window.location.origin).href;
+}
+
+/**
+ * Native OS notification (Mac Notification Center / banners).
+ * Relative icon URLs often fail silently on macOS Chrome/Safari.
+ */
+export async function showOsNotification(opts: {
+  title: string;
+  body: string;
+  tag: string;
+  url?: string;
+  sticky?: boolean;
+}) {
   if (
     typeof window === "undefined" ||
     !("Notification" in window) ||
@@ -104,25 +129,28 @@ export async function showLocalDawnNotification(preview: DawnPushPreview) {
   ) {
     return;
   }
-  const opts: NotificationOptions = {
-    body: preview.body,
-    icon: "/icons/icon-192.png",
-    tag: "dawn-push-test",
-    requireInteraction: true,
-    data: { url: "/dashboard" },
+  const origin = window.location.origin;
+  const nopts: NotificationOptions = {
+    body: opts.body,
+    icon: `${origin}/icons/icon-192.png`,
+    badge: `${origin}/icons/icon-192.png`,
+    tag: opts.tag,
+    requireInteraction: opts.sticky !== false,
+    silent: false,
+    data: { url: opts.url || "/dashboard" },
   };
   try {
     if (navigator.serviceWorker?.ready) {
       const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(preview.title, opts);
-    } else {
-      new Notification(preview.title, opts);
+      await reg.showNotification(opts.title, nopts);
+      return;
     }
   } catch {
-    try {
-      new Notification(preview.title, opts);
-    } catch {
-      /* ignore */
-    }
+    /* fall through */
+  }
+  try {
+    new Notification(opts.title, nopts);
+  } catch {
+    /* ignore */
   }
 }

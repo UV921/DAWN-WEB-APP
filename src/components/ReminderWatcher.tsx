@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { hasWebPushSubscription } from "@/lib/web-push-client";
+import { showOsNotification } from "@/lib/web-push-client";
 
 type ReminderRow = {
   id: string;
@@ -16,8 +16,8 @@ type ReminderRow = {
 };
 
 /**
- * While Dawn is open: tick Discord + Web Push.
- * Local notifications are only a fallback if this device is not push-subscribed.
+ * While Dawn is open (including a background Mac tab): native OS banners.
+ * Web Push still covers the fully-closed case.
  */
 export function ReminderWatcher() {
   const { status } = useSession();
@@ -49,35 +49,24 @@ export function ReminderWatcher() {
         const dayKey = now.toDateString();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-        const useLocal =
+        if (
           typeof window !== "undefined" &&
           "Notification" in window &&
-          Notification.permission === "granted" &&
-          !(await hasWebPushSubscription());
-
-        if (useLocal) {
+          Notification.permission === "granted"
+        ) {
           for (const r of remindersRef.current) {
             if (!r.enabled || !r.notifyBrowser || r.time !== clock) continue;
             if (r.todo && (r.todo.done || r.todo.date !== today)) continue;
             const key = `dawn-br-${r.id}-${dayKey}-${clock}`;
             if (sessionStorage.getItem(key)) continue;
             sessionStorage.setItem(key, "1");
-            const body = r.message || "Open Dawn and check in.";
-            if (navigator.serviceWorker?.ready) {
-              const reg = await navigator.serviceWorker.ready;
-              await reg.showNotification(r.title, {
-                body,
-                icon: "/icons/icon-192.png",
-                tag: `dawn-${r.id}`,
-                data: { url: "/dashboard?ritual=1" },
-              });
-            } else {
-              new Notification(r.title, {
-                body,
-                icon: "/icons/icon-192.png",
-                tag: `dawn-${r.id}`,
-              });
-            }
+            await showOsNotification({
+              title: r.title,
+              body: r.message || "Open Dawn and check in.",
+              tag: `dawn-${r.id}`,
+              url: "/dashboard?ritual=1",
+              sticky: document.visibilityState === "hidden",
+            });
           }
         }
 
