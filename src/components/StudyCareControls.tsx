@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   formatStudyNudgeInterval,
+  intervalInputFromMinutes,
+  minutesFromIntervalInput,
   STUDY_NUDGE_PRESETS,
   type StudyNudgeRow,
 } from "@/lib/study-nudges";
@@ -51,12 +53,16 @@ export function StudyCareControls({ live }: { live: boolean }) {
     await load();
   }
 
-  async function setIntervalMinutes(id: string, intervalMinutes: number) {
+  async function saveInterval(id: string, amount: number, unit: "min" | "hr") {
     setBusy(true);
     await fetch("/api/study-nudges", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, intervalMinutes }),
+      body: JSON.stringify({
+        id,
+        intervalAmount: amount,
+        intervalUnit: unit,
+      }),
     });
     setBusy(false);
     await load();
@@ -115,25 +121,11 @@ export function StudyCareControls({ live }: { live: boolean }) {
                   >
                     {n.title}
                   </button>
-                  <label className="flex items-center gap-1 text-xs text-[var(--color-mist)]">
-                    every
-                    <input
-                      type="number"
-                      min={1}
-                      max={720}
-                      disabled={busy || !n.enabled}
-                      defaultValue={n.intervalMinutes}
-                      key={`${n.id}-${n.intervalMinutes}`}
-                      onBlur={(e) => {
-                        const next = Number(e.target.value) || 1;
-                        if (next !== n.intervalMinutes) {
-                          void setIntervalMinutes(n.id, next);
-                        }
-                      }}
-                      className="w-14 rounded-lg border border-white/15 bg-white/5 px-1.5 py-1 text-xs text-white"
-                    />
-                    min
-                  </label>
+                  <CareIntervalField
+                    minutes={n.intervalMinutes}
+                    disabled={busy || !n.enabled}
+                    onSave={(amount, unit) => void saveInterval(n.id, amount, unit)}
+                  />
                 </li>
               ))}
             </ul>
@@ -155,10 +147,64 @@ export function StudyCareControls({ live }: { live: boolean }) {
             href="/settings?tab=reminders"
             className="block text-xs text-[var(--color-dawn)]"
           >
-            Edit messages & hours in Settings
+            Edit messages in Settings
           </Link>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CareIntervalField({
+  minutes,
+  disabled,
+  onSave,
+}: {
+  minutes: number;
+  disabled?: boolean;
+  onSave: (amount: number, unit: "min" | "hr") => void;
+}) {
+  const parsed = intervalInputFromMinutes(minutes);
+  const [amount, setAmount] = useState(parsed.amount);
+  const [unit, setUnit] = useState<"min" | "hr">(parsed.unit);
+
+  useEffect(() => {
+    const next = intervalInputFromMinutes(minutes);
+    setAmount(next.amount);
+    setUnit(next.unit);
+  }, [minutes]);
+
+  function commit(nextAmount = amount, nextUnit = unit) {
+    const stored = minutesFromIntervalInput(nextAmount, nextUnit);
+    if (stored !== minutes) onSave(nextAmount, nextUnit);
+  }
+
+  return (
+    <label className="flex items-center gap-1 text-xs text-[var(--color-mist)]">
+      every
+      <input
+        type="number"
+        min={1}
+        max={unit === "hr" ? 12 : 720}
+        disabled={disabled}
+        value={amount}
+        onChange={(e) => setAmount(Number(e.target.value) || 1)}
+        onBlur={() => commit()}
+        className="w-14 rounded-lg border border-white/15 bg-white/5 px-1.5 py-1 text-xs text-white"
+      />
+      <select
+        value={unit}
+        disabled={disabled}
+        onChange={(e) => {
+          const next = e.target.value as "min" | "hr";
+          setUnit(next);
+          commit(amount, next);
+        }}
+        className="rounded-lg border border-white/15 bg-white/5 px-1 py-1 text-xs text-white"
+      >
+        <option value="min">min</option>
+        <option value="hr">hr</option>
+      </select>
+    </label>
   );
 }
