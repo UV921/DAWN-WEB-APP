@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { processDueReminders } from "@/lib/reminders";
-import { processDueStudyNudges } from "@/lib/study-nudges";
+import { processDueStudyNudges } from "@/lib/study-nudge-send";
 import {
   reminderDiscordSender,
   studyNudgeDiscordSender,

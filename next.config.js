@@ -4,6 +4,7 @@ const path = require("path");
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   eslint: { ignoreDuringBuilds: true },
+  serverExternalPackages: ["web-push"],
   compress: true,
   poweredByHeader: false,
   images: {

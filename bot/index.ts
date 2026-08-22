@@ -919,7 +919,7 @@ async function fireDueReminders() {
 
 async function fireDueStudyNudges() {
   try {
-    const { processDueStudyNudges } = await import("../src/lib/study-nudges");
+    const { processDueStudyNudges } = await import("../src/lib/study-nudge-send");
     const { studyNudgeDiscordSender } = await import("../src/lib/discord-notify");
     const { due } = await processDueStudyNudges(prisma, {
       discord: studyNudgeDiscordSender(),
