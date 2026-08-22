@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { showOsNotification } from "@/lib/web-push-client";
 import { studyNudgeBrowserSlot } from "@/lib/study-nudges";
+import {
+  DAWN_STUDY_EVENT,
+  type DawnStudyEventDetail,
+} from "@/lib/study-session-events";
 
 type NudgeRow = {
   id: string;
@@ -17,9 +21,7 @@ type NudgeRow = {
 type Live = { id: string; startedAt: string } | null;
 
 /**
- * While Dawn is still loaded (tab can be in the background): fire a native
- * OS notification. Web Push covers the fully-closed case. We always show
- * the OS banner — skipping it when push is subscribed left Mac with nothing.
+ * Study care OS banners + Discord/Web Push ticks — only while a session is live.
  */
 export function StudyCareWatcher() {
   const { status } = useSession();
@@ -39,6 +41,19 @@ export function StudyCareWatcher() {
         liveRef.current = data.live || null;
       } catch {
         /* ignore */
+      }
+    }
+
+    async function confirmLive(): Promise<Live> {
+      try {
+        const res = await fetch("/api/study-nudges", { cache: "no-store" });
+        if (!res.ok) return liveRef.current;
+        const data = await res.json();
+        nudgesRef.current = (data.nudges || []) as NudgeRow[];
+        liveRef.current = data.live || null;
+        return liveRef.current;
+      } catch {
+        return liveRef.current;
       }
     }
 
@@ -71,7 +86,7 @@ export function StudyCareWatcher() {
       if (ticking.current) return;
       ticking.current = true;
       try {
-        const live = liveRef.current;
+        const live = await confirmLive();
         if (!live) return;
         const now = new Date();
         const started = new Date(live.startedAt);
@@ -81,6 +96,7 @@ export function StudyCareWatcher() {
           if (slot < 1) continue;
           await showLocal(n, slot, live.id);
         }
+        if (!(await confirmLive())) return;
         await fetch("/api/study-nudges/tick", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -100,13 +116,23 @@ export function StudyCareWatcher() {
     const onVis = () => {
       void refresh().then(() => void tick());
     };
+    const onStudy = (event: Event) => {
+      const detail = (event as CustomEvent<DawnStudyEventDetail>).detail;
+      if (!detail?.live) {
+        liveRef.current = null;
+        return;
+      }
+      void refresh().then(() => void tick());
+    };
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener(DAWN_STUDY_EVENT, onStudy);
     return () => {
       window.clearTimeout(boot);
       window.clearTimeout(first);
       window.clearInterval(listId);
       window.clearInterval(tickId);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener(DAWN_STUDY_EVENT, onStudy);
     };
   }, [status]);
 

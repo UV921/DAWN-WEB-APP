@@ -34,9 +34,22 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   if (body.test === true || body.action === "test") {
+    const live = await prisma.studySession.findFirst({
+      where: { userId: session.user.id, endedAt: null },
+      select: { id: true },
+    });
+    if (!live) {
+      return NextResponse.json(
+        {
+          error:
+            "Start a study session first. Study care pings only send while you are studying.",
+        },
+        { status: 400 }
+      );
+    }
     const result = await sendWebPushToUser(prisma, session.user.id, {
-      title: "Dawn Web Push",
-      body: "This reaches you even if Dawn is closed.",
+      title: "Dawn study care",
+      body: "This is a session ping — it only sends while you are studying.",
       url: "/dashboard",
       tag: "dawn-push-test",
     });
