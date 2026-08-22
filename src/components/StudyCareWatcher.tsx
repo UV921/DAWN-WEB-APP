@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { hasWebPushSubscription } from "@/lib/web-push-client";
 import { studyNudgeBrowserSlot } from "@/lib/study-nudges";
 
 type NudgeRow = {
@@ -16,8 +17,8 @@ type NudgeRow = {
 type Live = { id: string; startedAt: string } | null;
 
 /**
- * Browser study-care alerts while Dawn is open (tab may be in the background).
- * Discord is sent by the bot even when this page is closed.
+ * While Dawn is open: tick the server (Discord + Web Push) and fall back
+ * to a local notification only if this device is not push-subscribed.
  */
 export function StudyCareWatcher() {
   const { status } = useSession();
@@ -40,7 +41,7 @@ export function StudyCareWatcher() {
       }
     }
 
-    async function showBrowser(n: NudgeRow, slot: number, sessionId: string) {
+    async function showLocal(n: NudgeRow, slot: number, sessionId: string) {
       if (
         typeof window === "undefined" ||
         !("Notification" in window) ||
@@ -48,12 +49,13 @@ export function StudyCareWatcher() {
       ) {
         return;
       }
+      if (await hasWebPushSubscription()) return;
       const key = `dawn-study-${n.id}-${sessionId}-${slot}`;
       try {
         if (sessionStorage.getItem(key)) return;
         sessionStorage.setItem(key, "1");
       } catch {
-        /* private mode — still try to show once this tick */
+        /* private mode */
       }
       const body = n.message || "Take a short break, then back to it.";
       const opts: NotificationOptions = {
@@ -79,28 +81,20 @@ export function StudyCareWatcher() {
       ticking.current = true;
       try {
         const live = liveRef.current;
+        if (!live) return;
         const now = new Date();
-        if (live) {
-          const started = new Date(live.startedAt);
-          for (const n of nudgesRef.current) {
-            if (!n.enabled || !n.notifyBrowser) continue;
-            const slot = studyNudgeBrowserSlot(
-              started,
-              now,
-              n.intervalMinutes
-            );
-            if (slot < 1) continue;
-            await showBrowser(n, slot, live.id);
-          }
+        const started = new Date(live.startedAt);
+        for (const n of nudgesRef.current) {
+          if (!n.enabled || !n.notifyBrowser) continue;
+          const slot = studyNudgeBrowserSlot(started, now, n.intervalMinutes);
+          if (slot < 1) continue;
+          await showLocal(n, slot, live.id);
         }
-
-        if (live) {
-          await fetch("/api/study-nudges/tick", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: "{}",
-          });
-        }
+        await fetch("/api/study-nudges/tick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
       } catch {
         /* ignore */
       } finally {

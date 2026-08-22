@@ -19,7 +19,7 @@ Morning habit tracker with streaks, wake-time graphs, and **Discord friend accou
 - Wake-time chart, completion bars, 6-week heatmap  
 - Friend circle: invite code, Discord / same-server add, rank board (habits + study hours)  
 - Check-ins posted to your Discord channel
-- Study care pings (drink water, rest your eyes, custom) on an interval you set — Discord while you study even if Dawn is closed, browser while the tab is open in the background  
+- Study care pings (drink water, rest your eyes, custom) on an interval you set — Discord and Web Push while you study, even if Dawn is fully closed  
 - Bot commands: `/setup`, `/woke`, `/checkin`, `/habit`, `/today`, `/me`, `/streak`, `/board`, `/focus`, `/why`, `/study-room`, `/studied`, `/doing`
 - Study hours from marked Discord voice channels (Dawn’s own timer). Join a room and Dawn pings you there (only you get the ping) asking what you’re doing. Your answer stays private. You can also start / label a session on the study card on Today.
 
@@ -103,7 +103,7 @@ Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Sign up / Sign in** wi
 |------|----------------|---------------|
 | Check-in embeds | Study **channel** | Circle channel ID, or Goals channel ID, or `DISCORD_CHANNEL_ID` |
 | Reminder pings | Channel and/or **DM** | Goals → Reminders → destination **Channel / DM / Both**, turn **Discord** on for each reminder |
-| Study care pings | Channel and/or **DM**, plus **browser** | Today study card or Settings → Reminders → Study care. Set minutes or hours. Fires only while a session is live. Discord keeps going if Dawn is closed. |
+| Study care pings | Channel and/or **DM**, plus **Web Push** | Today study card or Settings → Reminders → Study care. Set minutes or hours. Fires only while a session is live. Discord and the browser keep going if Dawn is closed (allow notifications once; iPhone needs Home Screen). |
 | `/woke` `/checkin` | In Discord | Bot must be online (`npm run bot`) |
 
 **DM notes:** You must share a server with the Dawn bot, and Discord may require you to allow DMs from server members. First DM can fail until the bot can open a DM channel with you.

@@ -71,6 +71,7 @@ model User {
   missions Mission[]
   studySessions StudySession[]
   studyNudges   StudyNudge[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Goal {
@@ -328,7 +329,7 @@ model StudyNudge {
   discordTarget   String    @default("channel")
   /// water | eyes | stretch — null for a custom nudge
   presetKey       String?
-  /// Last successful Discord fire (browser de-dupes on the client)
+  /// Last successful Discord + Web Push fire
   lastFiredAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -460,4 +461,29 @@ model MissionStep {
   mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
   @@index([missionId, sortOrder])
+}
+
+/// Browser Web Push endpoint (works after Dawn is fully closed).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Singleton row for generated VAPID keys when env vars are not set.
+model AppConfig {
+  id           String   @id @default("app")
+  vapidPublic  String   @default("")
+  vapidPrivate String   @default("")
+  vapidSubject String   @default("")
+  updatedAt    DateTime @updatedAt
 }

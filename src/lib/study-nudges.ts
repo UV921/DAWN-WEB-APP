@@ -1,13 +1,14 @@
 /**
  * Interval care pings while a study session is live.
  *
- * Discord is sent by the bot (and /api/reminders/tick) so it still fires
- * when Dawn is closed. Browser alerts are shown by StudyCareWatcher from
- * the same interval clock — the tab can be in the background.
+ * Discord and Web Push are sent by the bot (and /api ticks) so they still
+ * fire when Dawn is fully closed. The first open of Dawn on a device
+ * subscribes that browser for push.
  */
 
 import type { PrismaClient, StudyNudge, User } from "@prisma/client";
 import { normChannelId } from "./bot-messages";
+import { sendWebPushToUser, type WebPushSendResult } from "./web-push";
 
 export const MIN_STUDY_NUDGE_MINUTES = 1;
 export const MAX_STUDY_NUDGE_MINUTES = 12 * 60;
@@ -71,6 +72,7 @@ export type StudyNudgeFireResult = {
   message: string;
   notifyBrowser: boolean;
   discord: { channel?: boolean; dm?: boolean; error?: string };
+  push?: WebPushSendResult;
 };
 
 export function isStudyNudgePresetKey(raw: unknown): raw is StudyNudgePresetKey {
@@ -126,8 +128,8 @@ export function normalizeDiscordTarget(
 }
 
 /**
- * Next fire instant: interval after session start, then after each Discord fire
- * that happened during this session. A fire from an older session is ignored.
+ * Next fire instant: interval after session start, then after each server fire
+ * (Discord + Web Push) during this session. A fire from an older session is ignored.
  */
 export function studyNudgeDueAt(
   sessionStartedAt: Date,
@@ -202,7 +204,7 @@ async function resolveDiscordId(
   return account?.providerAccountId || null;
 }
 
-/** Claim + send Discord care pings that are due for live study sessions. */
+/** Claim + send Discord and Web Push care pings for live study sessions. */
 export async function processDueStudyNudges(
   prisma: PrismaClient,
   opts: {
@@ -235,7 +237,11 @@ export async function processDueStudyNudges(
     if (!user) continue;
 
     const nudges = await prisma.studyNudge.findMany({
-      where: { userId, enabled: true, notifyDiscord: true },
+      where: {
+        userId,
+        enabled: true,
+        OR: [{ notifyDiscord: true }, { notifyBrowser: true }],
+      },
     });
 
     for (const nudge of nudges) {
@@ -259,15 +265,29 @@ export async function processDueStudyNudges(
       });
       if (claimed.count === 0) continue;
 
+      const title = nudge.title || "Study care";
+      const body =
+        nudge.message || "Take a short break — water, blink, then back to it.";
+
       const result: StudyNudgeFireResult = {
         nudgeId: nudge.id,
-        title: nudge.title,
-        message: nudge.message,
+        title,
+        message: body,
         notifyBrowser: nudge.notifyBrowser,
         discord: {},
       };
 
-      await deliverStudyNudgeDiscord(prisma, user, nudge, opts.discord, result);
+      if (nudge.notifyBrowser) {
+        result.push = await sendWebPushToUser(prisma, user.id, {
+          title,
+          body,
+          url: "/dashboard",
+          tag: `dawn-study-${nudge.id}`,
+        });
+      }
+      if (nudge.notifyDiscord) {
+        await deliverStudyNudgeDiscord(prisma, user, nudge, opts.discord, result);
+      }
       results.push(result);
     }
   }

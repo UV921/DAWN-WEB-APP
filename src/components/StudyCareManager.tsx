@@ -7,6 +7,7 @@ import {
   STUDY_NUDGE_PRESETS,
   type StudyNudgeRow,
 } from "@/lib/study-nudges";
+import { requestAndSubscribeWebPush } from "@/lib/web-push-client";
 
 type Live = {
   id: string;
@@ -56,13 +57,12 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
   }, [load]);
 
   async function enableBrowser() {
-    if (!("Notification" in window)) return;
-    const p = await Notification.requestPermission();
-    setPerm(p);
+    const result = await requestAndSubscribeWebPush();
+    setPerm(result.permission);
     setMsg(
-      p === "granted"
-        ? "Browser alerts on. This tab can sit in the background."
-        : "Permission denied."
+      result.ok
+        ? "Web Push on. Browser alerts keep going after Dawn is closed."
+        : result.reason || "Could not enable Web Push."
     );
   }
 
@@ -141,8 +141,9 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         </h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           While you study — Discord voice or Start session — Dawn pings you
-          after an interval you set. Discord still fires if this tab is closed.
-          Browser alerts need Dawn open or installed (background is fine).
+          after an interval you set. Discord and Web Push both fire after Dawn
+          is closed. Allow notifications once on this device. On iPhone, add
+          Dawn to the Home Screen first.
         </p>
         {live ? (
           <p className="mt-2 text-xs text-[var(--color-leaf)]">
@@ -165,6 +166,34 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
           Allow browser notifications
         </button>
       )}
+      {perm === "granted" ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void fetch("/api/push", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ test: true }),
+            })
+              .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                setMsg(
+                  res.ok
+                    ? "Test push sent. Close Dawn and you should still see it."
+                    : typeof data.error === "string"
+                      ? data.error
+                      : "Test push failed."
+                );
+              })
+              .finally(() => setBusy(false));
+          }}
+          className="rounded-full border border-white/20 px-4 py-2 text-sm text-white"
+        >
+          Send test push
+        </button>
+      ) : null}
 
       {nudges.length === 0 ? (
         <button

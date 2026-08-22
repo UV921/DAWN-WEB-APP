@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { hasWebPushSubscription } from "@/lib/web-push-client";
 
 type ReminderRow = {
   id: string;
@@ -15,8 +16,8 @@ type ReminderRow = {
 };
 
 /**
- * While Dawn is open: browser notifications + Discord tick.
- * Discord also fires from the bot when it's running (works with app closed).
+ * While Dawn is open: tick Discord + Web Push.
+ * Local notifications are only a fallback if this device is not push-subscribed.
  */
 export function ReminderWatcher() {
   const { status } = useSession();
@@ -48,11 +49,13 @@ export function ReminderWatcher() {
         const dayKey = now.toDateString();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-        if (
+        const useLocal =
           typeof window !== "undefined" &&
           "Notification" in window &&
-          Notification.permission === "granted"
-        ) {
+          Notification.permission === "granted" &&
+          !(await hasWebPushSubscription());
+
+        if (useLocal) {
           for (const r of remindersRef.current) {
             if (!r.enabled || !r.notifyBrowser || r.time !== clock) continue;
             if (r.todo && (r.todo.done || r.todo.date !== today)) continue;
