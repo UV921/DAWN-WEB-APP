@@ -7,6 +7,7 @@ import type { GraduationCapIconHandle } from "@/components/ui/graduation-cap";
 import { StudyActivityControls } from "@/components/StudyActivityControls";
 import { StudyCareControls } from "@/components/StudyCareControls";
 import { type StudyStats } from "@/components/StudyStatusPanel";
+import { announceStudySession } from "@/lib/study-session-events";
 
 export function StudyHoursCard({
   onMinutes,
@@ -25,6 +26,10 @@ export function StudyHoursCard({
       const json = (await res.json()) as StudyStats;
       setData(json);
       onMinutes?.(json.today?.minutes || 0);
+      announceStudySession({
+        live: Boolean(json.today?.live),
+        sessionId: json.today?.live ? json.today.liveStartedAt : null,
+      });
     } catch {
       /* ignore */
     }
@@ -47,6 +52,9 @@ export function StudyHoursCard({
         setError(json.error || "Could not update the session.");
         return;
       }
+      if (action === "stop") {
+        announceStudySession({ live: false, sessionId: null });
+      }
       await load();
     } catch {
       setError("Could not update the session.");
@@ -66,7 +74,7 @@ export function StudyHoursCard({
 
   const live = Boolean(data?.today.live);
   useEffect(() => {
-    const ms = live ? 15_000 : 45_000;
+    const ms = live ? 10_000 : 45_000;
     const id = window.setInterval(() => void load(), ms);
     return () => window.clearInterval(id);
   }, [load, live]);

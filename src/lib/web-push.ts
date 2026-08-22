@@ -50,13 +50,6 @@ export async function ensureVapidKeys(prisma: PrismaClient): Promise<{
 } | null> {
   const envPublic = process.env.VAPID_PUBLIC_KEY?.trim();
   const envPrivate = process.env.VAPID_PRIVATE_KEY?.trim();
-  if (envPublic && envPrivate) {
-    return {
-      publicKey: envPublic,
-      privateKey: envPrivate,
-      subject: vapidSubject(),
-    };
-  }
 
   const row = await prisma.appConfig.findUnique({ where: { id: "app" } });
   if (row?.vapidPublic && row.vapidPrivate) {
@@ -65,6 +58,23 @@ export async function ensureVapidKeys(prisma: PrismaClient): Promise<{
       privateKey: row.vapidPrivate,
       subject: row.vapidSubject || vapidSubject(),
     };
+  }
+
+  if (envPublic && envPrivate) {
+    const subject = vapidSubject();
+    await prisma.appConfig
+      .upsert({
+        where: { id: "app" },
+        create: {
+          id: "app",
+          vapidPublic: envPublic,
+          vapidPrivate: envPrivate,
+          vapidSubject: subject,
+        },
+        update: {},
+      })
+      .catch(() => undefined);
+    return { publicKey: envPublic, privateKey: envPrivate, subject };
   }
 
   const generated = webpush.generateVAPIDKeys();
@@ -167,7 +177,8 @@ export async function sendWebPushToUser(
             endpoint: row.endpoint,
             keys: { p256dh: row.p256dh, auth: row.auth },
           },
-          body
+          body,
+          { TTL: 3600, urgency: "high" }
         );
         sent += 1;
       } catch (e) {

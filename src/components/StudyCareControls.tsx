@@ -94,8 +94,8 @@ export function StudyCareControls({ live }: { live: boolean }) {
         <div className="mt-2 space-y-2">
           <p className="text-xs text-[var(--color-mist)]">
             {live
-              ? "Pings Discord and this browser on your interval — Web Push keeps going after Dawn is closed."
-              : "Set these now. They start once a session is live."}
+              ? "Pings only while this session is live. Stop the session to silence them."
+              : "Set these now. They send only after you start a session or join a study VC."}
           </p>
           {nudges.length === 0 ? (
             <button

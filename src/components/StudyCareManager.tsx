@@ -80,9 +80,16 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         setMsg(sub.reason || "Could not subscribe this Mac for push.");
         return;
       }
+      const latest = await fetch("/api/study-nudges", { cache: "no-store" }).then(
+        (r) => (r.ok ? r.json() : null)
+      );
+      if (!latest?.live) {
+        setMsg("Start a study session first. Care pings only fire while you are studying.");
+        return;
+      }
       const preview = {
-        title: "Dawn Web Push",
-        body: "This reaches you even if Dawn is closed.",
+        title: "Dawn study care",
+        body: "This is a session ping — it only sends while you are studying.",
       };
       const res = await fetch("/api/push", {
         method: "POST",
@@ -90,13 +97,15 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         body: JSON.stringify({ test: true }),
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg(
+          typeof data.error === "string" ? data.error : "Test push failed."
+        );
+        return;
+      }
       await showLocalDawnNotification(preview);
       setMsg(
-        res.ok
-          ? "Test ping is on this page and in Notification Center (top-right). Chrome hides the system banner while Dawn is open."
-          : typeof data.error === "string"
-            ? data.error
-            : "Test push failed."
+        "Session test ping sent. Stop the session and they will not keep sending."
       );
     } catch {
       setMsg("Could not send a test ping.");
@@ -180,9 +189,10 @@ export function StudyCareManager({ compact = false }: { compact?: boolean }) {
         </h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           While you study — Discord voice or Start session — Dawn pings you
-          after an interval you set. Discord and Web Push both fire after Dawn
-          is closed. Allow notifications once on this device. On iPhone, add
-          Dawn to the Home Screen first.
+          after an interval you set. These care pings never send when the
+          session is stopped. Clock reminders on this tab are separate. On a
+          Mac: System Settings → Notifications → Chrome or Safari → Allow
+          Notifications → Alerts. On iPhone, add Dawn to the Home Screen first.
         </p>
         {live ? (
           <p className="mt-2 text-xs text-[var(--color-leaf)]">
