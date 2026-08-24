@@ -179,6 +179,18 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
+  if (typeof body.allEnabled === "boolean") {
+    await prisma.studyNudge.updateMany({
+      where: { userId: session.user.id },
+      data: { enabled: body.allEnabled },
+    });
+    const nudges = await prisma.studyNudge.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ enabled: "desc" }, { createdAt: "asc" }],
+    });
+    return NextResponse.json({ ok: true, nudges });
+  }
+
   const id = String(body.id || "");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
