@@ -20,6 +20,8 @@ type Props = {
   todos: ReportTodo[];
   loops: Loop[];
   onShare: () => Promise<"shared" | "downloaded">;
+  title?: string;
+  emptyHint?: string;
 };
 
 function TaskRow({ text, done, list }: { text: string; done: boolean; list?: string }) {
@@ -52,23 +54,30 @@ function TaskRow({ text, done, list }: { text: string; done: boolean; list?: str
 }
 
 /** Tasks closed today, with a shareable PNG report from Progress / Stats. */
-export function TodayFinishedReport({ todos, loops, onShare }: Props) {
+export function TodayFinishedReport({
+  todos,
+  loops,
+  onShare,
+  title = "Finished today",
+  emptyHint,
+}: Props) {
   const split = splitTodayTasks(todos);
   const doneGroups = groupTasksByList(split.done);
   const showListNames = doneGroups.length > 1 || split.open.some((t) => {
-    const title = normalizeListTitle(t.title);
-    return title !== "Today";
+    const titleName = normalizeListTitle(t.title);
+    return titleName !== "Today";
   });
 
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl text-white">Finished today</h2>
+          <h2 className="font-display text-2xl text-white">{title}</h2>
           <p className="mt-1 text-sm text-[var(--color-mist)]">
             {split.total
               ? `${split.doneCount} of ${split.total} tasks closed · ${split.pct}%. Share a PNG of the full day.`
-              : "No tasks on today’s list yet. Add them on Tasks — they’ll show up here when you close them."}
+              : emptyHint ||
+                "No tasks on today’s list yet. Add them on Tasks — they’ll show up here when you close them."}
           </p>
         </div>
         <ShareCardButton label="Share today" make={onShare} />

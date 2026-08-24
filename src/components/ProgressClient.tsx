@@ -11,25 +11,49 @@ import type { HabitDef, HabitLogLike } from "@/lib/habits";
 import type { StudyStats } from "@/components/StudyStatusPanel";
 import type { ReportRange } from "@/lib/progress-brief";
 import type { MissionPublic } from "@/lib/missions";
+import { clampDayIso, isDayIso } from "@/lib/day-progress";
+
+function readDayQuery(): string {
+  if (typeof window === "undefined") return "";
+  const day = new URLSearchParams(window.location.search).get("day") || "";
+  return isDayIso(day) ? day : "";
+}
+
+function writeDayQuery(date: string, today: string) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!date || date === today) url.searchParams.delete("day");
+  else url.searchParams.set("day", date);
+  const next = `${url.pathname}${url.search}`;
+  const cur = `${window.location.pathname}${window.location.search}`;
+  if (next !== cur) window.history.replaceState(null, "", next);
+}
 
 export function ProgressClient() {
   const [logs, setLogs] = useState<HabitLogLike[]>([]);
   const [habits, setHabits] = useState<HabitDef[]>([]);
   const [todoStats, setTodoStats] = useState<TodoStat[]>([]);
   const [todayTodos, setTodayTodos] = useState<ReportTodo[]>([]);
+  const [dayTodos, setDayTodos] = useState<ReportTodo[]>([]);
+  const [dayNotes, setDayNotes] = useState<string | null>(null);
+  const [dayGoal, setDayGoal] = useState<string | null>(null);
   const [study, setStudy] = useState<StudyStats | null>(null);
   const [missions, setMissions] = useState<MissionPublic[]>([]);
   const [missionHistory, setMissionHistory] = useState<MissionPublic[]>([]);
   const [missionToday, setMissionToday] = useState("");
-  const [range, setRange] = useState<ReportRange>("week");
+  const [range, setRange] = useState<ReportRange>("today");
   const [loading, setLoading] = useState(true);
   const [readyDays, setReadyDays] = useState(0);
+  const [todayIso, setTodayIso] = useState("");
+  const [wakeGoal, setWakeGoal] = useState("06:00");
+  const [sleepGoal, setSleepGoal] = useState("23:00");
+  const [selectedDate, setSelectedDate] = useState(readDayQuery);
 
   useEffect(() => {
-    const days = range === "year" ? 365 : 42;
-    if (readyDays >= days) return;
+    if (readyDays >= 365) return;
     let cancelled = false;
     if (readyDays === 0) setLoading(true);
+    const days = 365;
     void Promise.all([
       fetch(`/api/habits?days=${days}`).then((r) => r.json()),
       fetch(`/api/study?days=${days}`, { cache: "no-store" }).then((r) =>
@@ -45,6 +69,9 @@ export function ProgressClient() {
           habits?: HabitDef[];
           todoStats?: TodoStat[];
           todayTodos?: ReportTodo[];
+          today?: string;
+          wakeGoal?: string;
+          sleepGoal?: string;
         },
         StudyStats | null,
         {
@@ -58,6 +85,12 @@ export function ProgressClient() {
         setHabits(d.habits || []);
         setTodoStats(d.todoStats || []);
         setTodayTodos(d.todayTodos || []);
+        if (d.today) {
+          setTodayIso(d.today);
+          setSelectedDate((prev) => clampDayIso(prev || d.today!, d.today!));
+        }
+        if (d.wakeGoal) setWakeGoal(d.wakeGoal);
+        if (d.sleepGoal) setSleepGoal(d.sleepGoal);
         if (s?.status) setStudy(s);
         if (m) {
           setMissions(m.missions || []);
@@ -72,7 +105,51 @@ export function ProgressClient() {
     return () => {
       cancelled = true;
     };
-  }, [range, readyDays]);
+  }, [readyDays]);
+
+  useEffect(() => {
+    if (!selectedDate || !todayIso) return;
+    writeDayQuery(selectedDate, todayIso);
+    if (selectedDate === todayIso) {
+      setDayTodos(todayTodos);
+      setDayNotes(null);
+      setDayGoal(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/day/${selectedDate}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(
+        (d: {
+          todos?: ReportTodo[];
+          log?: { notes?: string | null } | null;
+          plan?: { goalText?: string | null } | null;
+        } | null) => {
+          if (cancelled || !d) return;
+          setDayTodos(d.todos || []);
+          setDayNotes(d.log?.notes || null);
+          setDayGoal(d.plan?.goalText || null);
+        }
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, todayIso, todayTodos]);
+
+  function pickDay(date: string) {
+    if (!todayIso) return;
+    setSelectedDate(clampDayIso(date, todayIso));
+    setRange("today");
+  }
+
+  const hasAnything =
+    logs.length > 0 ||
+    todoStats.length > 0 ||
+    todayTodos.length > 0 ||
+    missions.length > 0 ||
+    Boolean(
+      study?.hourly?.length || study?.weekMinutes || study?.today?.minutes
+    );
 
   return (
     <main className="dawn-bg relative min-h-screen">
@@ -82,19 +159,13 @@ export function ProgressClient() {
           <p className="ui-kicker">Progress</p>
           <h1 className="ui-title mt-2">How you’re doing</h1>
           <p className="ui-sub mt-3 max-w-xl">
-            Pick a window. You’ll see what you finished — including the tasks
-            you closed today — what you missed, and one next step. Share
-            today’s report as a PNG. Study time is from Discord rooms or a
-            session you start on Today — including a 24-hour cycle of when you
-            sit down.
+            Open any day for the ratios — wake, habits, tasks, study, sleep —
+            with graphs against the week before. Then zoom out to 7 days, 30
+            days, or a year.
           </p>
           {loading ? (
             <p className="mt-12 text-[var(--color-mist)]">Reading your days…</p>
-          ) : logs.length === 0 &&
-            todoStats.length === 0 &&
-            todayTodos.length === 0 &&
-            missions.length === 0 &&
-            !(study?.hourly?.length || study?.weekMinutes || study?.today?.minutes) ? (
+          ) : !hasAnything ? (
             <div className="mt-8 space-y-6">
               <p className="max-w-md text-[var(--color-mist)]">
                 Nothing to score yet. Go to{" "}
@@ -102,8 +173,7 @@ export function ProgressClient() {
                   Today
                 </a>
                 , log your wake, and close one habit. After a few days this page
-                will show what you finish, what you miss, and which weekday is
-                weakest.
+                will show each day’s ratios and which weekday is weakest.
               </p>
             </div>
           ) : (
@@ -114,8 +184,16 @@ export function ProgressClient() {
                 todoStats={todoStats}
                 study={study}
                 todayTodos={todayTodos}
+                dayTodos={dayTodos}
+                dayNotes={dayNotes}
+                dayGoal={dayGoal}
                 range={range}
                 onRange={setRange}
+                selectedDate={selectedDate || todayIso}
+                onSelectDate={pickDay}
+                todayIso={todayIso}
+                wakeGoal={wakeGoal}
+                sleepGoal={sleepGoal}
                 missions={missions}
                 missionHistory={missionHistory}
                 missionToday={missionToday}

@@ -31,7 +31,10 @@ const named = buildProgressReport({
 const closedLine = named.happened.find((l) => l.startsWith("Tasks closed:"));
 assert.ok(closedLine, "today report names closed tasks");
 assert.ok(closedLine?.includes("Ship landing"));
-assert.ok(closedLine?.includes("(+1 more)"));
+assert.ok(
+  closedLine?.includes("of the list today"),
+  "today copy mentions the list"
+);
 
 const empty = buildProgressReport({
   ...base,
@@ -42,6 +45,19 @@ const empty = buildProgressReport({
 assert.ok(
   empty.happened.some((l) => l.includes("none closed yet of 3")),
   "today report says when the list is still open"
+);
+
+const past = buildProgressReport({
+  ...base,
+  isToday: false,
+  loggedDays: 0,
+  wakeLoggedDays: 0,
+  fullHabitDays: 0,
+  habitPct: 0,
+});
+assert.ok(
+  past.headline.includes("nothing logged"),
+  "past day with no data is not phrased as today"
 );
 
 console.log("progress-brief tests passed");
