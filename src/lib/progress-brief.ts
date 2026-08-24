@@ -171,6 +171,8 @@ export function buildProgressReport(opts: {
   closedTasks?: string[];
   /** Top-level tasks on today’s list, including open ones. */
   todayTaskTotal?: number;
+  /** False when the Day view is a past date, not calendar today. */
+  isToday?: boolean;
 }): ProgressReport {
   const {
     range,
@@ -194,9 +196,11 @@ export function buildProgressReport(opts: {
     leftoverHigh,
     closedTasks = [],
     todayTaskTotal = 0,
+    isToday = true,
   } = opts;
 
-  const window = rangeLabel(range);
+  const thisDay = range === "today" && !isToday ? "this day" : "today";
+  const window = range === "today" ? thisDay : rangeLabel(range);
   const leaked: ProgressLeak[] = [];
   const happened: string[] = [];
 
@@ -211,9 +215,9 @@ export function buildProgressReport(opts: {
   }
   if (loggedDays > 0) {
     happened.push(
-      range === "today"
-        ? `Habits: ${habitPct}% done today.`
-        : `Habits: ${habitPct}% done. Full mornings (every habit closed): ${fullHabitDays} of ${windowDays} days.`
+        range === "today"
+          ? `Habits: ${habitPct}% done ${thisDay}.`
+          : `Habits: ${habitPct}% done. Full mornings (every habit closed): ${fullHabitDays} of ${windowDays} days.`
     );
   }
   if (
@@ -226,13 +230,13 @@ export function buildProgressReport(opts: {
       const extra = closedTasks.length - shown.length;
       const names =
         extra > 0 ? `${shown.join(", ")} (+${extra} more)` : shown.join(", ");
-      happened.push(`Tasks closed: ${names}. ${taskPct}% of today’s list.`);
+      happened.push(`Tasks closed: ${names}. ${taskPct}% of the list ${thisDay}.`);
     } else if (range === "today" && todayTaskTotal > 0 && !closedTasks.length) {
       happened.push(`Tasks: none closed yet of ${todayTaskTotal} on the list.`);
     } else {
       happened.push(
         range === "today"
-          ? `Tasks: ${taskPct}% of today’s list is done.`
+          ? `Tasks: ${taskPct}% of the list is done ${thisDay}.`
           : `Tasks: ${taskPct}% done. You cleared the whole list on ${allTaskDays} day${allTaskDays === 1 ? "" : "s"}.`
       );
     }
@@ -324,7 +328,9 @@ export function buildProgressReport(opts: {
       kicker: "Not enough data",
       headline:
         range === "today"
-          ? "Today isn’t finished yet — nothing here to score."
+          ? isToday
+            ? "Today isn’t finished yet — nothing here to score."
+            : "This day has nothing logged to score."
           : `Only ${loggedDays} day${loggedDays === 1 ? "" : "s"} logged ${window}. That’s too little to call a pattern.`,
       happened,
       leaked,
@@ -345,7 +351,9 @@ export function buildProgressReport(opts: {
       kicker: "On track",
       headline:
         range === "today"
-          ? "Morning is closed. Keep the rest of the day simple."
+          ? isToday
+            ? "Morning is closed. Keep the rest of the day simple."
+            : "Morning was closed. The ratios for this day are in."
           : `You finished every habit on ${fullHabitDays} of ${windowDays} days.`,
       happened,
       leaked,
@@ -365,7 +373,9 @@ export function buildProgressReport(opts: {
       kicker: "Falling behind",
       headline:
         range === "today"
-          ? `Only ${habitPct}% of habits are done. The morning is still open.`
+          ? isToday
+            ? `Only ${habitPct}% of habits are done. The morning is still open.`
+            : `Only ${habitPct}% of habits were done this day.`
           : `You only finished a full morning ${fullHabitDays} time${fullHabitDays === 1 ? "" : "s"} ${window}.`,
       happened,
       leaked,
@@ -381,10 +391,10 @@ export function buildProgressReport(opts: {
   return {
     tone: "slip",
     kicker: "Inconsistent",
-    headline:
-      range === "today"
-        ? `Partial day — habits ${habitPct}% done, tasks ${taskPct}% done.`
-        : `You showed up, but didn’t finish — habits ${habitPct}%, only ${fullHabitDays} complete morning${fullHabitDays === 1 ? "" : "s"}.`,
+      headline:
+        range === "today"
+          ? `Partial ${thisDay} — habits ${habitPct}% done, tasks ${taskPct}% done.`
+          : `You showed up, but didn’t finish — habits ${habitPct}%, only ${fullHabitDays} complete morning${fullHabitDays === 1 ? "" : "s"}.`,
     happened,
     leaked,
     improved,

@@ -20,6 +20,8 @@ type Props = {
   studyDays?: { date: string; minutes: number }[];
   showWakeTrend?: boolean;
   defaultRange?: Range;
+  selectedDate?: string;
+  onPickDay?: (date: string) => void;
 };
 
 type Cell = {
@@ -218,7 +220,13 @@ function rangeCaption(range: Range) {
   return "this year";
 }
 
-function DayDetail({ cell }: { cell: Cell | null }) {
+function DayDetail({
+  cell,
+  onPickDay,
+}: {
+  cell: Cell | null;
+  onPickDay?: (date: string) => void;
+}) {
   if (!cell || cell.level < 0) {
     return (
       <p className="text-sm leading-relaxed text-[var(--color-mist)]">
@@ -227,6 +235,12 @@ function DayDetail({ cell }: { cell: Cell | null }) {
       </p>
     );
   }
+  const habitPct = cell.habitsTotal
+    ? Math.round((cell.habitsDone / cell.habitsTotal) * 100)
+    : 0;
+  const taskPct = cell.tasksTotal
+    ? Math.round((cell.tasksDone / cell.tasksTotal) * 100)
+    : null;
   return (
     <div className="min-w-0">
       <p className="truncate font-medium text-white">{prettyDate(cell.date)}</p>
@@ -249,7 +263,7 @@ function DayDetail({ cell }: { cell: Cell | null }) {
           </dt>
           <dd className="mt-0.5 truncate text-white">
             {cell.logged
-              ? `${cell.habitsDone} of ${cell.habitsTotal} done`
+              ? `${cell.habitsDone} of ${cell.habitsTotal} · ${habitPct}%`
               : "No check-in"}
           </dd>
         </div>
@@ -259,7 +273,7 @@ function DayDetail({ cell }: { cell: Cell | null }) {
           </dt>
           <dd className="mt-0.5 truncate text-white">
             {cell.tasksTotal
-              ? `${cell.tasksDone} of ${cell.tasksTotal} done`
+              ? `${cell.tasksDone} of ${cell.tasksTotal} · ${taskPct}%`
               : "No list"}
           </dd>
         </div>
@@ -274,6 +288,15 @@ function DayDetail({ cell }: { cell: Cell | null }) {
           </dd>
         </div>
       </dl>
+      {onPickDay ? (
+        <button
+          type="button"
+          className="ui-btn-text mt-3 text-sm"
+          onClick={() => onPickDay(cell.date)}
+        >
+          Open this day’s graphs
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -285,6 +308,8 @@ export function HabitCharts({
   studyDays = [],
   showWakeTrend = true,
   defaultRange = "week",
+  selectedDate,
+  onPickDay,
 }: Props) {
   const [range, setRange] = useState<Range>(defaultRange);
   const [hover, setHover] = useState<Cell | null>(null);
@@ -366,7 +391,7 @@ export function HabitCharts({
           onMouseLeave={() => setHover(null)}
         >
           <div className="min-h-[6.5rem] rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-            <DayDetail cell={shown} />
+            <DayDetail cell={shown} onPickDay={onPickDay} />
           </div>
 
           {weekRow ? (
@@ -385,7 +410,9 @@ export function HabitCharts({
                   </span>
                   <span
                     className={`contrib-${cell.level} mx-auto mt-1.5 block h-8 w-8 rounded-md outline outline-white/10 sm:h-9 sm:w-9 ${
-                      shown?.date === cell.date ? "ring-1 ring-white/70" : ""
+                      shown?.date === cell.date || selectedDate === cell.date
+                        ? "ring-1 ring-white/70"
+                        : ""
                     }`}
                   />
                 </button>
@@ -452,7 +479,7 @@ export function HabitCharts({
                             onFocus={() => setHover(cell)}
                             onClick={() => setHover(cell)}
                             className={`tile contrib-${cell.level} cursor-pointer hover:ring-1 hover:ring-white/50 ${
-                              shown?.date === cell.date
+                              shown?.date === cell.date || selectedDate === cell.date
                                 ? "ring-1 ring-white/70"
                                 : ""
                             }`}
