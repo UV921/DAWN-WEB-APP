@@ -329,6 +329,53 @@ export function missionDoing(m: MissionPublic, today: string): MissionDoing {
   };
 }
 
+export type MissionCompactStat = {
+  finished: boolean;
+  status: "Finished" | "Not finished";
+  detail: string;
+};
+
+/**
+ * Compact Progress row: name-adjacent status, not a percent ring.
+ * A mission that ran its days (or closed every step) is Finished even if
+ * show-up was low — don't surface “10% done” once the timebox is over.
+ */
+export function missionCompactStat(
+  m: MissionPublic,
+  today: string
+): MissionCompactStat {
+  const doing = missionDoing(m, today);
+  const stepsComplete =
+    doing.stepsTotal > 0 && doing.stepsDone === doing.stepsTotal;
+  const finished = Boolean(m.progress.ended || stepsComplete);
+
+  const bits: string[] = [];
+  if (doing.stepsTotal) {
+    bits.push(`${doing.stepsDone}/${doing.stepsTotal} steps`);
+  } else if (m.kind === "manual" && doing.elapsedDays) {
+    bits.push(
+      `${doing.workedDays}/${doing.elapsedDays} day${doing.elapsedDays === 1 ? "" : "s"}`
+    );
+  }
+  if (m.progress.ended) {
+    bits.push(`${m.progress.total} days`);
+  } else if (m.progress.ongoing) {
+    bits.push(`day ${m.progress.day}`);
+  } else if (m.progress.daysLeft === 1) {
+    bits.push("last day");
+  } else if (m.progress.daysLeft > 0) {
+    bits.push(
+      `${m.progress.daysLeft} day${m.progress.daysLeft === 1 ? "" : "s"} left`
+    );
+  }
+
+  return {
+    finished,
+    status: finished ? "Finished" : "Not finished",
+    detail: bits.join(" · "),
+  };
+}
+
 type LogLike = {
   date: string;
   checks?: Record<string, boolean> | string;
