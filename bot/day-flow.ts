@@ -22,6 +22,7 @@ import {
   parseBotMessages,
   shouldAutoSendBotMessage,
 } from "../src/lib/bot-messages";
+import { shouldAutoRunBoardJob } from "../src/lib/discord-guild";
 import { todayStr, tomorrowStr } from "./wind-down";
 import {
   addTodosForDate,
@@ -347,6 +348,7 @@ export async function sendNightReviewDms(
     if (!opts?.force && !shouldAutoSendBotMessage(settings, "nightReview")) {
       continue;
     }
+    if (!shouldAutoRunBoardJob(m.channel.reviewEnabled, opts)) continue;
 
     const clock = zonedClock(u.timezone);
     if (

@@ -1,9 +1,10 @@
 /**
  * Morning DM pings + channel leaderboard
- * - At pingTime: DM every tracked member "Are you awake?"
+ * - At pingTime: DM every tracked member "Are you awake?" (if pingEnabled)
  * - If they tap I'm awake → log wake in DB (streaks/grid)
  * - If no reply → counted as not awake
  * - At leaderboardTime (or on command): post who woke / habits leaderboard
+ * Server owner toggles pingEnabled / boardEnabled in Settings → Discord.
  */
 
 import {
@@ -23,6 +24,7 @@ import {
   parseBotMessages,
   shouldAutoSendBotMessage,
 } from "../src/lib/bot-messages";
+import { shouldAutoRunBoardJob } from "../src/lib/discord-guild";
 
 type LogLike = HabitLog & { checks?: string | null };
 
@@ -87,6 +89,10 @@ export async function sendMorningDms(
   let skipped = 0;
 
   for (const ch of channels) {
+    if (!shouldAutoRunBoardJob(ch.pingEnabled, opts)) {
+      skipped += ch.members.length;
+      continue;
+    }
     for (const m of ch.members) {
       const u = m.user;
       if (!u.discordId) {
@@ -460,7 +466,7 @@ export async function buildLeaderboardEmbed(
         `**Not awake (${asleep.length})**`,
         asleepLines.join("\n") || "_Everyone replied_",
         "",
-        `_Ping at ${tracked.pingTime} · Board at ${tracked.leaderboardTime} · Report at ${tracked.reportTime || "21:30"}_`,
+        `_Ping ${tracked.pingEnabled ? `at ${tracked.pingTime}` : "off"} · Board ${tracked.boardEnabled ? `at ${tracked.leaderboardTime}` : "off"} · Report ${tracked.reportEnabled ? `at ${tracked.reportTime || "21:30"}` : "off"}_`,
       ].join("\n")
     )
     .setFooter({ text: "Tap I'm awake in DM to count · /report for graphs" })
@@ -481,6 +487,7 @@ export async function postLeaderboards(
 
   let posted = 0;
   for (const ch of channels) {
+    if (!shouldAutoRunBoardJob(ch.boardEnabled, opts)) continue;
     const due =
       opts?.force ||
       (ch.leaderboardTime === now && ch.lastLeaderboardDate !== today);
