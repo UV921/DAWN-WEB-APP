@@ -125,13 +125,14 @@ Open [http://127.0.0.1:3066](http://127.0.0.1:3066) → **Sign up / Sign in** wi
 - Same-server people already on Dawn show as one-tap **Add**
 - **Join Discord server group** shares one board with the guild
 - Owner can paste a study channel ID and **Post to Discord**
+- Discord **owner** (or Manage Server) can turn the server wake ping / morning board / report pings on or off in **Settings → Discord**
 
 The circle **rank board** sorts by habits + study, 7-day habit %, study hours, on-time wakes, or today.
 
 In Discord you can use:
    - `/setup` — button onboarding (why, wake, sleep, focus…)
-   - `/track ping_time:06:00 board_time:08:00` — morning board channel
-   - `/join` — join board · `/ping` — DM everyone “are you awake?”
+   - `/track ping_time:06:00 board_time:08:00` — morning board channel (owner / Manage Server). Turn wake pings, the public board, night check-in, and report pings on or off in **Settings → Discord**.
+   - `/join` — join board · `/ping` — owner/Manage Server: DM everyone “are you awake?”
    - Reply in DM → saved to DB / grid / streaks; no reply = not awake
    - `/leaderboard` — who woke + habit ranks (also auto-posts at board_time)
    - `/week` · `/grid` — personal bars + contribution grid

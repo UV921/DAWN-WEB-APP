@@ -236,12 +236,18 @@ model TrackedChannel {
   name             String   @default("Morning board")
   /// HH:MM — when to DM every member "are you awake?"
   pingTime         String   @default("06:00")
+  /// Server owner can turn this off in Settings → Discord
+  pingEnabled      Boolean  @default(true)
   /// HH:MM — when to post public leaderboard
   leaderboardTime  String   @default("08:00")
+  /// Auto-post who woke / who didn't
+  boardEnabled     Boolean  @default(true)
   /// HH:MM — nightly "did you finish todos?" DM
   reviewTime       String   @default("21:00")
+  reviewEnabled    Boolean  @default(true)
   /// HH:MM — post consistency report (on track vs needs focus)
   reportTime       String   @default("21:30")
+  reportEnabled    Boolean  @default(true)
   lastPingDate     String?
   lastLeaderboardDate String?
   lastReviewDate   String?

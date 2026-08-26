@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { IconChevronRight } from "@/components/icons";
 import { channelIdFromInput } from "@/lib/bot-messages";
+import { MorningBoardSettings } from "@/components/MorningBoardSettings";
 
 type ChecklistItem = {
   id: string;
@@ -184,8 +185,9 @@ export function DiscordSetup() {
         </h2>
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           Connect Discord so Dawn can DM you at wake time, post to a channel,
-          and run the morning bot. Follow the steps — each one has a clear
-          action.
+          and run the morning bot. If you own the server (or have Manage
+          Server), you can turn the “who woke up” pings off below. Everyone
+          else: follow the steps — each one has a clear action.
         </p>
         {data ? (
           <p className="mt-3 text-sm text-[var(--color-leaf)]">
@@ -193,6 +195,8 @@ export function DiscordSetup() {
           </p>
         ) : null}
       </div>
+
+      <MorningBoardSettings />
 
       {/* Checklist */}
       <ul className="space-y-2">
@@ -489,10 +493,17 @@ export function DiscordSetup() {
         <p className="font-medium text-white">Morning calls from Discord</p>
         <p className="mt-1">
           With the bot running, Dawn can DM “are you awake?”, take your plan at
-          night, and post reports. Web settings here control{" "}
-          <em className="text-white">where reminders go</em>. Slash commands
-          like <code className="text-[var(--color-dawn)]">/sleep</code> and{" "}
-          <code className="text-[var(--color-dawn)]">/report</code> live in the
+          night, and post reports. The Discord owner (or anyone with Manage
+          Server) turns those server pings on or off at the top of this page.
+          Your own DMs are on{" "}
+          <a
+            href="/settings?tab=bot"
+            className="text-[var(--color-dawn)] underline-offset-2 hover:underline"
+          >
+            Bot messages
+          </a>
+          . Slash commands like{" "}
+          <code className="text-[var(--color-dawn)]">/sleep</code> live in the
           Discord server once the bot is invited.
         </p>
       </div>

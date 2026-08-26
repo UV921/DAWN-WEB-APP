@@ -67,6 +67,7 @@ import {
   tomorrowWakeRows,
 } from "./wind-down";
 import { normChannelId } from "../src/lib/bot-messages";
+import { QUIET_BOARD_FLAGS } from "../src/lib/discord-guild";
 import {
   addTodosForDate,
   buildTodoEmbed,
@@ -418,6 +419,7 @@ async function enrollInChannel(
       channelId,
       guildId: guildIdStr,
       name: channelName || "Morning board",
+      ...QUIET_BOARD_FLAGS,
     },
     update: {},
   });
@@ -456,6 +458,7 @@ async function syncChannelMembers(
       channelId,
       guildId: guildIdStr,
       name: channelName || "Morning board",
+      ...QUIET_BOARD_FLAGS,
     },
     update: channelName ? { name: channelName } : {},
   });
@@ -592,6 +595,27 @@ function gridCell(score: number, max: number) {
   return "💛";
 }
 
+function memberCanManageBoard(interaction: ChatInputCommandInteraction) {
+  if (interaction.guild?.ownerId === interaction.user.id) return true;
+  return Boolean(
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+  );
+}
+
+async function denyUnlessBoardManager(
+  interaction: ChatInputCommandInteraction
+) {
+  if (memberCanManageBoard(interaction)) return false;
+  const content =
+    "Only the Discord **owner** or someone with **Manage Server** can do this. Turn these pings on or off in Dawn → Settings → Discord.";
+  if (interaction.deferred || interaction.replied) {
+    await interaction.editReply({ content, embeds: [], components: [] });
+  } else {
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+  }
+  return true;
+}
+
 async function registerCommands() {
   const habit = new SlashCommandBuilder()
     .setName("habit")
@@ -657,6 +681,7 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName("track")
       .setDescription("Use THIS channel as the shared morning board")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addStringOption((o) =>
         o
           .setName("ping_time")
@@ -676,6 +701,26 @@ async function registerCommands() {
         o
           .setName("report_time")
           .setDescription("Daily consistency report in channel (HH:MM), default 21:30")
+      )
+      .addBooleanOption((o) =>
+        o
+          .setName("wake_ping")
+          .setDescription("DM everyone “are you awake?” — default on for /track")
+      )
+      .addBooleanOption((o) =>
+        o
+          .setName("morning_board")
+          .setDescription("Post who woke / not in this channel")
+      )
+      .addBooleanOption((o) =>
+        o
+          .setName("night_review")
+          .setDescription("Server-wide night check-in DMs")
+      )
+      .addBooleanOption((o) =>
+        o
+          .setName("report_ping")
+          .setDescription("Daily report that pings people who need focus")
       ),
     new SlashCommandBuilder()
       .setName("morning")
@@ -685,7 +730,8 @@ async function registerCommands() {
       .setDescription("Join this channel's morning tracker"),
     new SlashCommandBuilder()
       .setName("ping")
-      .setDescription("DM every member now: are you awake?"),
+      .setDescription("DM every member now: are you awake?")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     new SlashCommandBuilder()
       .setName("leaderboard")
       .setDescription("Post today's wake + habits leaderboard in this channel"),
@@ -735,7 +781,8 @@ async function registerCommands() {
       .setDescription("Send yourself tonight's task review DM now"),
     new SlashCommandBuilder()
       .setName("report")
-      .setDescription("Post today's consistency report (on track vs needs focus)"),
+      .setDescription("Post today's consistency report (on track vs needs focus)")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     new SlashCommandBuilder()
       .setName("study-room")
       .setDescription("Mark voice channels Dawn counts as study time")
@@ -1389,6 +1436,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   }
 
   if (interaction.commandName === "track") {
+    if (await denyUnlessBoardManager(interaction)) return;
     if (!interaction.guildId || !interaction.channelId) {
       await interaction.reply({
         content: "Use `/track` inside your study channel.",
@@ -1421,11 +1469,18 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply();
     }
+    const existed = await prisma.trackedChannel.findUnique({
+      where: { channelId: interaction.channelId },
+    });
     const synced = await syncChannelMembers(
       interaction.channelId,
       interaction.guildId,
       name
     );
+    const pingOpt = interaction.options.getBoolean("wake_ping");
+    const boardOpt = interaction.options.getBoolean("morning_board");
+    const reviewOpt = interaction.options.getBoolean("night_review");
+    const reportOpt = interaction.options.getBoolean("report_ping");
     await prisma.trackedChannel.update({
       where: { channelId: interaction.channelId },
       data: {
@@ -1434,7 +1489,14 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
         leaderboardTime: boardTime,
         reviewTime,
         reportTime,
+        pingEnabled: pingOpt ?? existed?.pingEnabled ?? true,
+        boardEnabled: boardOpt ?? existed?.boardEnabled ?? true,
+        reviewEnabled: reviewOpt ?? existed?.reviewEnabled ?? true,
+        reportEnabled: reportOpt ?? existed?.reportEnabled ?? true,
       },
+    });
+    const flags = await prisma.trackedChannel.findUnique({
+      where: { channelId: interaction.channelId },
     });
     await interaction.editReply({
       embeds: [
@@ -1445,14 +1507,13 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
             [
               `Channel **#${name}** is the Dawn board.`,
               `Synced **${synced.enrolled}** members who can see this channel (**${synced.total}** total tracked).`,
-              `**${pingTime}** — DM: “Are you awake?”`,
-              `After awake → reminder → todos (\`/habit add\` optional).`,
-              `**${boardTime}** — wake leaderboard.`,
-              `**${reviewTime}** — night task review.`,
-              `**${reportTime}** — detailed report + pings.`,
+              `**${pingTime}** — wake DM ${flags?.pingEnabled ? "on" : "off"}`,
+              `**${boardTime}** — who woke / not ${flags?.boardEnabled ? "on" : "off"}`,
+              `**${reviewTime}** — night check-in ${flags?.reviewEnabled ? "on" : "off"}`,
+              `**${reportTime}** — report ping ${flags?.reportEnabled ? "on" : "off"}`,
               "",
+              "Toggle these in **Dawn → Settings → Discord** (owner / Manage Server).",
               "Anyone missed? Tap **Join Dawn board** below.",
-              "Then: `/ping` · `/report`",
             ].join("\n")
           ),
       ],
@@ -1531,6 +1592,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   }
 
   if (interaction.commandName === "ping") {
+    if (await denyUnlessBoardManager(interaction)) return;
     if (!interaction.channelId) {
       await interaction.reply({
         content: "Use `/ping` in the morning channel.",
@@ -1573,7 +1635,11 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       force: true,
     });
     await interaction.editReply({
-      content: `DMs sent to **${result.sent}** member(s) (skipped ${result.skipped}). They must tap **I'm awake** in Discord DMs.`,
+      content:
+        `DMs sent to **${result.sent}** member(s) (skipped ${result.skipped}). They must tap **I'm awake** in Discord DMs.` +
+        (tracked.pingEnabled
+          ? ""
+          : " Auto wake ping is **off** — change that in Dawn → Settings → Discord."),
     });
     return;
   }
@@ -2037,6 +2103,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   }
 
   if (interaction.commandName === "report") {
+    if (await denyUnlessBoardManager(interaction)) return;
     if (!interaction.channelId) {
       await interaction.reply({
         content: "Use `/report` in the morning channel.",

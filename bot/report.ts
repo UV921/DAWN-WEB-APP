@@ -6,6 +6,7 @@
 import { Client, EmbedBuilder } from "discord.js";
 import type { Habit, HabitLog, PrismaClient, Todo, TrackedChannel, User } from "@prisma/client";
 import { resolveManyNames } from "./names";
+import { shouldAutoRunBoardJob } from "../src/lib/discord-guild";
 
 function todayStr() {
   const d = new Date();
@@ -363,6 +364,7 @@ export async function postConsistencyReports(
 
   let posted = 0;
   for (const ch of channels) {
+    if (!shouldAutoRunBoardJob(ch.reportEnabled, opts)) continue;
     const reportTime = ch.reportTime || "21:30";
     const lastReport = ch.lastReportDate;
     const due =

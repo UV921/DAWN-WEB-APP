@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { discordFriendsInviteCode } from "@/lib/circle-invite";
 import { normChannelId } from "@/lib/bot-messages";
+import { QUIET_BOARD_FLAGS } from "@/lib/discord-guild";
 
 /** Put a Discord-logged Dawn user on the server board + Discord friends circle. */
 export async function enrollDiscordFriend(opts: {
@@ -19,6 +20,7 @@ export async function enrollDiscordFriend(opts: {
         channelId,
         guildId,
         name: "Dawn Discord",
+        ...QUIET_BOARD_FLAGS,
       },
       update: {},
     });

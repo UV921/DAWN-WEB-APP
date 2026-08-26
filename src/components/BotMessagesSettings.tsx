@@ -146,7 +146,8 @@ export function BotMessagesSettings() {
         <p className="mt-2 text-sm text-[var(--color-mist)]">
           You are in control. Each Discord DM can be Off, Manual (only when you
           ask), or Date-wise at a time you pick. Mode saves as soon as you tap
-          it.
+          it. Server-wide “who woke up” pings are separate — the Discord owner
+          sets those under Settings → Discord.
         </p>
         <p className="mt-2 text-xs text-[var(--color-mist)]">
           You can use{" "}
