@@ -30,7 +30,7 @@ import {
   type CompareRow,
   type TrendPoint,
 } from "@/components/ProgressTrendChart";
-import { missionDoing, type MissionPublic } from "@/lib/missions";
+import { type MissionPublic } from "@/lib/missions";
 import { emptyHours, sumHourlyRows } from "@/lib/study-cycle";
 import { formatStudyDuration } from "@/lib/study-time";
 import {
@@ -458,13 +458,6 @@ export function ProgressDetail({
         };
 
   const missionDay = range === "today" ? selected : today;
-  const liveMissions = missions.filter((m) => m.active);
-  const missionScores = liveMissions.map((m) => missionDoing(m, missionDay));
-  const missionPct = missionScores.length
-    ? Math.round(
-        missionScores.reduce((a, s) => a + s.pct, 0) / missionScores.length
-      )
-    : null;
 
   const dayLog = logMap.get(selected);
   const prevNight = logMap.get(addCalendarDays(selected, -1));
@@ -658,21 +651,6 @@ export function ProgressDetail({
         </p>
       </div>
 
-      {range === "today" && onSelectDate ? (
-        <DayProgressPanel
-          date={selected}
-          today={today}
-          onDate={onSelectDate}
-          score={pickedScore}
-          ratios={dayRatios}
-          habits={dayHabits}
-          compare={compareRows}
-          strip={strip}
-          notes={dayNotes || dayLog?.notes || null}
-          goalText={dayGoal}
-        />
-      ) : null}
-
       <div className={`rounded-2xl border px-5 py-5 ${briefTone.border} ${briefTone.bg}`}>
         <div className="flex items-start justify-between gap-3">
           <p
@@ -731,6 +709,28 @@ export function ProgressDetail({
         </div>
       </div>
 
+      <MissionStats
+        missions={missions}
+        history={missionHistory}
+        range={range}
+        today={missionDay}
+      />
+
+      {range === "today" && onSelectDate ? (
+        <DayProgressPanel
+          date={selected}
+          today={today}
+          onDate={onSelectDate}
+          score={pickedScore}
+          ratios={dayRatios}
+          habits={dayHabits}
+          compare={compareRows}
+          strip={strip}
+          notes={dayNotes || dayLog?.notes || null}
+          goalText={dayGoal}
+        />
+      ) : null}
+
       <TodayFinishedReport
         title={
           range === "today" && !isToday
@@ -778,9 +778,8 @@ export function ProgressDetail({
       <div>
         <h2 className="font-display text-2xl text-white">The numbers</h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Four scores for {rangeHint.toLowerCase()}
-          {missionPct != null ? " — plus your missions" : ""}. Percentages are
-          how much you finished, not a grade.
+          Four scores for {rangeHint.toLowerCase()}. Percentages are how much
+          you finished, not a grade.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat
@@ -849,30 +848,8 @@ export function ProgressDetail({
             }
           />
           <Stat label={fourth.label} value={fourth.value} hint={fourth.hint} />
-          {missionPct != null ? (
-            <Stat
-              label={
-                liveMissions.length === 1
-                  ? liveMissions[0].title
-                  : "Missions"
-              }
-              value={`${missionPct}%`}
-              hint={
-                liveMissions.length === 1
-                  ? missionScores[0].detail
-                  : `${liveMissions.length} live · steps and days you showed up.`
-              }
-            />
-          ) : null}
         </div>
       </div>
-
-      <MissionStats
-        missions={missions}
-        history={missionHistory}
-        range={range}
-        today={missionDay}
-      />
 
       {range !== "today" && perHabit.length ? (
         <div>
