@@ -123,7 +123,9 @@ export function NightCloseFlow({
         setLiveMissions(live);
         if (live.length) {
           setMissionAnswers(
-            Object.fromEntries(live.map((m) => [m.id, m.doneToday]))
+            Object.fromEntries(
+              live.filter((m) => m.doneToday).map((m) => [m.id, true])
+            )
           );
           setStep((cur) => (cur === "remember" ? "mission" : cur));
         }
