@@ -34,6 +34,8 @@ import {
 import { parseLifeJson } from "@/lib/personal-life";
 import { formatDateInZone, DEFAULT_TZ } from "@/lib/clock";
 import { summarizeWeek } from "@/lib/morning-pulse";
+import { lastNDates } from "@/lib/study-time";
+import { buildWeekConsistency, tallyTodos } from "@/lib/consistency";
 
 function toClientLog(log: {
   date: string;
@@ -87,8 +89,9 @@ export async function GET(req: Request) {
     new Date(Date.now() - days * 24 * 60 * 60 * 1000),
     tz
   );
+  const weekStart = lastNDates(today, 7)[0];
 
-  const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, todoHistory] =
+  const [habitsRaw, rawLogs, profile, todayPlan, todayTodos, todoHistory, weekStudy] =
     await Promise.all([
       ensureDefaultHabits(userId),
       prisma.habitLog.findMany({
@@ -136,12 +139,19 @@ export async function GET(req: Request) {
         where: { userId, date: today },
         orderBy: { createdAt: "asc" },
       }),
-      lite
-        ? Promise.resolve([] as { date: string; done: boolean }[])
-        : prisma.todo.findMany({
-            where: { userId, date: { gte: since } },
-            select: { date: true, done: true },
-          }),
+      prisma.todo.findMany({
+        where: { userId, date: { gte: lite ? weekStart : since } },
+        select: { date: true, done: true },
+      }),
+      prisma.studySession.groupBy({
+        by: ["date"],
+        where: {
+          userId,
+          endedAt: { not: null },
+          date: { gte: weekStart },
+        },
+        _sum: { minutes: true },
+      }),
     ]);
 
   const wakeGoal = effectiveWakeGoal(todayPlan?.wakeGoal, settingsWake);
@@ -172,16 +182,17 @@ export async function GET(req: Request) {
   );
   const life = parseLifeJson(profile?.lifeJson);
   const weekPulse = summarizeWeek(logs, habitKeys, 7);
-  const todoByDate = new Map<string, { total: number; done: number }>();
-  for (const t of todoHistory) {
-    const cur = todoByDate.get(t.date) || { total: 0, done: 0 };
-    cur.total += 1;
-    if (t.done) cur.done += 1;
-    todoByDate.set(t.date, cur);
-  }
-  const todoStats = [...todoByDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({ date, ...v }));
+  const todoStats = tallyTodos(todoHistory);
+  const weekGraph = buildWeekConsistency({
+    today,
+    logs,
+    habitKeys,
+    todos: todoStats,
+    studyDays: weekStudy.map((row) => ({
+      date: row.date,
+      minutes: row._sum.minutes || 0,
+    })),
+  });
 
   return NextResponse.json({
     logs: lite ? undefined : logs,
@@ -200,6 +211,7 @@ export async function GET(req: Request) {
     todayTodos,
     morningFlow: todayPlan?.morningFlow || "none",
     weekPulse,
+    weekGraph,
     todoStats: lite ? undefined : todoStats,
     profile: {
       xp: profile?.xp ?? 0,

@@ -56,24 +56,24 @@ export function LandingNewFeatures() {
     <section
       id="new"
       ref={root}
-      className="scroll-mt-16 border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24"
+      className="scroll-mt-16 border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24"
     >
       <div className="mx-auto max-w-5xl">
         <div className="max-w-xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
             New
           </p>
-          <h2 className="font-display mt-2 text-[1.85rem] leading-tight text-white sm:text-[2.35rem]">
+          <h2 className="font-display mt-2 text-[1.65rem] leading-tight text-[var(--lp-fg)] sm:text-[2.35rem]">
             What Dawn gives you now
           </h2>
-          <p className="mt-3 max-w-[40ch] text-[15px] text-[#9aa6b2]">
+          <p className="mt-3 max-w-[40ch] text-[15px] text-[var(--lp-muted)]">
             Google sign-in, a friend code, and a board that ranks habit
             consistency against study hours.
           </p>
         </div>
 
         <motion.div
-          className="relative mt-8 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]"
+          className="relative mt-8 overflow-hidden rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)]"
           initial={reduce ? false : { opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -86,13 +86,13 @@ export function LandingNewFeatures() {
 
           <div className="relative z-10 flex flex-col justify-between gap-6 p-5 sm:p-6 lg:min-h-[32rem] lg:flex-row lg:items-end lg:p-8">
             <div className="max-w-md">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
                 {feature.kicker}
               </p>
-              <h3 className="font-display mt-2 text-[1.7rem] leading-tight text-white sm:text-[2.1rem]">
+              <h3 className="font-display mt-2 text-[1.45rem] leading-tight text-[var(--lp-fg)] sm:text-[2.1rem]">
                 {feature.title}
               </h3>
-              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[#9aa6b2] lg:text-[#d6e2ec]/90">
+              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[var(--lp-muted)]">
                 {feature.body}
               </p>
               <Link href="/signup" className="dawn-btn mt-6">
@@ -114,14 +114,14 @@ export function LandingNewFeatures() {
                 className={cn(
                   "rounded-xl border px-3 py-3 text-left transition sm:px-4",
                   active
-                    ? "border-[#f0b45a]/50 bg-[#f0b45a]/10"
-                    : "border-white/[0.1] bg-white/[0.03] hover:border-white/20"
+                    ? "border-[var(--lp-gold)]/50 bg-[var(--lp-gold)]/10"
+                    : "border-[var(--lp-border)] bg-[var(--lp-inset)] hover:border-[var(--lp-gold)]/30"
                 )}
               >
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--lp-gold)]">
                   {f.kicker}
                 </p>
-                <p className="mt-1 text-[13px] font-medium leading-snug text-white">
+                <p className="mt-1 text-[13px] font-medium leading-snug text-[var(--lp-fg)]">
                   {f.title}
                 </p>
                 <span

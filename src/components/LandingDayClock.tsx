@@ -231,13 +231,13 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
         </svg>
       </div>
 
-      <div className="mt-5 flex gap-1">
+      <div className="mt-5 grid grid-cols-4 gap-1">
         {STEPS.map((s, i) => (
           <button
             key={s.id}
             type="button"
             onClick={() => setStep(i)}
-            className={`flex-1 rounded-xl px-2 py-2 text-center text-[12px] transition ${
+            className={`min-w-0 rounded-xl px-1.5 py-2 text-center text-[11px] transition sm:px-2 sm:text-[12px] ${
               i === step
                 ? "bg-[#f0b45a] font-medium text-[#0a0e12]"
                 : "bg-white/[0.04] text-[#8ba3b8] hover:text-white"

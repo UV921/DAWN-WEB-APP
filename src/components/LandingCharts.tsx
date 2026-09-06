@@ -40,7 +40,7 @@ export function LandingCharts({ series }: { series: LandingPoint[] }) {
 
   return (
     <motion.div
-      className="h-[300px] w-full sm:h-[340px]"
+      className="h-[220px] w-full min-w-0 sm:h-[300px] md:h-[340px]"
       initial={reduce ? false : { opacity: 0.4 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
