@@ -12,6 +12,7 @@ import {
 export type MissionDraft = {
   title: string;
   note: string;
+  focus: string;
   startDate: string;
   endDate: string;
   ongoing: boolean;
@@ -22,6 +23,7 @@ export function emptyDraft(today: string): MissionDraft {
   return {
     title: "",
     note: "",
+    focus: "",
     startDate: today,
     endDate: "",
     ongoing: false,
@@ -33,6 +35,7 @@ export function draftFromMission(m: MissionPublic): MissionDraft {
   return {
     title: m.title,
     note: m.note || "",
+    focus: m.focus || "",
     startDate: m.startDate,
     endDate: m.endDate || "",
     ongoing: Boolean(m.progress.ongoing || !m.days),
@@ -72,6 +75,7 @@ export function MissionAddRow({
     onAdd({
       title: name,
       note: "",
+      focus: "",
       startDate: startDate || today,
       endDate,
       ongoing: !endDate,
@@ -198,6 +202,7 @@ export function MissionEditor({
   saveLabel = "Save",
   onSave,
   onCancel,
+  showSteps = true,
   children,
 }: {
   draft: MissionDraft;
@@ -206,13 +211,24 @@ export function MissionEditor({
   saveLabel?: string;
   onSave: () => void;
   onCancel: () => void;
+  /** Create flow includes steps. Edit keeps steps on the live card. */
+  showSteps?: boolean;
   children?: ReactNode;
 }) {
+  const [stepDraft, setStepDraft] = useState("");
+  const steps = draft.steps || [];
   const span = draft.ongoing
-    ? "No end date"
+    ? "No end date — keep going until you stop it."
     : draft.startDate && draft.endDate
       ? `${daysFromRange(draft.startDate, draft.endDate)} days · ${formatMissionSpan(draft.startDate, draft.endDate)}`
       : "Pick a start and end";
+
+  function queueStep() {
+    const text = stepDraft.trim();
+    if (!text || steps.length >= MAX_MISSION_STEPS) return;
+    onChange({ ...draft, steps: [...steps, text] });
+    setStepDraft("");
+  }
 
   return (
     <div className="space-y-3 rounded-xl border border-white/12 bg-black/20 px-3 py-3">
@@ -226,67 +242,146 @@ export function MissionEditor({
           maxLength={80}
         />
       </label>
+      <div>
+        <p className="text-sm text-[var(--color-mist)]">Mission period</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2">
+          <label className="text-[11px] text-[var(--color-mist)]">
+            Starts
+            <input
+              type="date"
+              value={draft.startDate}
+              onChange={(e) =>
+                onChange({
+                  ...draft,
+                  startDate: e.target.value,
+                  endDate:
+                    draft.endDate && e.target.value && draft.endDate < e.target.value
+                      ? e.target.value
+                      : draft.endDate,
+                })
+              }
+              className="ui-field mt-1 !px-3 !py-2 text-sm [color-scheme:dark]"
+            />
+          </label>
+          <label className="text-[11px] text-[var(--color-mist)]">
+            Ends
+            <input
+              type="date"
+              value={draft.ongoing ? "" : draft.endDate}
+              min={draft.startDate || undefined}
+              disabled={draft.ongoing}
+              onChange={(e) =>
+                onChange({ ...draft, endDate: e.target.value, ongoing: false })
+              }
+              className="ui-field mt-1 !px-3 !py-2 text-sm [color-scheme:dark] disabled:opacity-40"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              ...draft,
+              ongoing: !draft.ongoing,
+              endDate: draft.ongoing ? draft.endDate : "",
+            })
+          }
+          className={`mt-2 rounded-full border px-3 py-1 text-xs ${
+            draft.ongoing
+              ? "border-[var(--color-dawn)] text-[var(--color-dawn)]"
+              : "border-white/15 text-[var(--color-mist)]"
+          }`}
+        >
+          {draft.ongoing ? "Ongoing · no end" : "No end date"}
+        </button>
+        <p className="mt-1.5 text-xs text-[var(--color-mist)]">{span}</p>
+      </div>
       <label className="block text-sm text-[var(--color-mist)]">
-        Note
-        <input
+        What do you want to achieve?
+        <textarea
           value={draft.note}
           onChange={(e) => onChange({ ...draft, note: e.target.value })}
-          placeholder="What you’re building"
+          placeholder="Ship the demo. Pass the exam. Finish the build."
+          rows={2}
           className="ui-field mt-1.5 !px-3 !py-2 text-sm"
           maxLength={200}
         />
       </label>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-sm text-[var(--color-mist)]">
-          Starts
-          <input
-            type="date"
-            value={draft.startDate}
-            onChange={(e) =>
-              onChange({
-                ...draft,
-                startDate: e.target.value,
-                endDate:
-                  draft.endDate && e.target.value && draft.endDate < e.target.value
-                    ? e.target.value
-                    : draft.endDate,
-              })
-            }
-            className="ui-field mt-1.5 !px-3 !py-2 text-sm [color-scheme:dark]"
-          />
-        </label>
-        <label className="text-sm text-[var(--color-mist)]">
-          Ends
-          <input
-            type="date"
-            value={draft.ongoing ? "" : draft.endDate}
-            min={draft.startDate || undefined}
-            disabled={draft.ongoing}
-            onChange={(e) =>
-              onChange({ ...draft, endDate: e.target.value, ongoing: false })
-            }
-            className="ui-field mt-1.5 !px-3 !py-2 text-sm [color-scheme:dark] disabled:opacity-40"
-          />
-        </label>
-      </div>
-      <button
-        type="button"
-        onClick={() =>
-          onChange({
-            ...draft,
-            ongoing: !draft.ongoing,
-            endDate: draft.ongoing ? draft.endDate : "",
-          })
-        }
-        className={`rounded-full border px-3 py-1 text-xs ${
-          draft.ongoing
-            ? "border-[var(--color-dawn)] text-[var(--color-dawn)]"
-            : "border-white/15 text-[var(--color-mist)]"
-        }`}
-      >
-        {draft.ongoing ? "Ongoing · no end" : "No end date"}
-      </button>
-      <p className="text-xs text-[var(--color-mist)]">{span}</p>
+      {showSteps ? (
+        <div>
+          <p className="text-sm text-[var(--color-mist)]">
+            Write the steps to get there
+          </p>
+          {steps.length ? (
+            <ul className="mt-2 space-y-1">
+              {steps.map((step, i) => (
+                <li
+                  key={`${step}-${i}`}
+                  className="flex items-center justify-between gap-2 text-sm text-white"
+                >
+                  <span className="min-w-0 truncate">○ {step}</span>
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--color-mist)]"
+                    onClick={() =>
+                      onChange({
+                        ...draft,
+                        steps: steps.filter((_, j) => j !== i),
+                      })
+                    }
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-[11px] text-[var(--color-mist)]">
+              Break the mission into the moves you will actually take.
+            </p>
+          )}
+          {steps.length < MAX_MISSION_STEPS ? (
+            <div className="mt-2 flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] py-1 pl-3 pr-1.5">
+              <input
+                value={stepDraft}
+                onChange={(e) => setStepDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    queueStep();
+                  }
+                }}
+                placeholder="Add a step"
+                className="min-w-0 flex-1 bg-transparent py-2 text-sm text-white outline-none placeholder:text-[var(--color-mist)]"
+                autoComplete="off"
+                maxLength={120}
+              />
+              <button
+                type="button"
+                disabled={!stepDraft.trim()}
+                onClick={queueStep}
+                className="rounded-lg px-3 py-1.5 text-sm text-[var(--color-dawn)] disabled:opacity-40"
+              >
+                Add step
+              </button>
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-[var(--color-mist)]">
+              Max {MAX_MISSION_STEPS} steps.
+            </p>
+          )}
+        </div>
+      ) : null}
+      <label className="block text-sm text-[var(--color-mist)]">
+        The important thing
+        <input
+          value={draft.focus}
+          onChange={(e) => onChange({ ...draft, focus: e.target.value })}
+          placeholder="The one thing that makes this succeed"
+          className="ui-field mt-1.5 !px-3 !py-2 text-sm"
+          maxLength={200}
+        />
+      </label>
       {children}
       <div className="flex flex-wrap gap-2">
         <button
@@ -356,6 +451,7 @@ export function payloadFromDraft(draft: MissionDraft) {
   return {
     title: draft.title.trim().slice(0, 80),
     note: draft.note.trim().slice(0, 200),
+    focus: draft.focus.trim().slice(0, 200),
     startDate: draft.startDate,
     endDate: draft.ongoing ? "" : draft.endDate,
     days: Math.min(MAX_MISSION_DAYS, days),

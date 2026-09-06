@@ -4,17 +4,19 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MissionSteps } from "@/components/MissionSteps";
-import { MissionPctRing } from "@/components/MissionRing";
 import { IconChevronDown, IconSettings } from "@/components/icons";
 import {
+  formatDaysRemain,
   formatMissionRemaining,
   formatMissionSpan,
-  missionRemainPct,
   type MissionPublic,
 } from "@/lib/missions";
+import { formatLocalDate } from "@/lib/habits";
 import {
+  emptyDraft,
   MissionEditor,
   MissionStopAsk,
+  payloadFromDraft,
   type MissionDraft,
 } from "@/components/MissionEditor";
 
@@ -37,6 +39,9 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
   const [busyId, setBusyId] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<MissionDraft | null>(null);
+  const [today, setToday] = useState(formatLocalDate(new Date()));
 
   const apply = useCallback(
     (next: MissionPublic[] | ((prev: MissionPublic[]) => MissionPublic[])) => {
@@ -57,6 +62,7 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
     }
     const data = await res.json();
     apply((data.missions || []) as MissionPublic[]);
+    if (typeof data.today === "string") setToday(data.today);
     setLoaded(true);
   }, [apply]);
 
@@ -157,6 +163,42 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
 
   const live = missions.filter((m) => m.active && !m.progress.ended);
 
+  async function createMission() {
+    if (!draft) return;
+    const payload = payloadFromDraft(draft);
+    if (!payload.title) return;
+    setBusyId("create");
+    setErr("");
+    const { ok, data } = await post({
+      action: "create",
+      kind: "manual",
+      ...payload,
+      habitKeys: [],
+    });
+    setBusyId("");
+    if (!ok) {
+      setErr(String(data.error || "Could not start that mission."));
+      return;
+    }
+    setCreating(false);
+    setDraft(null);
+    if (data.mission) {
+      apply((prev) => {
+        const next = data.mission as MissionPublic;
+        return [next, ...prev.filter((m) => m.id !== next.id)];
+      });
+      setOpenId((data.mission as MissionPublic).id);
+    } else {
+      await load();
+    }
+  }
+
+  function beginCreate() {
+    setDraft(emptyDraft(today));
+    setCreating(true);
+    setErr("");
+  }
+
   if (!loaded) return null;
 
   return (
@@ -202,17 +244,33 @@ export function TodayMissions({ missions: incoming, onChange }: Props) {
             </li>
           ))}
         </ul>
+      ) : creating && draft ? (
+        <div className="mt-4">
+          <MissionEditor
+            draft={draft}
+            onChange={setDraft}
+            busy={busyId === "create"}
+            saveLabel="Start mission"
+            onSave={() => void createMission()}
+            onCancel={() => {
+              setCreating(false);
+              setDraft(null);
+            }}
+          />
+        </div>
       ) : (
-        <p className="mt-3 text-sm text-[var(--color-mist)]">
-          No mission on Today.{" "}
-          <Link
-            href={todayMissionSettingsHref()}
-            className="text-[var(--color-dawn)]"
+        <div className="mt-4">
+          <p className="font-display text-[1.35rem] leading-tight text-white">
+            Hey, do you have a mission?
+          </p>
+          <button
+            type="button"
+            onClick={beginCreate}
+            className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-dashed border-[var(--color-dawn)]/55 bg-[var(--color-dawn)]/[0.06] px-5 text-sm font-medium text-[var(--color-dawn)]"
           >
-            Open Settings
-          </Link>{" "}
-          to add one.
-        </p>
+            Mission
+          </button>
+        </div>
       )}
     </section>
   );
@@ -237,7 +295,6 @@ function TodayMissionCard({
 }) {
   const reduce = useReducedMotion();
   const p = m.progress;
-  const remain = missionRemainPct(p);
   const settingsHref = todayMissionSettingsHref(m.id);
   const stepCount = (m.steps || []).length;
   const stepsDone = (m.steps || []).filter((s) => s.done).length;
@@ -252,55 +309,27 @@ function TodayMissionCard({
       }`}
       transition={{ duration: 0.28, ease: EASE }}
     >
-      <div className="flex items-stretch">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left sm:gap-4 sm:px-4"
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left sm:px-4"
+      >
+        <p className="font-display min-w-0 flex-1 truncate text-[1.2rem] leading-tight text-white">
+          {m.title}
+        </p>
+        <span className="shrink-0 text-sm tabular-nums text-[var(--color-mist)]">
+          {m.doneToday ? "Shown up · " : ""}
+          {formatDaysRemain(p)}
+        </span>
+        <motion.span
+          className="shrink-0 text-[var(--color-mist)]"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: reduce ? 0 : 0.22, ease: EASE }}
         >
-          <MissionPctRing
-            fill={p.ongoing ? 100 : remain ?? 0}
-            value={p.ongoing ? String(p.day) : remain ?? 0}
-            caption={p.ongoing ? "day" : "left"}
-            pulse={p.ongoing}
-            ariaLabel={
-              p.ongoing
-                ? `Day ${p.day}, ongoing`
-                : `${remain ?? 0} percent remaining, day ${p.day}`
-            }
-          />
-          <div className="min-w-0 flex-1">
-            <p className="font-display truncate text-[1.35rem] leading-tight text-white">
-              {m.title}
-            </p>
-            <p className="mt-1 text-sm tabular-nums text-[var(--color-mist)]">
-              {p.ongoing
-                ? `Day ${p.day}`
-                : `Day ${p.day} of ${p.total}`}
-              {p.ongoing
-                ? " · ongoing"
-                : p.daysLeft === 1
-                  ? " · last day"
-                  : ` · ${p.daysLeft} left`}
-            </p>
-          </div>
-          <motion.span
-            className="shrink-0 text-[var(--color-mist)]"
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: reduce ? 0 : 0.22, ease: EASE }}
-          >
-            <IconChevronDown size={18} />
-          </motion.span>
-        </button>
-        <Link
-          href={settingsHref}
-          aria-label={`Open ${m.title} in Settings`}
-          className="flex shrink-0 items-center border-l border-white/10 px-3 text-[var(--color-mist)] hover:text-white"
-        >
-          <IconSettings size={16} />
-        </Link>
-      </div>
+          <IconChevronDown size={18} />
+        </motion.span>
+      </button>
 
       <AnimatePresence initial={false}>
         {open ? (
@@ -313,10 +342,21 @@ function TodayMissionCard({
             className="overflow-hidden"
           >
             <div className="border-t border-white/8 px-3 pb-3 sm:px-4">
-              <p className="pt-3 text-[11px] tabular-nums text-[var(--color-mist)]">
+              {m.note ? (
+                <p className="pt-3 text-sm text-[var(--color-cloud)]">{m.note}</p>
+              ) : null}
+              {m.focus ? (
+                <p className="pt-2 text-sm text-white">
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-dawn)]">
+                    Important
+                  </span>
+                  <span className="mt-0.5 block">{m.focus}</span>
+                </p>
+              ) : null}
+              <p className={`${m.note || m.focus ? "pt-3" : "pt-3"} text-[11px] tabular-nums text-[var(--color-mist)]`}>
                 {stepCount
                   ? `${stepsDone}/${stepCount} steps`
-                  : "Add steps for today"}
+                  : "Add the steps you defined"}
               </p>
               <MissionSteps
                 steps={m.steps || []}
@@ -325,6 +365,13 @@ function TodayMissionCard({
                 onToggle={onToggleStep}
                 onDelete={onDeleteStep}
               />
+              <Link
+                href={settingsHref}
+                className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--color-mist)]"
+              >
+                <IconSettings size={12} />
+                Edit in Settings
+              </Link>
             </div>
           </motion.div>
         ) : null}
@@ -427,6 +474,11 @@ export function MissionLiveRow({
       {m.note ? (
         <p className="mt-2 text-xs text-[var(--color-mist)]">{m.note}</p>
       ) : null}
+      {m.focus ? (
+        <p className="mt-1 text-xs text-[var(--color-cloud)]">
+          Important: {m.focus}
+        </p>
+      ) : null}
 
       {editing && draft && onDraft ? (
         <div className="mt-3">
@@ -434,6 +486,7 @@ export function MissionLiveRow({
             draft={draft}
             onChange={onDraft}
             busy={busy}
+            showSteps={false}
             onSave={() => onSaveEdit?.()}
             onCancel={() => onCancelEdit?.()}
           >

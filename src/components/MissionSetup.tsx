@@ -5,7 +5,6 @@ import { MissionLiveRow } from "@/components/TodayMissions";
 import {
   draftFromMission,
   emptyDraft,
-  MissionAddRow,
   MissionEditor,
   payloadFromDraft,
   type MissionDraft,
@@ -172,31 +171,6 @@ export function MissionSetup({
     setEditingId(null);
     setDraft(null);
     resetExtras();
-    await load();
-    onStarted?.();
-  }
-
-  async function addQuick(next: MissionDraft) {
-    setBusy(true);
-    setMsg("");
-    const payload = payloadFromDraft(next);
-    const res = await fetch("/api/mission", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create",
-        kind: "manual",
-        ...payload,
-        habitKeys: [],
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      setMsg(String(err.error || "Could not add mission."));
-      return;
-    }
-    setMsg(`${payload.title} is on Today.`);
     await load();
     onStarted?.();
   }
@@ -394,12 +368,6 @@ export function MissionSetup({
 
   return (
     <div className="space-y-4">
-      <MissionAddRow
-        today={day}
-        busy={busy && creating && !editingId}
-        onAdd={(d) => void addQuick(d)}
-      />
-
       {creating && draft && !editingId ? (
         <MissionEditor
           draft={draft}
@@ -414,13 +382,26 @@ export function MissionSetup({
         >
           {extras}
         </MissionEditor>
+      ) : !live.length ? (
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-4 py-4">
+          <p className="font-display text-[1.35rem] leading-tight text-white">
+            Hey, do you have a mission?
+          </p>
+          <button
+            type="button"
+            onClick={() => beginCreate()}
+            className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-dashed border-[var(--color-dawn)]/55 bg-[var(--color-dawn)]/[0.06] px-5 text-sm font-medium text-[var(--color-dawn)]"
+          >
+            Mission
+          </button>
+        </div>
       ) : (
         <button
           type="button"
           onClick={() => beginCreate()}
           className="text-xs text-[var(--color-dawn)]"
         >
-          More options
+          Start another mission
         </button>
       )}
 
@@ -487,8 +468,8 @@ export function MissionSetup({
         </ul>
       ) : !creating ? (
         <p className="text-sm text-[var(--color-mist)]">
-          Add a mission above. Pick a start and end date — like a hackathon
-          weekend.
+          Name it, set the period, write what you want to achieve, the steps,
+          and the one important thing.
         </p>
       ) : null}
 
