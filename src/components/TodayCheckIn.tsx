@@ -34,6 +34,8 @@ import {
 } from "@/lib/morning-pulse";
 import { buildDayTally, type TallyHit } from "@/lib/day-tally";
 import type { MissionPublic } from "@/lib/missions";
+import type { ConsistencyDay } from "@/lib/consistency";
+import { WeekConsistencyGraph } from "@/components/WeekConsistencyGraph";
 
 type Streaks = Record<string, { current: number; longest: number }>;
 
@@ -182,6 +184,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   >([]);
   const [notifyReady, setNotifyReady] = useState(false);
   const [pulse, setPulse] = useState<MorningPulse | null>(null);
+  const [weekGraph, setWeekGraph] = useState<ConsistencyDay[]>([]);
   const [nightFlow, setNightFlow] = useState(false);
   const [timezone, setTimezone] = useState<string | undefined>();
   const tzRef = useRef<string | undefined>(undefined);
@@ -317,6 +320,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
         ),
       });
       setPulse(localPulse);
+      setWeekGraph((data.weekGraph as ConsistencyDay[]) || []);
       onData?.({
         logs: data.logs || [],
         streaks: data.streaks,
@@ -1057,6 +1061,26 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
                 : "Couldn’t save — try again"}
           </p>
         )}
+
+        <WeekConsistencyGraph
+          days={weekGraph}
+          today={today}
+          liveToday={
+            today
+              ? {
+                  date: today,
+                  habitsDone: done,
+                  habitsTotal: liveHabits.length || 1,
+                  tasksDone: todayTodos.filter((x) => x.done).length,
+                  tasksTotal: todayTodos.length,
+                  studyMinutes,
+                  wakeTime: wakeTime || null,
+                  wakeEarly: Boolean(checks.wakeEarly),
+                  logged: Boolean(wakeTime) || done > 0 || todayTodos.length > 0,
+                }
+              : null
+          }
+        />
       </div>
     </>
   );

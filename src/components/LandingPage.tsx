@@ -16,6 +16,7 @@ import { LandingNewFeatures } from "@/components/LandingNewFeatures";
 import { LandingPhilosophyFilm } from "@/components/LandingPhilosophyFilm";
 import { LandingStudyFilm } from "@/components/LandingStudyFilm";
 import { LandingNightDetail } from "@/components/LandingNightDetail";
+import { LandingThemeProvider, useLandingTheme } from "@/components/LandingTheme";
 import { defaultWindowForKey } from "@/lib/habit-windows";
 import type { LandingSnapshot } from "@/lib/landing-data";
 import { cn } from "@/lib/utils";
@@ -26,8 +27,10 @@ const SLEEP_WIN = defaultWindowForKey("sleepEarly", WAKE, SLEEP);
 const WAKE_WIN = defaultWindowForKey("wakeEarly", WAKE, SLEEP);
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const PANEL = "overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]";
-const INSET = "rounded-xl border border-white/[0.1] bg-white/[0.03]";
+const PANEL =
+  "overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a] text-[#e8e4dc]";
+const INSET =
+  "rounded-xl border border-[var(--lp-border)] bg-[var(--lp-inset)]";
 
 const HABITS_TODAY = [
   { label: "Wake early", meta: "Done · 05:52", done: true },
@@ -76,7 +79,16 @@ const LOOP = [
 type Props = { snap: LandingSnapshot };
 
 export function LandingPage({ snap }: Props) {
+  return (
+    <LandingThemeProvider>
+      <LandingPageInner snap={snap} />
+    </LandingThemeProvider>
+  );
+}
+
+function LandingPageInner({ snap }: Props) {
   const reduce = useReducedMotion();
+  const { theme } = useLandingTheme();
   const live = snap.people > 0 || snap.mornings > 0 || snap.tasksTotal > 0;
   const taskPct =
     snap.tasksTotal > 0
@@ -93,29 +105,32 @@ export function LandingPage({ snap }: Props) {
   const streakShow = live ? Math.max(snap.wakesToday, 1) : 7;
 
   return (
-    <main className="bg-[#0a0e12] text-[#e8e4dc]">
+    <main
+      className="landing min-w-0 bg-[var(--lp-bg)] text-[var(--lp-fg)]"
+      data-theme={theme}
+    >
       <LandingNav />
       <LandingInstall />
 
       <section
         id="top"
-        className="relative overflow-hidden pt-16"
+        className="relative overflow-x-clip overflow-y-hidden pt-16"
       >
         <LandingHeroBackdrop />
-        <div className="relative z-10">
+        <div className="relative z-10 min-w-0">
           <ContainerScroll
             titleComponent={
               <>
-                <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--lp-gold)] sm:mb-4 sm:text-[11px]">
                   Wake · Lists · Study · Night
                 </p>
-                <h1 className="font-display text-[clamp(3rem,8vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-white">
+                <h1 className="font-display text-[clamp(2.4rem,12vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-[var(--lp-fg)]">
                   Dawn
                 </h1>
-                <p className="mx-auto mt-4 max-w-[28ch] text-[1.05rem] leading-snug text-[#9aa6b2] sm:text-lg">
+                <p className="mx-auto mt-3 max-w-[28ch] px-1 text-[0.98rem] leading-snug text-[var(--lp-muted)] sm:mt-4 sm:text-lg">
                   One screen for the day. Wake, lists, study, then close the night.
                 </p>
-                <Link href="/signup" className="dawn-btn relative z-30 mt-8">
+                <Link href="/signup" className="dawn-btn relative z-30 mt-6 sm:mt-8">
                   Open Dawn
                 </Link>
               </>
@@ -129,7 +144,7 @@ export function LandingPage({ snap }: Props) {
       <LandingNewFeatures />
 
       {live ? (
-        <section className="border-t border-white/[0.08] px-5 py-10 sm:px-10">
+        <section className="border-t border-[var(--lp-line)] px-4 py-10 sm:px-10">
           <motion.div
             className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-4"
             initial="hidden"
@@ -159,16 +174,16 @@ export function LandingPage({ snap }: Props) {
         </section>
       ) : null}
 
-      <section className="border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24">
+      <section className="border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24">
         <div className="mx-auto grid min-w-0 max-w-5xl items-stretch gap-8 lg:grid-cols-2 lg:gap-10">
           <Fade className="flex flex-col justify-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               The rule
             </p>
-            <h2 className="font-display mt-3 text-[1.85rem] leading-tight text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-3 text-[1.65rem] leading-tight text-[var(--lp-fg)] sm:text-[2.15rem]">
               Today is the loop.
             </h2>
-            <p className="mt-4 max-w-[28ch] text-[15px] text-[#9aa6b2]">
+            <p className="mt-4 max-w-[28ch] text-[15px] text-[var(--lp-muted)]">
               Wake in the window. Habits on a clock. Lists on Tasks.
             </p>
           </Fade>
@@ -189,15 +204,15 @@ export function LandingPage({ snap }: Props) {
         </div>
       </section>
 
-      <section className="border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24">
+      <section className="border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
           <Fade>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
                   The screen
                 </p>
-                <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+                <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
                   Today
                 </h2>
               </div>
@@ -369,14 +384,14 @@ export function LandingPage({ snap }: Props) {
 
       <section
         id="tasks"
-        className="scroll-mt-16 border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24"
+        className="scroll-mt-16 border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24"
       >
         <div className="mx-auto grid min-w-0 max-w-5xl items-stretch gap-6 lg:grid-cols-2">
           <Fade className="flex h-full flex-col">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               Inbox
             </p>
-            <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
               Named lists
             </h2>
             <div className={cn(PANEL, "mt-6 flex min-h-[20rem] flex-1 flex-col")}>
@@ -456,13 +471,13 @@ export function LandingPage({ snap }: Props) {
             </div>
           </Fade>
           <Fade delay={0.12} className="flex h-full flex-col">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               Close
             </p>
-            <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
               Night
             </h2>
-            <p className="mt-2 max-w-[36ch] text-[14px] leading-relaxed text-[#9aa6b2]">
+            <p className="mt-2 max-w-[36ch] text-[14px] leading-relaxed text-[var(--lp-muted)]">
               What time you slept. What time you should have. A gold band for
               the plan — bars for the nights you actually took.
             </p>
@@ -473,13 +488,13 @@ export function LandingPage({ snap }: Props) {
         </div>
       </section>
 
-      <section className="border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24">
+      <section className="border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24">
         <div className="mx-auto grid min-w-0 max-w-5xl items-stretch gap-8 lg:grid-cols-2 lg:gap-10">
           <Fade className="flex flex-col justify-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               New loop
             </p>
-            <h2 className="font-display mt-3 text-[1.85rem] leading-tight text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-3 text-[1.65rem] leading-tight text-[var(--lp-fg)] sm:text-[2.15rem]">
               List. Study. Share.
             </h2>
           </Fade>
@@ -497,19 +512,19 @@ export function LandingPage({ snap }: Props) {
 
       <section
         id="stats"
-        className="scroll-mt-16 border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24"
+        className="scroll-mt-16 border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24"
       >
         <div className="mx-auto max-w-5xl">
           <Fade>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               Progress
             </p>
-            <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
               Stats
             </h2>
           </Fade>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatPulse
               label="Habits · 7d"
               hint="full mornings"
@@ -552,10 +567,10 @@ export function LandingPage({ snap }: Props) {
             transition={{ duration: 0.75, ease: EASE }}
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#f0b45a]">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--lp-gold)]">
                 14 days
               </p>
-              <div className="flex gap-4 text-[11px] text-[#8ba3b8]">
+              <div className="flex gap-4 text-[11px] text-[var(--lp-muted)]">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-sm bg-[#f0b45a]" /> Habits
                 </span>
@@ -571,24 +586,24 @@ export function LandingPage({ snap }: Props) {
 
       <section
         id="study"
-        className="scroll-mt-16 border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24"
+        className="scroll-mt-16 border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24"
       >
         <div className="mx-auto grid min-w-0 max-w-5xl items-stretch gap-8 lg:grid-cols-2 lg:gap-10">
           <Fade className="flex flex-col justify-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               Discord
             </p>
-            <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
               Sit in the room
             </h2>
-            <p className="mt-4 max-w-[28ch] text-[15px] text-[#9aa6b2]">
+            <p className="mt-4 max-w-[28ch] text-[15px] text-[var(--lp-muted)]">
               Mark a voice channel. Hours count while you’re in it.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <code className="max-w-full rounded-full border border-[#5865F2]/40 bg-[#5865F2]/10 px-3 py-1.5 text-[12px] text-[#8ba9ff]">
                 /study-room add
               </code>
-              <code className="rounded-full border border-[#f0b45a]/35 bg-[#f0b45a]/10 px-3 py-1.5 text-[12px] text-[#f0b45a]">
+              <code className="rounded-full border border-[var(--lp-gold)]/35 bg-[var(--lp-gold)]/10 px-3 py-1.5 text-[12px] text-[var(--lp-gold)]">
                 /studied
               </code>
             </div>
@@ -607,17 +622,17 @@ export function LandingPage({ snap }: Props) {
 
       <section
         id="clock"
-        className="scroll-mt-16 border-t border-white/[0.08] px-5 py-16 sm:px-10 sm:py-24"
+        className="scroll-mt-16 border-t border-[var(--lp-line)] px-4 py-14 sm:px-10 sm:py-24"
       >
         <div className="mx-auto max-w-5xl">
           <Fade>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               Why Dawn
             </p>
-            <h2 className="font-display mt-2 text-[1.85rem] text-white sm:text-[2.15rem]">
+            <h2 className="font-display mt-2 text-[1.65rem] text-[var(--lp-fg)] sm:text-[2.15rem]">
               One day. One loop.
             </h2>
-            <p className="mt-3 max-w-[36ch] text-[15px] text-[#9aa6b2]">
+            <p className="mt-3 max-w-[36ch] text-[15px] text-[var(--lp-muted)]">
               Not anytime. Wake, lists, study, night — in that order.
             </p>
           </Fade>
@@ -638,16 +653,16 @@ export function LandingPage({ snap }: Props) {
         </div>
       </section>
 
-      <section className="border-t border-white/[0.08] px-5 py-24 sm:px-10 sm:py-32">
+      <section className="border-t border-[var(--lp-line)] px-4 py-20 sm:px-10 sm:py-32">
         <div className="mx-auto max-w-5xl">
           <Fade>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f0b45a]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
               The loop
             </p>
-            <h2 className="font-display mt-4 max-w-[14ch] text-[2.4rem] leading-[0.95] text-white sm:text-[3.4rem]">
+            <h2 className="font-display mt-4 max-w-[14ch] text-[2.1rem] leading-[0.95] text-[var(--lp-fg)] sm:text-[3.4rem]">
               Start today.
             </h2>
-            <p className="mt-5 max-w-[32ch] text-[15px] text-[#9aa6b2]">
+            <p className="mt-5 max-w-[32ch] text-[15px] text-[var(--lp-muted)]">
               Wake in the window. Check the lists. Sit in study. Close the night.
             </p>
             <ol className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -656,13 +671,13 @@ export function LandingPage({ snap }: Props) {
                   key={chip.label}
                   className={cn(INSET, "px-4 py-3")}
                 >
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--lp-muted)]">
                     {chip.n}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-white">
+                  <p className="mt-1 text-sm font-semibold text-[var(--lp-fg)]">
                     {chip.label}
                   </p>
-                  <p className="mt-0.5 font-mono text-[11px] text-[#8ba3b8]">
+                  <p className="mt-0.5 font-mono text-[11px] text-[var(--lp-muted)]">
                     {chip.detail}
                   </p>
                 </li>
@@ -677,9 +692,9 @@ export function LandingPage({ snap }: Props) {
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.08] px-5 py-6 sm:px-10">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[13px] text-[#6b7785]">
-          <span className="text-[#f0b45a]">
+      <footer className="border-t border-[var(--lp-line)] px-4 py-6 sm:px-10">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 text-[13px] text-[var(--lp-faint)]">
+          <span className="text-[var(--lp-gold)]">
             <DawnMark size={22} />
           </span>
           <span>Wake · lists · study · night</span>
@@ -734,11 +749,11 @@ function MiniStat({
   fill?: number;
 }) {
   return (
-    <div className={cn(INSET, "flex h-full flex-col justify-center p-4 text-left")}>
+    <div className="flex h-full flex-col justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] p-3 text-left sm:p-4">
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
         {label}
       </p>
-      <p className="font-display mt-1.5 text-[1.75rem] leading-none tabular-nums text-[#f0b45a]">
+      <p className="font-display mt-1.5 text-[1.45rem] leading-none tabular-nums text-[#f0b45a] sm:text-[1.75rem]">
         {value}
       </p>
       <p className="mt-1.5 text-[11px] text-[#6b7785]">{hint}</p>
@@ -780,14 +795,14 @@ function StatPulse({
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.6, delay, ease: EASE }}
     >
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[#8ba3b8]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--lp-muted)]">
         {label}
       </p>
-      <p className="font-display mt-2 text-[1.85rem] leading-none tabular-nums text-[#f0b45a]">
+      <p className="font-display mt-2 text-[1.45rem] leading-none tabular-nums text-[var(--lp-gold)] sm:text-[1.85rem]">
         {format(n)}
       </p>
-      <p className="mt-1.5 text-[11px] text-[#6b7785]">{hint}</p>
-      <div className="mt-3 h-1 overflow-hidden bg-white/10">
+      <p className="mt-1.5 text-[11px] text-[var(--lp-faint)]">{hint}</p>
+      <div className="mt-3 h-1 overflow-hidden bg-[var(--lp-border)]">
         <motion.div
           className="h-full bg-gradient-to-r from-[#e07a3a] to-[#f0b45a]"
           initial={reduce ? { width: `${Math.min(100, fill)}%` } : { width: "0%" }}
@@ -844,13 +859,13 @@ function StatBox({
         "flex h-full min-h-[6.75rem] flex-col items-center justify-center px-3 py-4 text-center"
       )}
     >
-      <p className="min-h-[2.4em] text-[10px] uppercase leading-tight tracking-[0.12em] text-[#8ba3b8]">
+      <p className="min-h-[2.4em] text-[10px] uppercase leading-tight tracking-[0.12em] text-[var(--lp-muted)]">
         {label}
       </p>
-      <p className="font-display mt-1 text-2xl leading-none tabular-nums text-[#f0b45a]">
+      <p className="font-display mt-1 text-2xl leading-none tabular-nums text-[var(--lp-gold)]">
         {value}
       </p>
-      <p className="mt-1.5 min-h-[2.2em] text-[11px] leading-tight text-[#6b7785]">
+      <p className="mt-1.5 min-h-[2.2em] text-[11px] leading-tight text-[var(--lp-faint)]">
         {unit}
       </p>
     </motion.div>
@@ -900,26 +915,26 @@ function LoopChip({
   return (
     <motion.div
       animate={{
-        backgroundColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.03)",
-        borderColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.1)",
-        color: on ? "#0a0e12" : "#e8e4dc",
+        backgroundColor: on ? "var(--lp-gold)" : "var(--lp-inset)",
+        borderColor: on ? "var(--lp-gold)" : "var(--lp-border)",
+        color: on ? "var(--lp-ink)" : "var(--lp-fg)",
       }}
       transition={{ duration: 0.45, ease: EASE }}
       className="flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center rounded-xl border px-2.5 py-2 sm:min-h-[4.75rem] sm:px-3 sm:py-2.5"
     >
       <p
         className={`text-[10px] uppercase tracking-[0.12em] ${
-          on ? "text-[#0a0e12]/70" : "text-[#8ba3b8]"
+          on ? "text-[var(--lp-ink)]/70" : "text-[var(--lp-muted)]"
         }`}
       >
         {n}
       </p>
-      <p className={`mt-1 truncate text-xs font-semibold ${on ? "" : "text-white"}`}>
+      <p className={`mt-1 truncate text-xs font-semibold ${on ? "" : "text-[var(--lp-fg)]"}`}>
         {label}
       </p>
       <p
         className={`mt-0.5 text-[10px] ${
-          on ? "text-[#0a0e12]/70" : "text-[#8ba3b8]"
+          on ? "text-[var(--lp-ink)]/70" : "text-[var(--lp-muted)]"
         }`}
       >
         {detail}

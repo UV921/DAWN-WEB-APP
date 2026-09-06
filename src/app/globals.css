@@ -39,6 +39,68 @@ html.dark,
   color-scheme: dark;
 }
 
+.landing {
+  --lp-bg: #0a0e12;
+  --lp-fg: #e8e4dc;
+  --lp-muted: #9aa6b2;
+  --lp-dim: #c5ced6;
+  --lp-faint: #6b7785;
+  --lp-card: #0d131a;
+  --lp-inset: rgba(255, 255, 255, 0.03);
+  --lp-border: rgba(255, 255, 255, 0.1);
+  --lp-line: rgba(255, 255, 255, 0.08);
+  --lp-gold: #f0b45a;
+  --lp-leaf: #6fbf8a;
+  --lp-ink: #0a0e12;
+  color-scheme: dark;
+  overflow-x: clip;
+}
+
+.landing[data-theme="light"] {
+  --lp-bg: #f4efe6;
+  --lp-fg: #1c1915;
+  --lp-muted: #5c656e;
+  --lp-dim: #3f4750;
+  --lp-faint: #7a8490;
+  --lp-card: #fffdf8;
+  --lp-inset: rgba(28, 25, 21, 0.04);
+  --lp-border: rgba(28, 25, 21, 0.1);
+  --lp-line: rgba(28, 25, 21, 0.08);
+  --lp-gold: #b8751c;
+  --lp-leaf: #2f8a52;
+  --lp-ink: #1c1915;
+  color-scheme: light;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+}
+
+.landing[data-theme="light"] .mac-glass,
+.landing[data-theme="light"] .mac-bezel {
+  background: #0a0e12;
+}
+
+@media (max-width: 767px) {
+  .landing .hero-photo-vignette {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 14, 18, 0.72) 0%,
+        rgba(10, 14, 18, 0.42) 38%,
+        rgba(10, 14, 18, 0.88) 100%
+      );
+  }
+
+  .landing[data-theme="light"] .hero-photo-vignette {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(244, 239, 230, 0.78) 0%,
+        rgba(244, 239, 230, 0.28) 40%,
+        rgba(244, 239, 230, 0.92) 100%
+      );
+  }
+}
+
 body {
   font-family: var(--font-body);
   background: var(--color-night);
@@ -551,6 +613,16 @@ button,
   -webkit-backdrop-filter: blur(16px);
 }
 
+.landing[data-theme="light"] .landing-install {
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: 0 8px 28px rgba(28, 25, 21, 0.12);
+}
+
+.landing[data-theme="light"] .landing-install-copy,
+.landing[data-theme="light"] .landing-install-skip {
+  color: #5c656e;
+}
+
 .landing-install-app {
   bottom: calc(5.55rem + env(safe-area-inset-bottom, 0px));
   z-index: 35;
@@ -639,7 +711,7 @@ button,
 
 .mac-chassis {
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 18px;
   background: linear-gradient(
     180deg,
     #6a6f76 0%,

@@ -35,12 +35,12 @@ export const ContainerScroll = ({
     };
   }, []);
 
-  const heroRange = isMobile ? 520 : 860;
-  const scaleDimensions = () => (isMobile ? [0.7, 0.9] : [1.05, 1]);
+  const heroRange = isMobile ? 360 : 860;
+  const scaleDimensions = () => (isMobile ? [0.96, 1] : [1.05, 1]);
   const rotate = useTransform(
     scrollY,
     [0, heroRange],
-    reduce ? [0, 0] : [20, 0]
+    reduce ? [0, 0] : isMobile ? [8, 0] : [20, 0]
   );
   const scale = useTransform(
     scrollY,
@@ -50,16 +50,16 @@ export const ContainerScroll = ({
   const translate = useTransform(
     scrollY,
     [0, heroRange],
-    reduce ? [0, 0] : [0, -100]
+    reduce ? [0, 0] : isMobile ? [0, -16] : [0, -100]
   );
 
   return (
     <div
-      className="relative flex h-[60rem] items-center justify-center p-2 md:h-[80rem] md:p-20"
+      className="relative flex min-h-[34rem] items-center justify-center overflow-x-clip px-3 py-10 sm:min-h-[42rem] sm:px-4 md:h-[80rem] md:p-20"
       ref={containerRef}
     >
       <div
-        className="relative w-full py-10 md:py-40"
+        className="relative w-full min-w-0 py-6 md:py-40"
         style={{ perspective: "1000px", transformStyle: "preserve-3d" }}
       >
         <Header translate={translate} titleComponent={titleComponent} />
@@ -81,7 +81,7 @@ export const Header = ({
   return (
     <motion.div
       style={{ translateY: translate }}
-      className="relative z-20 mx-auto max-w-5xl text-center"
+      className="relative z-20 mx-auto max-w-5xl px-1 text-center"
     >
       {titleComponent}
     </motion.div>
@@ -105,7 +105,7 @@ export const Card = ({
         boxShadow:
           "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
       }}
-      className="mac-chassis mx-auto mt-10 h-[30rem] w-full max-w-5xl md:mt-14 md:h-[40rem]"
+      className="mac-chassis mx-auto mt-6 h-[22rem] w-full max-w-5xl sm:mt-8 sm:h-[28rem] md:mt-14 md:h-[40rem]"
     >
       <div className="mac-bezel">
         <div className="mac-glass">{children}</div>

@@ -3,10 +3,13 @@
 import { useMemo, useState } from "react";
 import {
   completedCount,
-  isHabitDone,
   type HabitDef,
   type HabitLogLike,
 } from "@/lib/habits";
+import {
+  buildConsistencyDay,
+  type ConsistencyDay,
+} from "@/lib/consistency";
 import { formatStudyDuration } from "@/lib/study-time";
 import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-chart";
@@ -24,18 +27,7 @@ type Props = {
   onPickDay?: (date: string) => void;
 };
 
-type Cell = {
-  date: string;
-  level: number;
-  habitsDone: number;
-  habitsTotal: number;
-  tasksDone: number;
-  tasksTotal: number;
-  studyMinutes: number;
-  wakeTime: string | null;
-  wakeEarly: boolean;
-  logged: boolean;
-};
+type Cell = ConsistencyDay;
 
 const RANGE_OPTS: { key: Range; label: string }[] = [
   { key: "week", label: "Weekly" },
@@ -44,20 +36,6 @@ const RANGE_OPTS: { key: Range; label: string }[] = [
 ];
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function consistencyLevel(cell: Omit<Cell, "level" | "date">): number {
-  const any = cell.logged || cell.tasksTotal > 0 || cell.studyMinutes > 0;
-  if (!any) return 0;
-  let hits = 0;
-  if (cell.wakeEarly) hits += 1;
-  if (cell.habitsTotal > 0 && cell.habitsDone / cell.habitsTotal >= 0.5) {
-    hits += 1;
-  }
-  if (cell.habitsTotal > 0 && cell.habitsDone >= cell.habitsTotal) hits += 1;
-  if (cell.tasksTotal > 0 && cell.tasksDone / cell.tasksTotal >= 0.5) hits += 1;
-  if (cell.studyMinutes >= 25) hits += 1;
-  return Math.max(1, Math.min(4, hits));
-}
 
 function formatKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -100,19 +78,13 @@ function makeCell(
       logged: false,
     };
   }
-  const log = byDate.get(key) || null;
-  const todo = todoByDate.get(key);
-  const detail = {
-    habitsDone: log ? completedCount(log, habitKeys) : 0,
-    habitsTotal: habitTotal,
-    tasksDone: todo?.done || 0,
-    tasksTotal: todo?.total || 0,
-    studyMinutes: studyByDate.get(key) || 0,
-    wakeTime: log?.wakeTime || null,
-    wakeEarly: log ? isHabitDone(log, "wakeEarly") : false,
-    logged: Boolean(log),
-  };
-  return { date: key, level: consistencyLevel(detail), ...detail };
+  return buildConsistencyDay(
+    key,
+    byDate.get(key),
+    todoByDate.get(key),
+    studyByDate.get(key) || 0,
+    habitKeys
+  );
 }
 
 function buildGrid(
