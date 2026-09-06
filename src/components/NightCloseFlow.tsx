@@ -12,12 +12,13 @@ import { UiMessage } from "@/components/UiMessage";
 import { nextCalendarDate } from "@/lib/daily-loop";
 import type { DayTally } from "@/lib/day-tally";
 import { formatLocalDate } from "@/lib/habits";
+import type { MissionPublic } from "@/lib/missions";
 import {
   MIN_SLEEP_HOURS,
   sleepDurationHours,
 } from "@/lib/sleep-report";
 
-type Step = "remember" | "tasks" | "sleep";
+type Step = "mission" | "remember" | "tasks" | "sleep";
 
 type Draft = { id: string; text: string; time?: string };
 
@@ -36,7 +37,7 @@ type Props = {
   onCancel?: () => void;
 };
 
-const STEPS: Step[] = ["remember", "tasks", "sleep"];
+const BASE_STEPS: Step[] = ["remember", "tasks", "sleep"];
 
 const WAKE_OPTS = ["05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00"];
 
@@ -58,8 +59,8 @@ function rememberChips(wakeGoal: string, sleepGoal: string) {
 }
 
 /**
- * Night close after tapping the sleep habit: any reminder → tomorrow’s
- * tasks → take at least the minimum sleep.
+ * Night close after tapping the sleep habit: mission yes/no (if one is
+ * live) → any reminder → tomorrow’s tasks → take at least the minimum sleep.
  */
 export function NightCloseFlow({
   name,
@@ -93,17 +94,43 @@ export function NightCloseFlow({
   const [tasks, setTasks] = useState<Draft[]>([]);
   const [leftover, setLeftover] = useState<Leftover[]>([]);
   const [carried, setCarried] = useState<string[]>([]);
+  const [liveMissions, setLiveMissions] = useState<MissionPublic[]>([]);
+  const [missionAnswers, setMissionAnswers] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [ready, setReady] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const chips = rememberChips(wakeGoal, sleepGoal);
   const hours = sleepDurationHours(sleepGoal, wake);
-  const stepIndex = STEPS.indexOf(step);
+  const askMission = liveMissions.length > 0;
+  const STEPS: Step[] = askMission
+    ? ["mission", ...BASE_STEPS]
+    : BASE_STEPS;
+  const stepIndex = Math.max(0, STEPS.indexOf(step));
 
   useEffect(() => {
     setWake(wakeGoal);
   }, [wakeGoal]);
 
   useEffect(() => {
+    void fetch("/api/mission?lite=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const live = ((d?.missions || []) as MissionPublic[]).filter(
+          (m) => m.active && !m.progress.ended
+        );
+        setLiveMissions(live);
+        if (live.length) {
+          setMissionAnswers(
+            Object.fromEntries(live.map((m) => [m.id, m.doneToday]))
+          );
+          setStep((cur) => (cur === "remember" ? "mission" : cur));
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setReady(true));
+
     void fetch("/api/day-plan")
       .then((r) => r.json())
       .then((d) => {
@@ -248,6 +275,33 @@ export function NightCloseFlow({
     );
   }
 
+  async function answerMission(id: string, done: boolean) {
+    setMissionAnswers((prev) => ({ ...prev, [id]: done }));
+    setBusy(true);
+    setMsg(null);
+    const res = await fetch("/api/mission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check", missionId: id, done }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setMsg({ tone: "error", text: "Couldn’t save that mission check." });
+      return;
+    }
+    setLiveMissions((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, doneToday: done } : m))
+    );
+    if (liveMissions.length <= 1) {
+      setStep("remember");
+    }
+  }
+
+  function goRemember() {
+    setMsg(null);
+    setStep("remember");
+  }
+
   function goTasks() {
     setMsg(null);
     setStep("tasks");
@@ -304,11 +358,22 @@ export function NightCloseFlow({
     ? `Hey ${name}, any reminder?`
     : "Any reminder?";
 
+  if (!ready) {
+    return (
+      <section className="space-y-6">
+        <p className="ui-kicker">Going to sleep</p>
+        <p className="text-sm text-[var(--color-mist)]">One moment…</p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-6">
       <header>
         <div className="flex items-start justify-between gap-3">
-          <p className="ui-kicker">Going to sleep · {stepIndex + 1} of 3</p>
+          <p className="ui-kicker">
+            Going to sleep · {stepIndex + 1} of {STEPS.length}
+          </p>
           {onCancel ? (
             <button
               type="button"
@@ -335,6 +400,86 @@ export function NightCloseFlow({
       </header>
 
       {tally ? <DayTallyCard tally={tally} compact /> : null}
+
+      {step === "mission" ? (
+        <>
+          <div>
+            <h1 className="ui-title">
+              {liveMissions.length === 1
+                ? `Did you work on ${liveMissions[0].title} today?`
+                : "Did you work on your mission today?"}
+            </h1>
+            <p className="ui-sub mt-3">
+              Yes counts toward consistency on Today and Stats.
+            </p>
+          </div>
+
+          {liveMissions.length === 1 ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void answerMission(liveMissions[0].id, true)}
+                className="ui-btn ui-btn-primary flex-1"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void answerMission(liveMissions[0].id, false)}
+                className="ui-btn ui-btn-ghost flex-1"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <>
+              <ul className="space-y-3">
+                {liveMissions.map((m) => {
+                  const picked = missionAnswers[m.id];
+                  return (
+                    <li
+                      key={m.id}
+                      className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
+                    >
+                      <p className="font-display text-lg text-white">{m.title}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void answerMission(m.id, true)}
+                          className={`ui-chip ${picked === true ? "is-on" : ""}`}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void answerMission(m.id, false)}
+                          className={`ui-chip ${picked === false ? "is-on" : ""}`}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={goRemember}
+                  className="ui-btn ui-btn-primary flex-1"
+                >
+                  Next · reminders
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      ) : null}
 
       {step === "remember" ? (
         <>
@@ -463,6 +608,16 @@ export function NightCloseFlow({
             >
               Skip
             </button>
+            {askMission ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setStep("mission")}
+                className="ui-btn ui-btn-ghost"
+              >
+                Back
+              </button>
+            ) : null}
           </div>
         </>
       ) : null}

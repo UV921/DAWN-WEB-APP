@@ -136,9 +136,10 @@ export function SettingsClient() {
                       Mission
                     </h2>
                     <p className="mt-2 text-sm text-[var(--color-mist)]">
-                      Add and edit missions here. Today only shows the name,
-                      steps, and days left — tap Settings on a mission to open
-                      it on this tab.
+                      Name the mission, set the period, say what you want to
+                      achieve, write the steps, and pick the one important
+                      thing. Today shows the name and days left — tap the bar
+                      to open the steps.
                     </p>
                   </div>
                   <MissionSetup focusId={search?.get("mission")} />

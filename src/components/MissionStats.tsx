@@ -4,9 +4,11 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { MissionPctRing, MISSION_RING_EASE } from "@/components/MissionRing";
 import {
-  formatMissionRemaining,
+  formatDaysRemain,
+  formatMissionMissed,
   missionDoing,
   missionEndDate,
+  missionStatusLabel,
   type MissionPublic,
 } from "@/lib/missions";
 import { formatLocalDate } from "@/lib/habits";
@@ -64,8 +66,7 @@ export function MissionStats({
   range,
   today,
 }: Props) {
-  const size = windowSize(range);
-  const dates = lastNDates(size, today);
+  const dates = lastNDates(windowSize(range), today);
   const live = missions.filter((m) => m.active);
   const past = history.filter((m) => !m.active).slice(0, 6);
   const day = today || dates[dates.length - 1] || formatLocalDate(new Date());
@@ -75,12 +76,11 @@ export function MissionStats({
       <div>
         <h2 className="font-display text-2xl text-white">Missions</h2>
         <p className="mt-1 text-sm text-[var(--color-mist)]">
-          Long missions (hackathon, a build, exam prep) are not on this report
-          yet.{" "}
+          Start a mission on Today — name, period, what you want to achieve,
+          steps, and the important thing. Days you mark at sleep show up here.{" "}
           <Link href="/settings?tab=mission" className="ui-btn-text">
-            Start one
-          </Link>{" "}
-          and mark days on Today — they show up here.
+            Open Mission
+          </Link>
         </p>
       </div>
     );
@@ -90,8 +90,8 @@ export function MissionStats({
     <div>
       <h2 className="font-display text-2xl text-white">Missions</h2>
       <p className="mt-1 text-sm text-[var(--color-mist)]">
-        How each mission is going — steps closed and days you showed up — not
-        just the {rangeLabel(range)} window.
+        Ongoing or already done — open steps, then how consistent you have been
+        {range === "today" ? "" : ` across ${rangeLabel(range)}`}.
       </p>
       <ul className="mt-4 space-y-3">
         {live.map((m) => (
@@ -101,7 +101,7 @@ export function MissionStats({
       {past.length ? (
         <div className="mt-6">
           <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-mist)]">
-            Ended
+            Already done
           </p>
           <ul className="mt-2 space-y-2">
             {past.map((m) => {
@@ -140,31 +140,42 @@ function MissionStatCard({
   const checks = new Set(m.checkDates);
   const workedInRange = windowDays.filter((d) => checks.has(d)).length;
   const showDots = dates.length <= 30 && m.kind === "manual";
-  const p = m.progress;
+  const status = missionStatusLabel(m);
+  const missed = formatMissionMissed(m);
 
   return (
     <li className="ui-card ui-card-compact !text-left">
-      <div className="flex items-center gap-3">
-        <MissionPctRing
-          fill={doing.pct}
-          value={doing.pct}
-          caption="done"
-          ariaLabel={`${m.title} ${doing.pct} percent done. ${doing.detail}`}
-        />
-        <div className="min-w-0 flex-1">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,11rem)_1fr] sm:items-start">
+        <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-dawn)]">
-            {m.kind === "manual" ? "Manual" : "Habit run"}
-            {m.doneToday ? " · today" : ""}
+            Mission
           </p>
           <p className="font-display mt-1 truncate text-xl text-white">
             {m.title}
           </p>
-          <p className="mt-0.5 text-sm tabular-nums text-[var(--color-mist)]">
-            {formatMissionRemaining(p)}
+          <p className="mt-1 text-sm text-[var(--color-cloud)]">{status}</p>
+          <p className="mt-0.5 text-xs tabular-nums text-[var(--color-mist)]">
+            {formatDaysRemain(m.progress)}
           </p>
-          <p className="mt-0.5 text-sm text-[var(--color-cloud)]">
-            {doing.detail}
-          </p>
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-start gap-3">
+            <MissionPctRing
+              fill={doing.pct}
+              value={doing.pct}
+              caption="score"
+              ariaLabel={`${m.title} ${doing.pct} percent consistent. ${doing.detail}`}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-[var(--color-cloud)]">{missed}</p>
+              <p className="mt-1 text-sm tabular-nums text-white">
+                {doing.pct}% consistent
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--color-mist)]">
+                {doing.detail}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -208,24 +219,6 @@ function MissionStatCard({
         <p className="mt-2 text-xs text-[var(--color-mist)]">
           {m.habitStats.map((h) => `${h.label} ${h.daysDone}`).join(" · ")}
         </p>
-      ) : null}
-
-      {(m.steps || []).length ? (
-        <ul className="mt-3 space-y-1">
-          {m.steps.map((s) => (
-            <li
-              key={s.id}
-              className={`text-sm ${
-                s.done
-                  ? "text-[var(--color-mist)] line-through"
-                  : "text-[var(--color-cloud)]"
-              }`}
-            >
-              {s.done ? "✓ " : "○ "}
-              {s.text}
-            </li>
-          ))}
-        </ul>
       ) : null}
     </li>
   );

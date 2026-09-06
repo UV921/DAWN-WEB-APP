@@ -425,7 +425,10 @@ model Mission {
   active          Boolean  @default(true)
   /// run = habit sprint (one at a time). manual = long project; several can run together.
   kind            String   @default("run")
+  /// What you want to achieve.
   note            String   @default("")
+  /// The one important thing that makes the mission succeed.
+  focus           String   @default("")
   /// JSON array of habit keys to track for this mission
   habitKeys       String   @default("[]")
   /// JSON array of daily task template strings

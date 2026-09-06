@@ -24,6 +24,7 @@ type MissionRow = {
   title: string;
   kind: string;
   note: string;
+  focus?: string;
   startDate: string;
   days: number;
   active: boolean;
@@ -50,6 +51,7 @@ function toPublic(
     title: mission.title,
     kind,
     note: mission.note || "",
+    focus: mission.focus || "",
     startDate: mission.startDate,
     endDate: missionEndDate(mission.startDate, mission.days),
     days: mission.days,
@@ -223,6 +225,7 @@ export async function POST(req: Request) {
       kind === "manual" ? "Hackathon" : "7-day mission";
     const title = String(body.title || defaultTitle).trim().slice(0, 80);
     const note = String(body.note || "").trim().slice(0, 200);
+    const focus = String(body.focus || "").trim().slice(0, 200);
     const span = resolveMissionSpan({
       kind,
       startDate: body.startDate,
@@ -324,6 +327,7 @@ export async function POST(req: Request) {
         title: title || defaultTitle,
         kind,
         note,
+        focus,
         startDate,
         days,
         active: true,
@@ -413,6 +417,10 @@ export async function POST(req: Request) {
       typeof body.note === "string"
         ? body.note.trim().slice(0, 200)
         : row.note;
+    const focus =
+      typeof body.focus === "string"
+        ? body.focus.trim().slice(0, 200)
+        : String((row as { focus?: string }).focus || "");
     const habitKeys = Array.isArray(body.habitKeys)
       ? (body.habitKeys as unknown[])
           .map((k) => String(k).trim())
@@ -431,6 +439,7 @@ export async function POST(req: Request) {
       data: {
         title,
         note,
+        focus,
         startDate: span.startDate,
         days: span.days,
         habitKeys: JSON.stringify(habitKeys),

@@ -30,6 +30,8 @@ export type MissionPublic = {
   title: string;
   kind: MissionKind;
   note: string;
+  /** The one important thing that makes this mission succeed. */
+  focus: string;
   startDate: string;
   endDate: string | null;
   days: number;
@@ -230,6 +232,34 @@ export function formatMissionRemaining(progress: MissionProgress): string {
     return `Day ${progress.day} of ${progress.total} · last day`;
   }
   return `Day ${progress.day} of ${progress.total} · ${progress.daysLeft} days left`;
+}
+
+/** Compact Today bar: just how much time is left. */
+export function formatDaysRemain(progress: MissionProgress): string {
+  if (progress.ongoing) return "Ongoing";
+  if (progress.ended || progress.daysLeft <= 0) return "Finished";
+  if (progress.daysLeft === 1) return "Last day";
+  return `${progress.daysLeft} days remain`;
+}
+
+export function missionStatusLabel(m: Pick<MissionPublic, "active" | "progress">):
+  | "Ongoing"
+  | "Already done" {
+  if (!m.active || m.progress.ended) return "Already done";
+  return "Ongoing";
+}
+
+/** Open steps, in the wireframe voice: "you have not done this and this". */
+export function formatMissionMissed(m: Pick<MissionPublic, "steps">): string {
+  const open = (m.steps || []).filter((s) => !s.done).map((s) => s.text.trim()).filter(Boolean);
+  if (!open.length) {
+    return (m.steps || []).length
+      ? "Every step is done."
+      : "No steps left open.";
+  }
+  if (open.length === 1) return `You have not done ${open[0]}.`;
+  if (open.length === 2) return `You have not done ${open[0]} and ${open[1]}.`;
+  return `You have not done ${open[0]} and ${open[1]}, plus ${open.length - 2} more.`;
 }
 
 /** Share of the mission still left (null when open-ended). */

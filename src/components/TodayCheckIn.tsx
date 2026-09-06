@@ -810,7 +810,10 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
             setNightFlow(false);
             void load();
           }}
-          onCancel={() => setNightFlow(false)}
+          onCancel={() => {
+            setNightFlow(false);
+            void load();
+          }}
         />
       </>
     );
