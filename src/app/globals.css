@@ -1413,11 +1413,6 @@ button,
   box-shadow: inset 0 1px 0 #fff8e8b3, 0 16px 48px #64462724;
 }
 
-/* The original photo is presented without fading or recoloring in light mode. */
-.landing-light-hero { display: none; }
-.landing-page[data-theme="light"] .landing-light-hero { display: block; }
-.landing-page[data-theme="light"] .landing-dark-hero { display: none; }
-
 .landing-page[data-theme="light"] {
   --color-mist: var(--landing-muted);
   --color-cloud: var(--landing-text);

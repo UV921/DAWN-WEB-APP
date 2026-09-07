@@ -6,11 +6,8 @@ import Link from "next/link";
 import { DawnMark } from "@/components/DawnMark";
 import { LandingCharts } from "@/components/LandingCharts";
 import { LandingDayClock } from "@/components/LandingDayClock";
-import { LandingLightHero } from "@/components/LandingLightHero";
-import { LandingHeroBackdrop } from "@/components/LandingHeroBackdrop";
-import { LandingHeroFilm } from "@/components/LandingHeroFilm";
+import { LandingHero } from "@/components/LandingHero";
 import { LandingInstall } from "@/components/LandingInstall";
-import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import { LandingLifecycleFilm } from "@/components/LandingLifecycleFilm";
 import { LandingNav } from "@/components/LandingNav";
 import { LandingNewFeatures } from "@/components/LandingNewFeatures";
@@ -110,39 +107,7 @@ export function LandingPage({ snap }: Props) {
       <LandingNav theme={theme} onToggleTheme={toggleTheme} />
       <LandingInstall />
 
-      <section
-        className="landing-dark-hero relative overflow-hidden pt-16"
-      >
-        <LandingHeroBackdrop />
-        <div className="relative z-10">
-          <ContainerScroll
-            titleComponent={
-              <>
-                <a href="#new" className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--landing-border)] bg-[var(--landing-inset)] px-3 py-1.5 text-xs text-[var(--landing-accent)]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                  Dawn Beta <span className="text-[var(--landing-muted)]">· See what’s new ↗</span>
-                </a>
-                <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--landing-accent)]">
-                  Wake · Lists · Study · Night
-                </p>
-                <h1 className="landing-hero-title font-display text-[clamp(3rem,8vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-[var(--landing-text)]">
-                  Dawn
-                </h1>
-                <p className="mx-auto mt-4 max-w-[28ch] text-[1.05rem] leading-snug text-[var(--landing-muted)] sm:text-lg">
-                  One screen for the day. Wake, lists, study, then close the night.
-                </p>
-                <Link href="/signup" className="dawn-btn relative z-30 mt-8">
-                  Open Dawn
-                </Link>
-              </>
-            }
-          >
-            <LandingHeroFilm />
-          </ContainerScroll>
-        </div>
-      </section>
-
-      <LandingLightHero />
+      <LandingHero />
       <LandingNewFeatures />
 
       {live ? (
