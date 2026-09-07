@@ -15,9 +15,9 @@ export function LandingLightHero() {
           <div className="mt-5 sm:mt-7 flex flex-wrap items-center gap-5"><Link href="/signup" className="dawn-btn">Open Dawn</Link><a href="#new" className="py-3 text-sm text-[var(--landing-accent)] underline underline-offset-4">Explore the beta ↓</a></div>
           <p className="hidden sm:block mt-7 text-[11px] tracking-wide text-[var(--landing-muted)]">Wake · Habits · Missions · Study · Night</p>
         </div>
-        <figure className="overflow-hidden rounded-[1.75rem] border border-[var(--landing-border)] bg-[var(--landing-surface)] shadow-[0_18px_60px_#372b1814]">
-          <img src="/images/landing-hero.jpg" alt="Morning sunlight finding its way through soft curtains" width={1800} height={1467} fetchPriority="high" className="aspect-[4/3] w-full object-cover object-[78%_65%] sm:aspect-[5/4] lg:aspect-[4/5]" />
-          <figcaption className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 text-[11px] text-[var(--landing-muted)]"><span>Let a little light in.</span><span className="font-mono text-[var(--landing-accent)]">A new day, again.</span></figcaption>
+        <figure className="min-w-0">
+          <img src="/images/landing-hero.jpg" alt="Morning sunlight finding its way through soft curtains" width={1800} height={1467} fetchPriority="high" className="block aspect-[4/3] w-full rounded-[1.75rem] object-cover shadow-[0_18px_60px_#372b1814] object-[78%_65%] sm:aspect-[5/4] lg:aspect-[4/5]" />
+          <figcaption className="flex flex-wrap items-center justify-between gap-2 px-1 pt-3 text-[11px] text-[var(--landing-muted)]"><span>Let a little light in.</span><span className="font-mono text-[var(--landing-accent)]">A new day, again.</span></figcaption>
         </figure>
         <p className="text-sm leading-6 text-[var(--landing-muted)] sm:hidden">Wake, build your habits, make time for your work, and close the night. One place for the small things that add up.</p>
       </div>
