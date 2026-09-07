@@ -1303,7 +1303,7 @@ button,
   }
 }
 
-/* Landing chrome has its own palette; product previews retain the app palette. */
+/* A warm paper palette around independently themed product demos. */
 .landing-page,
 .landing-demo {
   --landing-text: #f3f0e9;
@@ -1313,6 +1313,10 @@ button,
   --landing-border: #ffffff1f;
   --landing-inset: #ffffff08;
   --landing-nav: #0a0e12eb;
+  --landing-surface: #0d131a;
+  --landing-track: #ffffff1a;
+  --landing-selected: #f0b45a1a;
+  --landing-success: #6fbf8a;
   color-scheme: dark;
 }
 
@@ -1324,28 +1328,93 @@ button,
 }
 
 .landing-page[data-theme="light"] {
-  --landing-text: #202a33;
-  --landing-muted: #526271;
-  --landing-accent: #94520a;
-  --landing-link: #4055b5;
-  --landing-border: #202a3326;
-  --landing-inset: #202a3305;
-  --landing-nav: #faf7f0eb;
+  --landing-text: #35291f;
+  --landing-muted: #746353;
+  --landing-accent: #975622;
+  --landing-link: #72523d;
+  --landing-border: #b89a773d;
+  --landing-inset: #fffaf2;
+  --landing-nav: #f8f1e5ed;
+  --landing-surface: #fffaf2;
+  --landing-track: #e6d8c3;
+  --landing-selected: #eedfc7;
+  --landing-success: #42684b;
+  --landing-device-shadow: 0 20px 70px #6446272b, 0 4px 12px #64462718;
   color-scheme: light;
-  background: #faf7f0;
+  background: #f5edde;
 }
 
 .landing-demo {
   color: var(--landing-text);
 }
 
+.landing-page[data-theme="light"] .hero-photo {
+  background: #f5edde;
+}
+
 .landing-page[data-theme="light"] .hero-photo-img {
-  opacity: 0.2;
+  opacity: 0.58;
+  filter: sepia(0.18) saturate(0.75);
   animation: none;
+  object-position: 88% 42%;
 }
 
 .landing-page[data-theme="light"] .hero-photo-vignette {
-  background: linear-gradient(180deg, #faf7f066, #faf7f033 55%, #faf7f0);
+  background:
+    linear-gradient(180deg, #f5edde55 0%, #f5edde00 40%, #f5edde 100%),
+    linear-gradient(90deg, #f5eddefa 0%, #f5eddee8 30%, #f5eddeaa 55%, #f5edde15 100%);
+}
+
+.landing-page[data-theme="light"] .landing-hero-title {
+  color: #3f2b1c;
+  text-shadow: 0 2px 28px #fff4d8b3;
+}
+
+.landing-page[data-theme="light"] .landing-panel {
+  box-shadow: 0 8px 32px #795b3510;
+}
+
+.landing-page[data-theme="light"] .landing-nav-shell {
+  border-color: var(--landing-border);
+  box-shadow: 0 4px 24px #573d2010;
+}
+
+.landing-page[data-theme="light"] .dawn-btn {
+  background: #714626;
+  color: #fff8eb;
+  border-color: #714626;
+  box-shadow: 0 3px 10px #71462618;
+}
+
+.landing-page[data-theme="light"] .dawn-btn:hover {
+  background: #57351d;
+}
+
+.landing-page[data-theme="light"] .landing-install {
+  background: #fff8edee;
+  border: 1px solid var(--landing-border);
+  box-shadow: 0 4px 24px #573d2014;
+}
+
+.landing-page[data-theme="light"] .landing-install-copy,
+.landing-page[data-theme="light"] .landing-install-skip {
+  color: #746353;
+}
+
+.landing-page[data-theme="light"] .landing-install-btn {
+  background: #714626;
+  color: #fff8eb;
+}
+
+@media (max-width: 639px) {
+  .landing-page[data-theme="light"] .hero-photo-img {
+    object-position: 78% 40%;
+  }
+  .landing-page[data-theme="light"] .hero-photo-vignette {
+    background:
+      linear-gradient(180deg, #f5eddebb, #f5eddea8 40%, #f5edde 100%),
+      linear-gradient(90deg, #f5eddeb3, #f5edde22);
+  }
 }
 
 .landing-page .grid > *,
@@ -1369,4 +1438,9 @@ button,
   .landing-page .landing-install-copy {
     font-size: 11px;
   }
+}
+
+.landing-page[data-theme="light"] .mac-chassis {
+  background: linear-gradient(180deg, #dacbb5, #b7a184 65%, #968066);
+  box-shadow: inset 0 1px 0 #fff8e8b3, 0 16px 48px #64462724;
 }

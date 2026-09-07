@@ -107,7 +107,7 @@ export function LandingNewFeatures() {
         </div>
 
         <motion.div
-          className="landing-demo relative mt-8 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]"
+          className="landing-panel relative mt-8 overflow-hidden rounded-2xl border border-[var(--landing-border)] bg-[var(--landing-surface)]"
           initial={reduce ? false : { opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -126,7 +126,7 @@ export function LandingNewFeatures() {
               <h3 className="font-display mt-2 text-[1.7rem] leading-tight text-[var(--landing-text)] sm:text-[2.1rem]">
                 {feature.title}
               </h3>
-              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[var(--landing-muted)] lg:text-[#d6e2ec]/90">
+              <p className="mt-3 max-w-[32ch] text-[15px] leading-relaxed text-[var(--landing-muted)]">
                 {feature.body}
               </p>
               <Link href="/signup" onFocus={() => setPaused(true)} className="dawn-btn mt-6">
@@ -151,7 +151,7 @@ export function LandingNewFeatures() {
                 className={cn(
                   "rounded-xl border px-3 py-3 text-left transition sm:px-4",
                   active
-                    ? "border-[#f0b45a]/50 bg-[#f0b45a]/10"
+                    ? "border-[var(--landing-accent)] bg-[var(--landing-selected)]"
                     : "border-[var(--landing-border)] bg-[var(--landing-inset)] hover:border-[var(--landing-accent)]"
                 )}
               >
@@ -162,7 +162,7 @@ export function LandingNewFeatures() {
                   {f.title}
                 </p>
                 <span
-                  className="mt-3 block h-0.5 overflow-hidden rounded-full bg-white/10"
+                  className="mt-3 block h-0.5 overflow-hidden rounded-full bg-[var(--landing-track)]"
                   aria-hidden
                 >
                   <motion.span
@@ -201,7 +201,7 @@ function FeatureOverlay({
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
       transition={{ duration: 0.7, ease: EASE }}
       style={{ transformPerspective: 1000, transformStyle: "preserve-3d" }}
-      className="w-full max-w-none shrink-0 sm:max-w-[18.5rem]"
+      className="landing-demo w-full max-w-none shrink-0 sm:max-w-[18.5rem]"
     >
       <div className="mac-chassis p-1.5 sm:p-2">
         <div className="mac-bezel">

@@ -103,7 +103,7 @@ export const Card = ({
         rotateX: rotate,
         scale,
         boxShadow:
-          "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
+          "var(--landing-device-shadow, 0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003)",
       }}
       className="mac-chassis mx-auto mt-10 h-[26rem] w-full sm:h-[30rem] max-w-5xl md:mt-14 md:h-[40rem]"
     >

@@ -30,7 +30,7 @@ export function LandingNav({ theme, onToggleTheme }: { theme: "dark" | "light"; 
     <header className="fixed inset-x-0 top-0 z-40 px-2 pt-3 sm:px-5">
       <div
         className={cn(
-          "mx-auto flex min-w-0 items-center transition-[max-width,border-radius,background-color,box-shadow,padding,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "landing-nav-shell mx-auto flex min-w-0 items-center transition-[max-width,border-radius,background-color,box-shadow,padding,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
           scrolled
             ? "h-12 max-w-3xl rounded-full border border-[var(--landing-border)] bg-[var(--landing-nav)] px-3 shadow-[0_12px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl sm:px-4"
             : "h-14 max-w-5xl rounded-2xl border border-transparent bg-[var(--landing-nav)] backdrop-blur-xl px-1.5 sm:px-4"

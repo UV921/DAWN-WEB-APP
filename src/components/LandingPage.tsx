@@ -26,7 +26,7 @@ const SLEEP_WIN = defaultWindowForKey("sleepEarly", WAKE, SLEEP);
 const WAKE_WIN = defaultWindowForKey("wakeEarly", WAKE, SLEEP);
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const PANEL = "landing-demo overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]";
+const PANEL = "landing-panel overflow-hidden rounded-2xl border border-[var(--landing-border)] bg-[var(--landing-surface)]";
 const INSET = "rounded-xl border border-[var(--landing-border)] bg-[var(--landing-inset)]";
 
 const HABITS_TODAY = [
@@ -125,7 +125,7 @@ export function LandingPage({ snap }: Props) {
                 <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--landing-accent)]">
                   Wake · Lists · Study · Night
                 </p>
-                <h1 className="font-display text-[clamp(3rem,8vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-[var(--landing-text)]">
+                <h1 className="landing-hero-title font-display text-[clamp(3rem,8vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-[var(--landing-text)]">
                   Dawn
                 </h1>
                 <p className="mx-auto mt-4 max-w-[28ch] text-[1.05rem] leading-snug text-[var(--landing-muted)] sm:text-lg">
@@ -230,7 +230,7 @@ export function LandingPage({ snap }: Props) {
                     <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--landing-accent)]">
                       Morning pulse
                     </p>
-                    <p className="font-mono text-[11px] text-[#6fbf8a]">
+                    <p className="font-mono text-[11px] text-[var(--landing-success)]">
                       On track
                     </p>
                   </div>
@@ -242,7 +242,7 @@ export function LandingPage({ snap }: Props) {
                       <span>{WAKE_WIN.start}–{WAKE_WIN.end}</span>
                       <span>05:52</span>
                     </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden bg-white/10">
+                    <div className="mt-1.5 h-1.5 overflow-hidden bg-[var(--landing-track)]">
                       <motion.div
                         className="h-full bg-[#f0b45a]"
                         initial={reduce ? { width: "62%" } : { width: "0%" }}
@@ -301,12 +301,12 @@ export function LandingPage({ snap }: Props) {
               viewport={{ once: true, margin: "-80px" }}
               transition={{ duration: 0.7, ease: EASE }}
             >
-              <div className="border-b border-white/[0.08] px-5 py-4">
+              <div className="border-b border-[var(--landing-border)] px-5 py-4">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--landing-accent)]">
                   Habits
                 </p>
               </div>
-              <ul className="flex-1 divide-y divide-white/[0.06]">
+              <ul className="flex-1 divide-y divide-[var(--landing-border)]">
                 {HABITS_TODAY.map((h, i) => (
                   <motion.li
                     key={h.label}
@@ -322,7 +322,7 @@ export function LandingPage({ snap }: Props) {
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
                         h.done
                           ? "border-[#f0b45a] bg-[#f0b45a] text-[#0a0e12]"
-                          : "border-white/25 text-transparent"
+                          : "border-[var(--landing-border)] text-transparent"
                       }`}
                     >
                       ✓
@@ -354,13 +354,13 @@ export function LandingPage({ snap }: Props) {
                   {TASKS_TODAY.map((t) => (
                     <li
                       key={t.text}
-                      className="flex items-center gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0"
+                      className="flex items-center gap-3 border-t border-[var(--landing-border)] py-2.5 first:border-t-0"
                     >
                       <span
                         className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
                           t.done
                             ? "border-[#6fbf8a] bg-[#6fbf8a] text-[#0a0e12]"
-                            : "border-white/25"
+                            : "border-[var(--landing-border)]"
                         }`}
                       >
                         {t.done ? "✓" : ""}
@@ -396,7 +396,7 @@ export function LandingPage({ snap }: Props) {
               Named lists
             </h2>
             <div className={cn(PANEL, "mt-6 flex min-h-[20rem] flex-1 flex-col")}>
-              <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[linear-gradient(160deg,rgba(240,180,90,0.12),transparent_72%)] px-5 py-4">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--landing-border)] bg-[linear-gradient(160deg,rgba(240,180,90,0.12),transparent_72%)] px-5 py-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--landing-accent)]">
                     Tasks
@@ -443,7 +443,7 @@ export function LandingPage({ snap }: Props) {
                       {list.items.map((t) => (
                         <li
                           key={t.text}
-                          className="flex items-center gap-3 border-t border-white/[0.06] px-3 py-2.5 first:border-t-0"
+                          className="flex items-center gap-3 border-t border-[var(--landing-border)] px-3 py-2.5 first:border-t-0"
                         >
                           <span
                             className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
@@ -506,7 +506,7 @@ export function LandingPage({ snap }: Props) {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.8, ease: EASE }}
           >
-            <LandingLifecycleFilm />
+            <div className="landing-demo h-full bg-[#0d131a]"><LandingLifecycleFilm /></div>
           </motion.div>
         </div>
       </section>
@@ -580,7 +580,7 @@ export function LandingPage({ snap }: Props) {
                 </span>
               </div>
             </div>
-            <LandingCharts series={snap.series} />
+            <div className="landing-demo rounded-xl bg-[#0d131a] p-2 sm:p-4"><LandingCharts series={snap.series} /></div>
           </motion.div>
         </div>
       </section>
@@ -616,7 +616,7 @@ export function LandingPage({ snap }: Props) {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.8, ease: EASE }}
           >
-            <LandingStudyFilm />
+            <div className="landing-demo h-full bg-[#0d131a]"><LandingStudyFilm /></div>
           </motion.div>
         </div>
       </section>
@@ -638,7 +638,7 @@ export function LandingPage({ snap }: Props) {
             </p>
           </Fade>
           <motion.div
-            className={cn(PANEL, "mt-8 p-5 sm:p-8")}
+            className={cn(PANEL, "landing-demo mt-8 p-5 sm:p-8")}
             initial={reduce ? false : { opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
@@ -759,7 +759,7 @@ function MiniStat({
       </p>
       <p className="mt-1.5 text-[11px] text-[var(--landing-muted)]">{hint}</p>
       {fill != null ? (
-        <div className="mt-2 h-1.5 overflow-hidden bg-white/10">
+        <div className="mt-2 h-1.5 overflow-hidden bg-[var(--landing-track)]">
           <div className="h-full bg-[#f0b45a]" style={{ width: `${fill}%` }} />
         </div>
       ) : null}
@@ -803,7 +803,7 @@ function StatPulse({
         {format(n)}
       </p>
       <p className="mt-1.5 text-[11px] text-[var(--landing-muted)]">{hint}</p>
-      <div className="mt-3 h-1 overflow-hidden bg-white/10">
+      <div className="mt-3 h-1 overflow-hidden bg-[var(--landing-track)]">
         <motion.div
           className="h-full bg-gradient-to-r from-[#e07a3a] to-[#f0b45a]"
           initial={reduce ? { width: `${Math.min(100, fill)}%` } : { width: "0%" }}
@@ -916,9 +916,9 @@ function LoopChip({
   return (
     <motion.div
       animate={{
-        backgroundColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.03)",
-        borderColor: on ? "rgba(240,180,90,1)" : "rgba(255,255,255,0.1)",
-        color: on ? "#0a0e12" : "#e8e4dc",
+        backgroundColor: on ? "rgba(240,180,90,1)" : "var(--landing-inset)",
+        borderColor: on ? "rgba(240,180,90,1)" : "var(--landing-border)",
+        color: on ? "#0a0e12" : "var(--landing-text)",
       }}
       transition={{ duration: 0.45, ease: EASE }}
       className="flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center rounded-xl border px-2.5 py-2 sm:min-h-[4.75rem] sm:px-3 sm:py-2.5"
