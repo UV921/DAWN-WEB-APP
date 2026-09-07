@@ -58,7 +58,7 @@ export function LandingHeroFilm() {
     <div
       ref={root}
       className={cn(
-        "h-full overflow-y-auto bg-[#0a0e12] px-4 py-5 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "h-full overflow-hidden sm:overflow-y-auto bg-[#0a0e12] px-4 py-5 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         still && "study-film-still"
       )}
       aria-hidden

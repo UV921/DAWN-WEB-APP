@@ -20,6 +20,7 @@ import { NightTally } from "@/components/NightTally";
 import { MorningRitual } from "@/components/MorningRitual";
 import { MorningAfterWake } from "@/components/MorningAfterWake";
 import { NightCloseFlow } from "@/components/NightCloseFlow";
+import { TodayConsistency } from "@/components/TodayConsistency";
 import { TodayOverview } from "@/components/TodayOverview";
 import { TodayMissions } from "@/components/TodayMissions";
 import { UiMessage, UiEmpty } from "@/components/UiMessage";
@@ -153,6 +154,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [today, setToday] = useState("");
+  const [history, setHistory] = useState<HabitLogLike[]>([]);
   const [wakeTime, setWakeTime] = useState("");
   const [bedtime, setBedtime] = useState("");
   const [habitDefs, setHabitDefs] = useState<HabitRow[]>([]);
@@ -244,6 +246,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
       }
       const defs = (data.habits || []) as HabitRow[];
       setToday(data.today);
+      setHistory(data.logs || []);
       setStreaks(data.streaks);
       if (typeof data.timezone === "string") {
         tzRef.current = data.timezone;
@@ -1060,6 +1063,7 @@ export function TodayCheckIn({ wakeGoal, sleepGoal, onData }: Props) {
                 : "Couldn’t save — try again"}
           </p>
         )}
+        <TodayConsistency logs={history} habits={habitDefs} today={today} checks={checks} wakeTime={wakeTime} />
       </div>
     </>
   );
