@@ -58,7 +58,7 @@ export function LandingHeroFilm() {
     <div
       ref={root}
       className={cn(
-        "h-full overflow-hidden sm:overflow-y-auto bg-[#0a0e12] px-4 py-5 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "h-full overflow-hidden sm:overflow-y-auto bg-[var(--landing-surface)] px-4 py-5 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         still && "study-film-still"
       )}
       aria-hidden
@@ -66,7 +66,7 @@ export function LandingHeroFilm() {
       <div className="pointer-events-none mx-auto max-w-xl space-y-5">
         <header>
           <p className="text-sm text-[var(--color-mist)]">Sat, Aug 15 · up 05:52</p>
-          <h1 className="font-display mt-1 text-3xl text-white">Morning</h1>
+          <h1 className="font-display mt-1 text-3xl text-[var(--landing-text)]">Morning</h1>
         </header>
 
         <MorningPulseCard pulse={PULSE} />
@@ -80,7 +80,7 @@ export function LandingHeroFilm() {
               <p className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-[var(--color-leaf)]">
                 Study · today · live
               </p>
-              <p className="font-display mt-1 text-[clamp(1.35rem,6vw,1.875rem)] leading-none tabular-nums text-white">
+              <p className="font-display mt-1 text-[clamp(1.35rem,6vw,1.875rem)] leading-none tabular-nums text-[var(--landing-text)]">
                 {clock(secs)}
               </p>
               <p className="mt-1.5 truncate text-sm text-[var(--color-mist)]">
@@ -100,14 +100,14 @@ export function LandingHeroFilm() {
             </div>
             <div className="ui-card ui-card-compact !text-left">
               <p className="ui-card-label">Morning</p>
-              <p className="font-display mt-1 text-3xl text-white">1/5</p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <p className="font-display mt-1 text-3xl text-[var(--landing-text)]">1/5</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--landing-track)]">
                 <div className="h-full w-[20%] rounded-full bg-[var(--color-dawn)]" />
               </div>
             </div>
             <div className="ui-card ui-card-compact !text-left">
               <p className="ui-card-label">Run</p>
-              <p className="font-display mt-1 text-3xl text-white">3/7</p>
+              <p className="font-display mt-1 text-3xl text-[var(--landing-text)]">3/7</p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">4 left</p>
             </div>
             <div className="ui-card ui-card-compact !text-left">
@@ -116,7 +116,7 @@ export function LandingHeroFilm() {
                 Lv 4
               </p>
               <p className="mt-1 text-xs text-[var(--color-mist)]">240 XP · 40 to next</p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--landing-track)]">
                 <div className="h-full w-[50%] rounded-full bg-[var(--color-dawn)]" />
               </div>
             </div>
@@ -142,7 +142,7 @@ export function LandingHeroFilm() {
 
         <section>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[15px] font-medium text-white">Morning habits</h2>
+            <h2 className="text-[15px] font-medium text-[var(--landing-text)]">Morning habits</h2>
             <span className="text-xs text-[var(--color-mist)]">Edit</span>
           </div>
           <ul className="space-y-2">
@@ -153,7 +153,7 @@ export function LandingHeroFilm() {
               >
                 <span className={`ui-check ${h.done ? "is-on" : ""}`}>✓</span>
                 <span className="min-w-0 flex-1 text-left">
-                  <span className="block font-medium text-white">{h.label}</span>
+                  <span className="block font-medium text-[var(--landing-text)]">{h.label}</span>
                   <span className="mt-0.5 block text-xs text-[var(--color-mist)]">
                     {h.meta}
                   </span>
@@ -165,7 +165,7 @@ export function LandingHeroFilm() {
 
         <section>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[15px] font-medium text-white">Check off</h2>
+            <h2 className="text-[15px] font-medium text-[var(--landing-text)]">Check off</h2>
             <span className="text-xs text-[var(--color-mist)]">Add in Tasks</span>
           </div>
           <div className="space-y-3">
@@ -174,9 +174,9 @@ export function LandingHeroFilm() {
               return (
                 <article
                   key={list.name}
-                  className="overflow-hidden border border-white/10 bg-black/25"
+                  className="overflow-hidden border border-[var(--landing-border)] bg-[var(--landing-inset)]"
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--landing-border)] px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="truncate font-display text-xl text-[var(--color-dawn)]">
                         {list.name}
@@ -194,7 +194,7 @@ export function LandingHeroFilm() {
                     {list.items.map((t) => (
                       <li
                         key={t.text}
-                        className="flex items-center border-b border-white/[0.06] last:border-0"
+                        className="flex items-center border-b border-[var(--landing-border)] last:border-0"
                       >
                         <span
                           className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left ${
@@ -206,7 +206,7 @@ export function LandingHeroFilm() {
                             className={`min-w-0 flex-1 text-sm leading-snug ${
                               t.done
                                 ? "text-[var(--color-mist)] line-through"
-                                : "text-white"
+                                : "text-[var(--landing-text)]"
                             }`}
                           >
                             {t.text}

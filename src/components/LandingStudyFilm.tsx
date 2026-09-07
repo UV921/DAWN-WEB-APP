@@ -35,7 +35,7 @@ export function LandingStudyFilm() {
     <div
       ref={root}
       className={cn(
-        "relative flex h-full min-h-[22rem] min-w-0 flex-col overflow-hidden bg-[#0b0f16]",
+        "relative flex h-full min-h-[22rem] min-w-0 flex-col overflow-hidden bg-[var(--landing-surface)]",
         still && "study-film-still"
       )}
       aria-label="Sit in a marked Discord study room. Dawn counts the hours."
@@ -45,8 +45,8 @@ export function LandingStudyFilm() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_0%,rgba(88,101,242,0.22),transparent_50%),radial-gradient(ellipse_at_80%_20%,rgba(240,180,90,0.16),transparent_45%)]"
       />
 
-      <div className="relative flex min-w-0 items-center gap-3 border-b border-white/[0.08] px-4 py-3 sm:px-5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2] text-white">
+      <div className="relative flex min-w-0 items-center gap-3 border-b border-[var(--landing-border)] px-4 py-3 sm:px-5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2] text-[#ffffff]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M11 5 6 9H3v6h3l5 4V5Z"
@@ -63,12 +63,12 @@ export function LandingStudyFilm() {
           </svg>
         </span>
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[#8ba9ff]">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--landing-link)]">
             Voice
           </p>
-          <p className="truncate text-[14px] text-white">Study</p>
+          <p className="truncate text-[14px] text-[var(--landing-text)]">Study</p>
         </div>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#6fbf8a]/15 px-2.5 py-1 text-[11px] font-medium text-[#6fbf8a]">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#6fbf8a]/15 px-2.5 py-1 text-[11px] font-medium text-[var(--landing-success)]">
           <span className="study-live-dot" />
           Live
         </span>
@@ -76,10 +76,10 @@ export function LandingStudyFilm() {
 
       <div className="relative flex min-w-0 flex-1 flex-col justify-center gap-5 px-4 py-5 sm:px-5">
         <div className="min-w-0 text-center">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#f0b45a]">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--landing-accent)]">
             Today
           </p>
-          <p className="font-display mt-2 break-words text-[clamp(1.35rem,5.2vw,2rem)] leading-none tabular-nums tracking-tight text-white">
+          <p className="font-display mt-2 break-words text-[clamp(1.35rem,5.2vw,2rem)] leading-none tabular-nums tracking-tight text-[var(--landing-text)]">
             {clock}
           </p>
           <div className="study-wave mx-auto mt-4">
@@ -87,7 +87,7 @@ export function LandingStudyFilm() {
               <span key={i} />
             ))}
           </div>
-          <p className="mt-3 text-[12px] text-[#8ba3b8]">
+          <p className="mt-3 text-[12px] text-[var(--landing-muted)]">
             Marked VC · counting
           </p>
         </div>
@@ -96,7 +96,7 @@ export function LandingStudyFilm() {
           {PEOPLE.map((p, i) => (
             <motion.div
               key={p.name}
-              className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+              className="flex min-w-0 items-center gap-2 rounded-xl border border-[var(--landing-border)] bg-[var(--landing-track)] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
               initial={reduce ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 * i, duration: 0.45, ease: EASE }}
@@ -111,8 +111,8 @@ export function LandingStudyFilm() {
                 {p.live ? <span className="study-ring" /> : null}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-[13px] text-white">{p.name}</p>
-                <p className="truncate text-[11px] text-[#8ba3b8]">
+                <p className="truncate text-[13px] text-[var(--landing-text)]">{p.name}</p>
+                <p className="truncate text-[11px] text-[var(--landing-muted)]">
                   {p.live ? "in room" : "idle"}
                 </p>
               </div>

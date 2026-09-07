@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DawnMark } from "@/components/DawnMark";
 import { LandingCharts } from "@/components/LandingCharts";
 import { LandingDayClock } from "@/components/LandingDayClock";
+import { LandingLightHero } from "@/components/LandingLightHero";
 import { LandingHeroBackdrop } from "@/components/LandingHeroBackdrop";
 import { LandingHeroFilm } from "@/components/LandingHeroFilm";
 import { LandingInstall } from "@/components/LandingInstall";
@@ -105,13 +106,12 @@ export function LandingPage({ snap }: Props) {
   const streakShow = live ? Math.max(snap.wakesToday, 1) : 7;
 
   return (
-    <main className="landing-page" data-theme={theme}>
+    <main id="top" className="landing-page" data-theme={theme}>
       <LandingNav theme={theme} onToggleTheme={toggleTheme} />
       <LandingInstall />
 
       <section
-        id="top"
-        className="relative overflow-hidden pt-16"
+        className="landing-dark-hero relative overflow-hidden pt-16"
       >
         <LandingHeroBackdrop />
         <div className="relative z-10">
@@ -142,6 +142,7 @@ export function LandingPage({ snap }: Props) {
         </div>
       </section>
 
+      <LandingLightHero />
       <LandingNewFeatures />
 
       {live ? (
@@ -189,7 +190,7 @@ export function LandingPage({ snap }: Props) {
             </p>
           </Fade>
           <motion.div
-            className={cn(PANEL, "min-h-[24rem] overflow-hidden lg:min-h-[26rem]")}
+            className={cn(PANEL, "landing-cinematic min-h-[24rem] overflow-hidden lg:min-h-[26rem]")}
             initial={reduce ? false : { opacity: 0, scale: 1.06, y: 24 }}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
@@ -254,7 +255,7 @@ export function LandingPage({ snap }: Props) {
                   </div>
                 </div>
 
-                <div className="mx-4 flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] px-4 py-3">
+                <div className="mx-4 flex items-center gap-3 rounded-xl border border-[var(--landing-border)] bg-[var(--landing-track)] px-4 py-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f0b45a] text-[12px] font-semibold text-[#0a0e12]">
                     ✓
                   </span>
@@ -414,23 +415,23 @@ export function LandingPage({ snap }: Props) {
                     className={`rounded-full px-3 py-1 text-[11px] ${
                       i === 1
                         ? "bg-[#f0b45a] font-semibold text-[#0a0e12]"
-                        : "border border-white/12 text-[var(--landing-muted)]"
+                        : "border border-[var(--landing-border)] text-[var(--landing-muted)]"
                     }`}
                   >
                     {p}
                   </span>
                 ))}
               </div>
-              <p className="mx-5 mt-3 border border-white/12 bg-white/[0.03] px-3 py-2.5 text-[13px] text-[var(--landing-muted)]">
+              <p className="mx-5 mt-3 border border-[var(--landing-border)] bg-[var(--landing-track)] px-3 py-2.5 text-[13px] text-[var(--landing-muted)]">
                 Add to Want to buy
               </p>
               <div className="flex flex-1 flex-col gap-3 p-5 pt-4">
                 {NAMED_LISTS.map((list) => (
                   <div
                     key={list.name}
-                    className="border border-white/10 bg-black/25"
+                    className="border border-[var(--landing-border)] bg-[var(--landing-inset)]"
                   >
-                    <div className="flex items-baseline justify-between border-b border-white/[0.07] px-3 py-2">
+                    <div className="flex items-baseline justify-between border-b border-[var(--landing-border)] px-3 py-2">
                       <p className="font-display text-lg text-[var(--landing-accent)]">
                         {list.name}
                       </p>
@@ -506,7 +507,7 @@ export function LandingPage({ snap }: Props) {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.8, ease: EASE }}
           >
-            <div className="landing-demo h-full bg-[#0d131a]"><LandingLifecycleFilm /></div>
+            <div className="landing-demo h-full bg-[var(--landing-surface)]"><LandingLifecycleFilm /></div>
           </motion.div>
         </div>
       </section>
@@ -573,14 +574,14 @@ export function LandingPage({ snap }: Props) {
               </p>
               <div className="flex gap-4 text-[11px] text-[var(--landing-muted)]">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-sm bg-[#f0b45a]" /> Habits
+                  <span className="h-2 w-2 rounded-sm bg-[var(--landing-accent)]" /> Habits
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-sm bg-[#6fbf8a]" /> Tasks
+                  <span className="h-2 w-2 rounded-sm bg-[var(--landing-success)]" /> Tasks
                 </span>
               </div>
             </div>
-            <div className="landing-demo rounded-xl bg-[#0d131a] p-2 sm:p-4"><LandingCharts series={snap.series} /></div>
+            <div className="landing-demo rounded-xl bg-[var(--landing-surface)] p-2 sm:p-4"><LandingCharts series={snap.series} /></div>
           </motion.div>
         </div>
       </section>
@@ -616,7 +617,7 @@ export function LandingPage({ snap }: Props) {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.8, ease: EASE }}
           >
-            <div className="landing-demo h-full bg-[#0d131a]"><LandingStudyFilm /></div>
+            <div className="landing-demo h-full bg-[var(--landing-surface)]"><LandingStudyFilm /></div>
           </motion.div>
         </div>
       </section>

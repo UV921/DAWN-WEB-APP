@@ -88,7 +88,7 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
   return (
     <motion.div
       className={cn(
-        "flex h-full min-h-[20rem] flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0d131a]",
+        "flex h-full min-h-[20rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--landing-border)] bg-[var(--landing-surface)]",
         className
       )}
       initial={reduce ? false : { opacity: 0, y: 16 }}
@@ -96,11 +96,11 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.6, ease: EASE }}
     >
-      <div className="border-b border-white/[0.08] bg-[linear-gradient(160deg,rgba(240,180,90,0.1),transparent_72%)] px-5 py-4">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+      <div className="border-b border-[var(--landing-border)] bg-[linear-gradient(160deg,rgba(240,180,90,0.1),transparent_72%)] px-5 py-4">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--landing-accent)]">
           Need vs take
         </p>
-        <p className="mt-1 text-[13px] text-[#c5ced6]">
+        <p className="mt-1 text-[13px] text-[var(--landing-muted)]">
           Minimum {MIN}h. Plan {PLAN}h ({sleepGoal} → {wakeGoal}). Last night{" "}
           {TAKE}h — under the floor.
         </p>
@@ -114,13 +114,13 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
       </div>
 
       <div className="px-5">
-        <div className="relative h-2.5 overflow-hidden rounded-full bg-white/10">
+        <div className="relative h-2.5 overflow-hidden rounded-full bg-[var(--landing-track)]">
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-[#e07a5f]"
             style={{ width: `${takePct}%` }}
           />
           <span
-            className="absolute top-0 h-full w-px bg-white/80"
+            className="absolute top-0 h-full w-px bg-[var(--landing-track)]"
             style={{ left: `${pct(MIN)}%` }}
             aria-hidden
           />
@@ -130,16 +130,16 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
             aria-hidden
           />
         </div>
-        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-wide text-[#8ba3b8]">
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-wide text-[var(--landing-muted)]">
           <li className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#e07a5f]" />
             Took {TAKE}h
           </li>
           <li className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-px bg-white/80" />
+            <span className="h-2 w-px bg-[var(--landing-track)]" />
             Min {MIN}h
           </li>
-          <li className="inline-flex items-center gap-1.5 text-[#f0b45a]">
+          <li className="inline-flex items-center gap-1.5 text-[var(--landing-accent)]">
             <span className="h-2 w-px bg-[#f0b45a]" />
             Target {TARGET}h
           </li>
@@ -147,10 +147,10 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
       </div>
 
       <div className="mx-4 mt-3 rounded-xl border border-[#f0b45a]/25 bg-[#f0b45a]/[0.06] px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--landing-accent)]">
           Suggestion
         </p>
-        <p className="mt-1 text-[13px] leading-snug text-white">
+        <p className="mt-1 text-[13px] leading-snug text-[var(--landing-text)]">
           Under the {MIN}h minimum. In bed by 22:30 — keep wake {wakeGoal}. Don’t
           sleep in.
         </p>
@@ -158,6 +158,7 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
 
       <div className="px-4 pb-4 pt-4">
         <SleepTimingChart
+          className="landing-sleep-preview"
           compact
           nights={DEMO_NIGHTS}
           sleepGoal={sleepGoal}
@@ -165,7 +166,7 @@ export function LandingNightDetail({ sleepGoal, wakeGoal, className }: Props) {
         />
       </div>
 
-      <div className="mt-auto grid grid-cols-3 gap-px border-t border-white/[0.08] bg-white/[0.04] text-center">
+      <div className="mt-auto grid grid-cols-3 gap-px border-t border-[var(--landing-border)] bg-[var(--landing-track)] text-center">
         <StatFoot label="Bed on time" value="43%" />
         <StatFoot label="Wake on time" value="71%" />
         <StatFoot label="Score" value="62" />
@@ -186,29 +187,29 @@ function Mini({
   ember?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+    <div className="rounded-xl border border-[var(--landing-border)] bg-[var(--landing-track)] px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--landing-muted)]">
         {label}
       </p>
       <p
         className={`font-display mt-0.5 text-xl ${
-          ember ? "text-[#e07a5f]" : "text-white"
+          ember ? "text-[#e07a5f]" : "text-[var(--landing-text)]"
         }`}
       >
         {value}
       </p>
-      <p className="text-[10px] text-[#8ba3b8]">{hint}</p>
+      <p className="text-[10px] text-[var(--landing-muted)]">{hint}</p>
     </div>
   );
 }
 
 function StatFoot({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[#0d131a] px-2 py-3">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+    <div className="bg-[var(--landing-surface)] px-2 py-3">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--landing-muted)]">
         {label}
       </p>
-      <p className="font-display mt-0.5 text-lg text-white">{value}</p>
+      <p className="font-display mt-0.5 text-lg text-[var(--landing-text)]">{value}</p>
     </div>
   );
 }

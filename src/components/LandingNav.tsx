@@ -42,34 +42,34 @@ export function LandingNav({ theme, onToggleTheme }: { theme: "dark" | "light"; 
         <nav className="ml-auto flex min-w-0 items-center gap-0 ">
           <a
             href="#new"
-            className="hidden rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-white/5 hover:text-[var(--landing-text)] sm:inline-flex sm:px-2.5"
+            className="hidden rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-[var(--landing-track)] hover:text-[var(--landing-text)] sm:inline-flex sm:px-2.5"
           >
             New
           </a>
           <a
             href="#tasks"
             aria-label="Tasks"
-            className="inline-flex items-center gap-1.5 rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-white/5 hover:text-[var(--landing-text)] sm:px-2.5"
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-[var(--landing-track)] hover:text-[var(--landing-text)] sm:px-2.5"
           >
             <ListTodoIcon size={16} />
             <span className="hidden sm:inline">Tasks</span>
           </a>
           <a
             href="#study"
-            className="rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-white/5 hover:text-[var(--landing-text)] sm:px-2.5"
+            className="rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-[var(--landing-track)] hover:text-[var(--landing-text)] sm:px-2.5"
           >
             Study
           </a>
           <a
             href="#clock"
-            className="hidden rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-white/5 hover:text-[var(--landing-text)] sm:inline sm:px-2.5"
+            className="hidden rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-[var(--landing-track)] hover:text-[var(--landing-text)] sm:inline sm:px-2.5"
           >
             Day
           </a>
           <a
             href="#stats"
             aria-label="Stats"
-            className="inline-flex items-center gap-1.5 rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-white/5 hover:text-[var(--landing-text)] sm:px-2.5"
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-3 text-[12px] text-[var(--landing-muted)] transition hover:bg-[var(--landing-track)] hover:text-[var(--landing-text)] sm:px-2.5"
           >
             <ChartColumnIcon size={16} />
             <span className="hidden sm:inline">Stats</span>

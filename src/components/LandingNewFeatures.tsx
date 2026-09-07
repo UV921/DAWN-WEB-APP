@@ -205,7 +205,7 @@ function FeatureOverlay({
     >
       <div className="mac-chassis p-1.5 sm:p-2">
         <div className="mac-bezel">
-          <div className="mac-glass min-h-[17rem] rounded-[15px] bg-[#0a121a]/95 p-4">
+          <div className="mac-glass min-h-[17rem] rounded-[15px] bg-[var(--landing-surface)]/95 p-4">
       {(id === "missions" || id === "consistency" || id === "night" || id === "themes") && <LandingBetaPreview id={id} still={reduce} />}
       {id === "google" ? (
         <>
@@ -218,7 +218,7 @@ function FeatureOverlay({
               <IconGoogle size={16} />
               Sign up with Google
             </span>
-            <span className="inline-flex items-center justify-center rounded-full bg-[#5865f2] px-4 py-2.5 text-[13px] font-medium text-[var(--landing-text)]">
+            <span className="inline-flex items-center justify-center rounded-full bg-[#5865f2] px-4 py-2.5 text-[13px] font-medium text-[#ffffff]">
               Sign up with Discord
             </span>
           </div>
@@ -227,13 +227,13 @@ function FeatureOverlay({
 
       {id === "code" ? (
         <>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#8ba3b8]">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--landing-muted)]">
             Your friend code
           </p>
           <p className="mt-2 font-mono text-[1.65rem] tracking-[0.18em] text-[var(--landing-accent)]">
             K7M2QP4X
           </p>
-          <p className="mt-2 text-[12px] text-[#8ba3b8]">
+          <p className="mt-2 text-[12px] text-[var(--landing-muted)]">
             Send it. They paste it. You’re on the board.
           </p>
           <span className="mt-4 inline-flex rounded-full bg-[#f0b45a] px-4 py-2 text-[12px] font-semibold text-[#071018]">
@@ -256,7 +256,7 @@ function FeatureOverlay({
               <li
                 key={row.place}
                 className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${
-                  row.you ? "bg-[#f0b45a]/15" : "bg-white/[0.04]"
+                  row.you ? "bg-[#f0b45a]/15" : "bg-[var(--landing-track)]"
                 }`}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f0b45a] text-[11px] font-semibold text-[#071018]">
@@ -274,16 +274,16 @@ function FeatureOverlay({
 
       {id === "study" ? (
         <>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#6fbf8a]">
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--landing-success)]">
             Study · live
           </p>
           <p className="font-display mt-2 text-[2rem] tabular-nums leading-none text-[var(--landing-text)]">
             1h 42m
           </p>
-          <p className="mt-2 text-[12px] text-[#8ba3b8]">
+          <p className="mt-2 text-[12px] text-[var(--landing-muted)]">
             Voice room counting. It lands on the board.
           </p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--landing-track)]">
             <motion.div
               className="h-full rounded-full bg-[#f0b45a]"
               initial={reduce ? { width: "68%" } : { width: "0%" }}

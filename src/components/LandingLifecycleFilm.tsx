@@ -67,12 +67,12 @@ export function LandingLifecycleFilm({ className }: Props) {
     <div
       ref={root}
       className={cn(
-        "relative overflow-hidden bg-[#0a0e12]",
+        "relative overflow-hidden bg-[var(--landing-surface)]",
         className
       )}
       aria-label="Dawn loop: named lists, study hours, share a card, read the week"
     >
-      <div className="border-b border-white/[0.08] px-4 pt-3">
+      <div className="border-b border-[var(--landing-border)] px-4 pt-3">
         <div className="flex gap-1.5 sm:gap-2">
           {STEPS.map((s, i) => (
             <button
@@ -82,7 +82,7 @@ export function LandingLifecycleFilm({ className }: Props) {
               className={`flex-1 rounded-full px-2 py-1.5 text-[10px] tracking-wide transition sm:text-[11px] ${
                 step === i
                   ? "bg-[#f0b45a] font-semibold text-[#0a0e12]"
-                  : "text-[#8ba3b8] hover:text-white"
+                  : "text-[var(--landing-muted)] hover:text-[var(--landing-text)]"
               }`}
             >
               <span className="font-mono opacity-70">{`0${i + 1}`}</span>{" "}
@@ -90,7 +90,7 @@ export function LandingLifecycleFilm({ className }: Props) {
             </button>
           ))}
         </div>
-        <div className="mt-3 h-0.5 overflow-hidden bg-white/10">
+        <div className="mt-3 h-0.5 overflow-hidden bg-[var(--landing-track)]">
           <motion.div
             key={step}
             className="h-full origin-left bg-[#f0b45a]"
@@ -108,21 +108,21 @@ export function LandingLifecycleFilm({ className }: Props) {
         <AnimatePresence mode="wait">
           {step === 0 ? (
             <Scene key="lists">
-              <div className="mb-4 flex items-center gap-2 text-[#f0b45a]">
+              <div className="mb-4 flex items-center gap-2 text-[var(--landing-accent)]">
                 <ListTodoIcon ref={listIcon} size={22} />
                 <p className="text-[11px] uppercase tracking-[0.16em]">
                   {STEPS[0].hint}
                 </p>
               </div>
-              <p className="font-display text-[1.85rem] text-[#f0b45a]">
+              <p className="font-display text-[1.85rem] text-[var(--landing-accent)]">
                 <TypeLine text="Want to buy" reduce={!!reduce} />
               </p>
-              <p className="mt-1 text-[12px] text-[#8ba3b8]">Named list · today</p>
+              <p className="mt-1 text-[12px] text-[var(--landing-muted)]">Named list · today</p>
               <ul className="mt-5 space-y-2">
                 {BUY.map((item, i) => (
                   <motion.li
                     key={item.text}
-                    className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-xl border border-[var(--landing-border)] bg-[var(--landing-inset)] px-3 py-2.5"
                     initial={reduce ? false : { opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.12 + i * 0.12, duration: 0.4, ease: EASE }}
@@ -138,7 +138,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                     </span>
                     <span
                       className={
-                        item.done ? "text-[#8ba3b8] line-through" : "text-white"
+                        item.done ? "text-[var(--landing-muted)] line-through" : "text-[var(--landing-text)]"
                       }
                     >
                       {item.text}
@@ -147,7 +147,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                 ))}
               </ul>
               <motion.p
-                className="mt-4 inline-flex rounded-full border border-[#f0b45a]/40 bg-[#f0b45a]/10 px-3 py-1.5 text-[11px] text-[#f0b45a]"
+                className="mt-4 inline-flex rounded-full border border-[#f0b45a]/40 bg-[#f0b45a]/10 px-3 py-1.5 text-[11px] text-[var(--landing-accent)]"
                 initial={reduce ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.4 }}
@@ -159,19 +159,19 @@ export function LandingLifecycleFilm({ className }: Props) {
 
           {step === 1 ? (
             <Scene key="study">
-              <div className="mb-4 flex items-center gap-2 text-[#f0b45a]">
+              <div className="mb-4 flex items-center gap-2 text-[var(--landing-accent)]">
                 <GraduationCapIcon ref={capIcon} size={26} />
                 <p className="text-[11px] uppercase tracking-[0.16em]">
                   {STEPS[1].hint}
                 </p>
               </div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#6fbf8a]">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--landing-success)]">
                 In session
               </p>
-              <p className="font-display mt-2 text-[clamp(1.6rem,6vw,2.6rem)] leading-none text-white">
+              <p className="font-display mt-2 text-[clamp(1.6rem,6vw,2.6rem)] leading-none text-[var(--landing-text)]">
                 <StudyClock reduce={!!reduce} />
               </p>
-              <p className="mt-2 text-[14px] text-[#9aa6b2]">
+              <p className="mt-2 text-[14px] text-[var(--landing-muted)]">
                 Today · counting while you’re in the marked VC
               </p>
               <div className="mt-6 flex items-end gap-1.5">
@@ -182,17 +182,17 @@ export function LandingLifecycleFilm({ className }: Props) {
                   >
                     <motion.div
                       className={`w-full rounded-sm ${
-                        i === 6 ? "bg-[#f0b45a]" : h > 0 ? "bg-white/30" : "bg-white/10"
+                        i === 6 ? "bg-[#f0b45a]" : h > 0 ? "bg-[var(--landing-track)]" : "bg-[var(--landing-track)]"
                       }`}
                       initial={reduce ? { height: Math.max(6, h * 0.7) } : { height: 6 }}
                       animate={{ height: Math.max(6, h * 0.7) }}
                       transition={{ delay: 0.1 + i * 0.07, duration: 0.5, ease: EASE }}
                     />
-                    <span className="text-[10px] text-[#8ba3b8]">{WEEK_L[i]}</span>
+                    <span className="text-[10px] text-[var(--landing-muted)]">{WEEK_L[i]}</span>
                   </motion.div>
                 ))}
               </div>
-              <p className="mt-4 text-[12px] text-[#6b7785]">
+              <p className="mt-4 text-[12px] text-[var(--landing-muted)]">
                 Today only. Totals on Stats.
               </p>
             </Scene>
@@ -200,11 +200,11 @@ export function LandingLifecycleFilm({ className }: Props) {
 
           {step === 2 ? (
             <Scene key="share">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#f0b45a]">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--landing-accent)]">
                 {STEPS[2].hint}
               </p>
               <motion.div
-                className="relative mt-4 overflow-hidden rounded-2xl border border-[#f0b45a]/25 bg-[#071018] px-5 py-5"
+                className="relative mt-4 overflow-hidden rounded-2xl border border-[#f0b45a]/25 bg-[var(--landing-surface)] px-5 py-5"
                 initial={reduce ? false : { opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.55, ease: EASE }}
@@ -213,13 +213,13 @@ export function LandingLifecycleFilm({ className }: Props) {
                   aria-hidden
                   className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_at_top,rgba(240,180,90,0.28),transparent_70%)]"
                 />
-                <p className="relative text-[11px] tracking-[0.28em] text-[#f0b45a]">
+                <p className="relative text-[11px] tracking-[0.28em] text-[var(--landing-accent)]">
                   D A W N
                 </p>
-                <p className="font-display relative mt-3 text-[1.7rem] text-[#f0b45a]">
+                <p className="font-display relative mt-3 text-[1.7rem] text-[var(--landing-accent)]">
                   This week
                 </p>
-                <p className="relative mt-1 text-[12px] text-[#8ba3b8]">
+                <p className="relative mt-1 text-[12px] text-[var(--landing-muted)]">
                   uv · Sat, Aug 15
                 </p>
                 <div className="relative mt-5 grid grid-cols-2 gap-2">
@@ -231,21 +231,21 @@ export function LandingLifecycleFilm({ className }: Props) {
                   ].map(([k, v], i) => (
                     <motion.div
                       key={k}
-                      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5"
+                      className="rounded-xl border border-[var(--landing-border)] bg-[var(--landing-track)] px-3 py-2.5"
                       initial={reduce ? false : { opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 + i * 0.08, duration: 0.35 }}
                     >
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--landing-muted)]">
                         {k}
                       </p>
-                      <p className="font-display mt-0.5 text-lg text-[#f0b45a]">
+                      <p className="font-display mt-0.5 text-lg text-[var(--landing-accent)]">
                         {v}
                       </p>
                     </motion.div>
                   ))}
                 </div>
-                <p className="relative mt-4 text-[11px] text-white/35">
+                <p className="relative mt-4 text-[11px] text-[var(--landing-text)]/35">
                   Made with Dawn
                 </p>
               </motion.div>
@@ -254,13 +254,13 @@ export function LandingLifecycleFilm({ className }: Props) {
 
           {step === 3 ? (
             <Scene key="stats">
-              <div className="mb-4 flex items-center gap-2 text-[#f0b45a]">
+              <div className="mb-4 flex items-center gap-2 text-[var(--landing-accent)]">
                 <ChartColumnIcon ref={chartIcon} size={22} />
                 <p className="text-[11px] uppercase tracking-[0.16em]">
                   {STEPS[3].hint}
                 </p>
               </div>
-              <p className="font-display text-[1.7rem] leading-tight text-white">
+              <p className="font-display text-[1.7rem] leading-tight text-[var(--landing-text)]">
                 You finished the morning on 4 of 7 days.
               </p>
               <div className="mt-5 grid grid-cols-3 gap-2">
@@ -271,15 +271,15 @@ export function LandingLifecycleFilm({ className }: Props) {
                 ].map(([k, v], i) => (
                   <motion.div
                     key={k}
-                    className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3"
+                    className="rounded-xl border border-[var(--landing-border)] bg-[var(--landing-track)] px-3 py-3"
                     initial={reduce ? false : { opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1, duration: 0.4, ease: EASE }}
                   >
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--landing-muted)]">
                       {k}
                     </p>
-                    <p className="font-display mt-1 text-xl text-[#f0b45a]">{v}</p>
+                    <p className="font-display mt-1 text-xl text-[var(--landing-accent)]">{v}</p>
                   </motion.div>
                 ))}
               </div>
@@ -296,7 +296,7 @@ export function LandingLifecycleFilm({ className }: Props) {
                   )
                 )}
               </div>
-              <p className="mt-3 text-[12px] text-[#6b7785]">
+              <p className="mt-3 text-[12px] text-[var(--landing-muted)]">
                 Gold habits. Green tasks.
               </p>
             </Scene>

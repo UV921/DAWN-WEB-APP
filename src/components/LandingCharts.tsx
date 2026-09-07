@@ -8,11 +8,11 @@ import type { LandingPoint } from "@/lib/landing-data";
 const config = {
   habitPct: {
     label: "Habits",
-    colors: { light: ["#f0b45a"], dark: ["#f0b45a"] },
+    colors: { light: ["var(--landing-accent)"], dark: ["var(--landing-accent)"] },
   },
   taskPct: {
     label: "Tasks",
-    colors: { light: ["#6fbf8a"], dark: ["#6fbf8a"] },
+    colors: { light: ["var(--landing-success)"], dark: ["var(--landing-success)"] },
   },
 } satisfies ChartConfig;
 

@@ -100,7 +100,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
       <AnimatePresence mode="wait">
         <motion.p
           key={current.id}
-          className="font-display min-h-[2.6rem] text-[1.35rem] leading-snug text-white sm:text-[1.55rem]"
+          className="font-display min-h-[2.6rem] text-[1.35rem] leading-snug text-[var(--landing-text)] sm:text-[1.55rem]"
           initial={reduce ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
@@ -126,7 +126,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
           <text
             x={PAD.l}
             y="16"
-            fill="#6b7785"
+            fill="var(--landing-muted)"
             fontSize="10"
             letterSpacing="0.16em"
             fontFamily="ui-monospace, monospace"
@@ -162,7 +162,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
                   x={p.x}
                   y={p.y - 14}
                   textAnchor="middle"
-                  fill={on ? "#f0b45a" : "#8ba3b8"}
+                  fill={on ? "#f0b45a" : "var(--landing-muted)"}
                   fontSize="11"
                   fontFamily="var(--font-display), Georgia, serif"
                 >
@@ -172,7 +172,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
                   cx={p.x}
                   cy={p.y}
                   r={on ? 5 : 3}
-                  fill={on ? "#f0b45a" : "#0a0e12"}
+                  fill={on ? "#f0b45a" : "var(--landing-surface)"}
                   stroke="#f0b45a"
                   strokeWidth="1.6"
                 />
@@ -197,12 +197,12 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
             y1={H - PAD.b}
             x2={W - PAD.r}
             y2={H - PAD.b}
-            stroke="rgba(255,255,255,0.14)"
+            stroke="var(--landing-border)"
           />
           <text
             x={PAD.l}
             y={H - 14}
-            fill="#6b7785"
+            fill="var(--landing-muted)"
             fontSize="11"
             fontFamily="ui-monospace, monospace"
           >
@@ -212,7 +212,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
             x={W / 2}
             y={H - 14}
             textAnchor="middle"
-            fill="#6b7785"
+            fill="var(--landing-muted)"
             fontSize="11"
             fontFamily="ui-monospace, monospace"
           >
@@ -222,7 +222,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
             x={W - PAD.r}
             y={H - 14}
             textAnchor="end"
-            fill="#6b7785"
+            fill="var(--landing-muted)"
             fontSize="11"
             fontFamily="ui-monospace, monospace"
           >
@@ -240,7 +240,7 @@ export function LandingDayClock({ wakeStart, sleepStart }: Props) {
             className={`flex-1 rounded-xl px-2 py-2 text-center text-[12px] transition ${
               i === step
                 ? "bg-[#f0b45a] font-medium text-[#0a0e12]"
-                : "bg-white/[0.04] text-[#8ba3b8] hover:text-white"
+                : "bg-[var(--landing-track)] text-[var(--landing-muted)] hover:text-[var(--landing-text)]"
             }`}
           >
             {s.label}
