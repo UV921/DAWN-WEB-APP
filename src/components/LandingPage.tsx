@@ -17,6 +17,8 @@ import { LandingPhilosophyFilm } from "@/components/LandingPhilosophyFilm";
 import { LandingStudyFilm } from "@/components/LandingStudyFilm";
 import { LandingNightDetail } from "@/components/LandingNightDetail";
 import { LandingThemeProvider, useLandingTheme } from "@/components/LandingTheme";
+import { VersionBadge } from "@/components/VersionBadge";
+import { APP_VERSION_LABEL } from "@/lib/app-version";
 import { defaultWindowForKey } from "@/lib/habit-windows";
 import type { LandingSnapshot } from "@/lib/landing-data";
 import { cn } from "@/lib/utils";
@@ -127,6 +129,9 @@ function LandingPageInner({ snap }: Props) {
                 <h1 className="font-display text-[clamp(2.4rem,12vw,5.25rem)] leading-[0.95] tracking-[-0.03em] text-[var(--lp-fg)]">
                   Dawn
                 </h1>
+                <div className="mt-3 flex justify-center sm:mt-4">
+                  <VersionBadge />
+                </div>
                 <p className="mx-auto mt-3 max-w-[28ch] px-1 text-[0.98rem] leading-snug text-[var(--lp-muted)] sm:mt-4 sm:text-lg">
                   One screen for the day. Wake, lists, study, then close the night.
                 </p>
@@ -698,6 +703,9 @@ function LandingPageInner({ snap }: Props) {
             <DawnMark size={22} />
           </span>
           <span>Wake · lists · study · night</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em]">
+            {APP_VERSION_LABEL}
+          </span>
         </div>
       </footer>
     </main>

@@ -8,6 +8,7 @@ import { MoonIcon } from "@/components/animated-icons/moon";
 import { SunIcon } from "@/components/animated-icons/sun";
 import { DawnMark } from "@/components/DawnMark";
 import { useLandingTheme } from "@/components/LandingTheme";
+import { VersionBadge } from "@/components/VersionBadge";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -60,10 +61,11 @@ export function LandingNav() {
       >
         <a
           href="#top"
-          className="shrink-0 text-[var(--lp-gold)]"
+          className="flex shrink-0 items-center gap-2 text-[var(--lp-gold)]"
           aria-label="Dawn"
         >
           <DawnMark size={scrolled ? 20 : 24} />
+          <VersionBadge size="sm" className="hidden sm:inline-flex" />
         </a>
         <nav className="ml-auto hidden min-w-0 items-center gap-0 md:flex">
           {LINKS.map((l) => (
@@ -126,6 +128,9 @@ export function LandingNav() {
       </div>
       {open ? (
         <div className="mx-auto mt-2 max-w-5xl rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)]/95 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl md:hidden">
+          <div className="px-3 py-2">
+            <VersionBadge size="sm" />
+          </div>
           {LINKS.map((l) => (
             <a
               key={l.href}

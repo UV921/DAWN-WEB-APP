@@ -23,18 +23,39 @@ const FEATURES = [
     body: "Copy your friend code. They paste it. Google or Discord — same step.",
   },
   {
-    id: "board",
-    kicker: "Board",
-    title: "Rank habits and study",
-    body: "Who stayed consistent. Who sat in the room. Combined score.",
+    id: "week",
+    kicker: "Today",
+    title: "A week on Today",
+    body: "Mini consistency graph at the bottom of Today. Seven days. Same green scale as Stats.",
   },
   {
-    id: "study",
-    kicker: "Hours",
-    title: "Study time that counts",
-    body: "Sit in a marked voice room. Dawn pings you what you’re doing and counts the hours.",
+    id: "missions",
+    kicker: "Missions",
+    title: "Named runs with steps",
+    body: "Hackathons, 7-day challenges, ongoing work. Steps check off like tasks. Days left on Today.",
+  },
+  {
+    id: "care",
+    kicker: "Study care",
+    title: "Water. Eyes. Custom.",
+    body: "Interval pings while you sit in the room — Discord and the browser, even if Dawn is closed.",
+  },
+  {
+    id: "progress",
+    kicker: "Progress",
+    title: "Pick a day. See the cycle.",
+    body: "Wake, habits, tasks, and a 24-hour study cycle. Tap a day on Stats and open its ratios.",
   },
 ] as const;
+
+const ALSO_NOW = [
+  "Dark / light on the landing",
+  "Push while Dawn is in the background",
+  "Night close from the sleep habit",
+  "Day picker on Progress",
+  "Morning board pings you can turn off",
+  "Share Today, tasks, and study as PNG",
+];
 
 export function LandingNewFeatures() {
   const reduce = useReducedMotion();
@@ -61,14 +82,14 @@ export function LandingNewFeatures() {
       <div className="mx-auto max-w-5xl">
         <div className="max-w-xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--lp-gold)]">
-            New
+            Now · Beta
           </p>
           <h2 className="font-display mt-2 text-[1.65rem] leading-tight text-[var(--lp-fg)] sm:text-[2.35rem]">
-            What Dawn gives you now
+            What this version ships
           </h2>
-          <p className="mt-3 max-w-[40ch] text-[15px] text-[var(--lp-muted)]">
-            Google sign-in, a friend code, and a board that ranks habit
-            consistency against study hours.
+          <p className="mt-3 max-w-[44ch] text-[15px] text-[var(--lp-muted)]">
+            Google, friends, a week graph on Today, missions with steps, study
+            care pings, and Progress you can actually inspect.
           </p>
         </div>
 
@@ -103,7 +124,7 @@ export function LandingNewFeatures() {
           </div>
         </motion.div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
           {FEATURES.map((f, i) => {
             const active = i === step;
             return (
@@ -144,6 +165,17 @@ export function LandingNewFeatures() {
             );
           })}
         </div>
+
+        <ul className="mt-6 flex flex-wrap gap-2">
+          {ALSO_NOW.map((item) => (
+            <li
+              key={item}
+              className="rounded-full border border-[var(--lp-border)] bg-[var(--lp-inset)] px-3 py-1.5 text-[12px] text-[var(--lp-muted)]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -203,29 +235,66 @@ function FeatureOverlay({
         </>
       ) : null}
 
-      {id === "board" ? (
+      {id === "week" ? (
         <>
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
-            Habits + study
+            This week
           </p>
-          <ul className="mt-3 space-y-2">
-            {[
-              { place: "1", name: "You", score: "86 · 12h", you: true },
-              { place: "2", name: "Ira", score: "74 · 9h" },
-              { place: "3", name: "Leo", score: "61 · 7h" },
-            ].map((row) => (
-              <li
-                key={row.place}
-                className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${
-                  row.you ? "bg-[#f0b45a]/15" : "bg-white/[0.04]"
-                }`}
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f0b45a] text-[11px] font-semibold text-[#071018]">
-                  {row.place}
+          <p className="font-display mt-1 text-xl text-white">6 consistent days</p>
+          <div className="mt-4 grid grid-cols-7 gap-1.5">
+            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
+              const level = [0, 2, 1, 3, 4, 2, 2][i];
+              const fill =
+                level === 0
+                  ? "bg-white/10"
+                  : level === 1
+                    ? "bg-[#0e4429]"
+                    : level === 2
+                      ? "bg-[#006d32]"
+                      : level === 3
+                        ? "bg-[#26a641]"
+                        : "bg-[#39d353]";
+              return (
+                <span key={`${d}-${i}`} className="min-w-0 text-center">
+                  <span className="block text-[10px] text-[#8ba3b8]">{d}</span>
+                  <span
+                    className={`mx-auto mt-1 block h-6 w-6 rounded-md ${fill}`}
+                  />
                 </span>
-                <span className="flex-1 text-[13px] text-white">{row.name}</span>
-                <span className="font-mono text-[11px] text-[#f0b45a]">
-                  {row.score}
+              );
+            })}
+          </div>
+          <p className="mt-3 text-[12px] text-[#8ba3b8]">
+            Fri · 5/5 habits · 40m study
+          </p>
+        </>
+      ) : null}
+
+      {id === "missions" ? (
+        <>
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+            Mission
+          </p>
+          <p className="font-display mt-1 text-xl text-white">Hackathon</p>
+          <p className="mt-1 text-[12px] text-[#8ba3b8]">Day 3 · 4 left</p>
+          <ul className="mt-4 space-y-2">
+            {[
+              { text: "Ship the landing", done: true },
+              { text: "Wire the graph", done: true },
+              { text: "Record a demo", done: false },
+            ].map((s) => (
+              <li key={s.text} className="flex items-center gap-2 text-[13px]">
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border text-[9px] ${
+                    s.done
+                      ? "border-[#6fbf8a] bg-[#6fbf8a] text-[#0a0e12]"
+                      : "border-white/25"
+                  }`}
+                >
+                  {s.done ? "✓" : ""}
+                </span>
+                <span className={s.done ? "text-[#8ba3b8] line-through" : "text-white"}>
+                  {s.text}
                 </span>
               </li>
             ))}
@@ -233,25 +302,58 @@ function FeatureOverlay({
         </>
       ) : null}
 
-      {id === "study" ? (
+      {id === "care" ? (
         <>
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#6fbf8a]">
             Study · live
           </p>
-          <p className="font-display mt-2 text-[2rem] tabular-nums leading-none text-white">
-            1h 42m
-          </p>
-          <p className="mt-2 text-[12px] text-[#8ba3b8]">
-            Voice room counting. It lands on the board.
-          </p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <motion.div
-              className="h-full rounded-full bg-[#f0b45a]"
-              initial={reduce ? { width: "68%" } : { width: "0%" }}
-              animate={{ width: "68%" }}
-              transition={{ duration: 1.1, ease: EASE }}
-            />
+          <p className="font-display mt-1 text-xl text-white">1h 42m</p>
+          <div className="mt-4 space-y-2">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              <p className="text-[11px] text-[#f0b45a]">Water</p>
+              <p className="text-[13px] text-white">Drink. Next in 18m.</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              <p className="text-[11px] text-[#8ba3b8]">Eyes</p>
+              <p className="text-[13px] text-white">Look away. Every 20m.</p>
+            </div>
           </div>
+        </>
+      ) : null}
+
+      {id === "progress" ? (
+        <>
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#f0b45a]">
+            Stats
+          </p>
+          <p className="font-display mt-1 text-xl text-white">Sat, Sep 6</p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              ["Wake", "05:52"],
+              ["Habits", "80%"],
+              ["Study", "1h 12m"],
+            ].map(([k, v]) => (
+              <div
+                key={k}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2"
+              >
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8ba3b8]">
+                  {k}
+                </p>
+                <p className="font-display mt-0.5 text-sm text-[#f0b45a]">{v}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex h-10 items-end gap-0.5">
+            {[20, 45, 10, 70, 90, 35, 55, 80, 40, 65, 25, 50].map((h, i) => (
+              <span
+                key={i}
+                className="flex-1 rounded-sm bg-[#f0b45a]/80"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-[#8ba3b8]">24-hour study cycle</p>
         </>
       ) : null}
           </div>

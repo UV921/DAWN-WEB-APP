@@ -79,13 +79,13 @@ export function LandingLifecycleFilm({ className }: Props) {
               key={s.id}
               type="button"
               onClick={() => setStep(i)}
-              className={`flex-1 rounded-full px-2 py-1.5 text-[10px] tracking-wide transition sm:text-[11px] ${
+              className={`min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-[10px] tracking-wide transition sm:px-2 sm:text-[11px] ${
                 step === i
                   ? "bg-[#f0b45a] font-semibold text-[#0a0e12]"
                   : "text-[#8ba3b8] hover:text-white"
               }`}
             >
-              <span className="font-mono opacity-70">{`0${i + 1}`}</span>{" "}
+              <span className="hidden font-mono opacity-70 sm:inline">{`0${i + 1}`}</span>{" "}
               {s.label}
             </button>
           ))}
