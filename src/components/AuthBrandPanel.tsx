@@ -8,8 +8,8 @@ export function AuthBrandPanel() {
           className="hero-photo-img"
           src="/images/landing-hero.jpg"
           alt=""
-          width={1800}
-          height={1467}
+          width={1672}
+          height={941}
           decoding="async"
         />
         <div className="hero-photo-vignette" />
