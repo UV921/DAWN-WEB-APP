@@ -4,7 +4,13 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { DawnSquare } from "@/components/DawnMark";
-import { IconMoreVertical, IconPanelClose, IconPanelOpen } from "@/components/icons";
+import {
+  IconLogOut,
+  IconMoreVertical,
+  IconPanelClose,
+  IconPanelOpen,
+  IconSettings,
+} from "@/components/icons";
 import { SunIcon } from "@/components/animated-icons/sun";
 import { MoonIcon } from "@/components/animated-icons/moon";
 import { ChartColumnIcon } from "@/components/animated-icons/chart-column";
@@ -62,7 +68,43 @@ function NavGlyph({
   );
 }
 
-function SidebarAccount() {
+function AccountAvatar({
+  name,
+  image,
+  sizeClass = "h-9 w-9",
+  bordered = false,
+}: {
+  name: string;
+  image?: string | null;
+  sizeClass?: string;
+  bordered?: boolean;
+}) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        className={`${sizeClass} rounded-full object-cover ${
+          bordered ? "border border-white/20" : ""
+        }`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`flex ${sizeClass} items-center justify-center rounded-full font-medium text-white ${
+        bordered
+          ? "border border-white/15 bg-white/[0.06] text-[13px]"
+          : "bg-white/10 text-sm"
+      }`}
+    >
+      {name.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
+function AccountMenu({ variant }: { variant: "sidebar" | "topbar" }) {
   const { data } = useSession();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -73,63 +115,87 @@ function SidebarAccount() {
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    const onDoc = (e: PointerEvent) => {
       if (!box.current?.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
+
+  const itemClass =
+    "flex min-h-11 w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] text-[#c5ced6] hover:bg-white/5 hover:text-white";
 
   return (
     <div ref={box} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition hover:bg-white/[0.05]"
-        aria-expanded={open}
-        aria-haspopup="menu"
-      >
-        {data?.user?.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.user.image}
-            alt=""
-            className="h-9 w-9 rounded-full object-cover"
+      {variant === "sidebar" ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition hover:bg-white/[0.05]"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label="Account menu"
+        >
+          <AccountAvatar name={name} image={data?.user?.image} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-medium text-white">
+              {name}
+            </span>
+            <span className="block truncate text-[11px] text-[#8ba3b8]">
+              #{handle}
+            </span>
+          </span>
+          <IconMoreVertical size={16} className="shrink-0 text-[#8ba3b8]" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label="Account menu"
+        >
+          <AccountAvatar
+            name={name}
+            image={data?.user?.image}
+            sizeClass="h-8 w-8"
+            bordered
           />
-        ) : (
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-white">
-            {name.slice(0, 1).toUpperCase()}
-          </span>
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-white">
-            {name}
-          </span>
-          <span className="block truncate text-[11px] text-[#8ba3b8]">
-            #{handle}
-          </span>
-        </span>
-        <IconMoreVertical size={16} className="shrink-0 text-[#8ba3b8]" />
-      </button>
+        </button>
+      )}
       {open ? (
         <div
           role="menu"
-          className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
+          className={
+            variant === "sidebar"
+              ? "absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
+              : "absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-white/10 bg-[#10161c] py-1 shadow-xl"
+          }
         >
           <Link
             href="/settings"
             role="menuitem"
-            className="flex w-full px-3 py-2 text-left text-[13px] text-[#c5ced6] hover:bg-white/5 hover:text-white"
+            className={itemClass}
             onClick={() => setOpen(false)}
           >
+            <IconSettings size={15} className="shrink-0" />
             Settings
           </Link>
           <button
             type="button"
             role="menuitem"
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex w-full px-3 py-2 text-left text-[13px] text-[#c5ced6] hover:bg-white/5 hover:text-white"
+            className={itemClass}
           >
+            <IconLogOut size={15} className="shrink-0" />
             Sign out
           </button>
         </div>
@@ -141,7 +207,6 @@ function SidebarAccount() {
 const SIDEBAR_KEY = "dawn-sidebar-open";
 
 export function AppNav({ active }: { active: NavKey }) {
-  const { data } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const mapped: NavKey =
     active === "leaderboard" || active === "circle" ? "settings" : active;
@@ -242,7 +307,7 @@ export function AppNav({ active }: { active: NavKey }) {
             <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#6d8090]">
               User account
             </p>
-            <SidebarAccount />
+            <AccountMenu variant="sidebar" />
           </div>
         </div>
       </aside>
@@ -283,24 +348,7 @@ export function AppNav({ active }: { active: NavKey }) {
           >
             <UsersIcon size={20} />
           </Link>
-          <Link
-            href="/settings"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            aria-label="Your account"
-          >
-            {data?.user?.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={data.user.image}
-                alt=""
-                className="h-8 w-8 rounded-full border border-white/20 object-cover"
-              />
-            ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[13px] font-medium text-white">
-                {(data?.user?.name || "?").slice(0, 1).toUpperCase()}
-              </span>
-            )}
-          </Link>
+          <AccountMenu variant="topbar" />
         </div>
       </header>
 

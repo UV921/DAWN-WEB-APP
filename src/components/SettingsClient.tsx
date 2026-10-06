@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
 import { HabitStudio } from "@/components/HabitStudio";
@@ -182,7 +182,20 @@ export function SettingsClient() {
                 </div>
               ) : null}
 
-              <div className="mt-10 border-t border-white/[0.08] pt-5">
+              <div className="mt-10 space-y-5 border-t border-white/[0.08] pt-5">
+                <div>
+                  <p className="text-sm font-medium text-white">Account</p>
+                  <p className="mt-1 text-xs text-[var(--color-mist)]">
+                    Sign out of Dawn on this device.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void signOut({ callbackUrl: "/" })}
+                    className="ui-btn ui-btn-ghost mt-3"
+                  >
+                    Sign out
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
