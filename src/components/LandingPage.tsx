@@ -10,7 +10,6 @@ import { LandingHero } from "@/components/LandingHero";
 import { LandingInstall } from "@/components/LandingInstall";
 import { LandingLifecycleFilm } from "@/components/LandingLifecycleFilm";
 import { LandingNav } from "@/components/LandingNav";
-import { LandingNewFeatures } from "@/components/LandingNewFeatures";
 import { LandingPhilosophyFilm } from "@/components/LandingPhilosophyFilm";
 import { LandingStudyFilm } from "@/components/LandingStudyFilm";
 import { LandingNightDetail } from "@/components/LandingNightDetail";
@@ -108,7 +107,6 @@ export function LandingPage({ snap }: Props) {
       <LandingInstall />
 
       <LandingHero />
-      <LandingNewFeatures />
 
       {live ? (
         <section className="border-t border-[var(--landing-border)] px-5 py-10 sm:px-10">
@@ -664,7 +662,7 @@ export function LandingPage({ snap }: Props) {
           <span className="text-[var(--landing-accent)]">
             <DawnMark size={22} />
           </span>
-          <span>Dawn Beta · Wake · lists · study · night</span>
+          <span>Wake · lists · study · night</span>
         </div>
       </footer>
     </main>
