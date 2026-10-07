@@ -3,7 +3,7 @@
    cache.addAll() then fails the whole install — the old worker keeps serving
    hashed /_next chunks from a previous deploy and the app white-screens.
    Bump CACHE when HTML/JS must not stay stuck on an old deploy. */
-const CACHE = "dawn-v11";
+const CACHE = "dawn-v12";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
@@ -32,11 +32,56 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function isAuthRoute(pathname) {
+  return (
+    pathname.startsWith("/api/auth") ||
+    pathname === "/login" ||
+    pathname === "/signup"
+  );
+}
+
 function isNetworkFirst(req, url) {
   if (req.mode === "navigate") return true;
   if (url.pathname.startsWith("/api/")) return true;
   if (url.pathname.startsWith("/_next/")) return true;
   return url.pathname.endsWith(".js") || url.pathname.endsWith(".css");
+}
+
+function canCache(res) {
+  return Boolean(res && res.ok && res.type === "basic" && !res.redirected);
+}
+
+function remember(req, res) {
+  if (!canCache(res)) return;
+  let copy;
+  try {
+    copy = res.clone();
+  } catch {
+    return;
+  }
+  caches.open(CACHE).then((cache) => cache.put(req, copy).catch(() => undefined));
+}
+
+function fallbackResponse(req) {
+  const acceptsHtml =
+    req.mode === "navigate" ||
+    (req.headers.get("accept") || "").includes("text/html");
+  if (acceptsHtml) {
+    return new Response(
+      "<!doctype html><meta charset=utf-8><title>Dawn</title><p>You are offline. Reopen Dawn when you are back online.</p>",
+      {
+        status: 503,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  }
+  return new Response("", {
+    status: 503,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 self.addEventListener("fetch", (event) => {
@@ -47,22 +92,26 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Do not intercept NextAuth. On iPhone, a SW fetch of the Discord
-  // callback drops the state/PKCE cookies, so the first Continue with
-  // Discord fails and the second tap then works.
-  if (url.pathname.startsWith("/api/auth")) return;
+  // Do not intercept NextAuth or the sign-in pages.
+  // A worker fetch of the Discord/Google callback drops the state/PKCE
+  // cookies, so the first Continue fails and NextAuth sends the browser to
+  // /login?callbackUrl=…&error=OAuthCallback. That login navigation is also
+  // intercepted; when it redirects (already signed in → /dashboard) or the
+  // network fails, caches.match() resolves to undefined and Chrome throws
+  // "Failed to convert value to 'Response'".
+  if (isAuthRoute(url.pathname)) return;
 
   if (isNetworkFirst(req, url)) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res && res.ok && req.mode === "navigate") {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
+          if (req.mode === "navigate") remember(req, res);
           return res;
         })
-        .catch(() => caches.match(req))
+        .catch(async () => {
+          const cached = await caches.match(req);
+          return cached || fallbackResponse(req);
+        })
     );
     return;
   }
@@ -71,13 +120,10 @@ self.addEventListener("fetch", (event) => {
     caches.match(req).then((cached) => {
       const network = fetch(req)
         .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
+          remember(req, res);
           return res;
         })
-        .catch(() => cached);
+        .catch(() => cached || fallbackResponse(req));
       return cached || network;
     })
   );

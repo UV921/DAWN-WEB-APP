@@ -577,62 +577,76 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account, profile }) {
-      if (account?.provider === "google") {
-        const googleId = String(account.providerAccountId || "");
-        if (googleId) {
+      try {
+        if (account?.provider === "google") {
+          const googleId = String(account.providerAccountId || "");
+          if (googleId) {
+            try {
+              const dbUser = await ensureGoogleUser({
+                googleId,
+                email: user?.email,
+                name: user?.name,
+                image: user?.image,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                expires_at: account.expires_at,
+                id_token: account.id_token,
+                token_type: account.token_type,
+                scope: account.scope,
+              });
+              if (dbUser) token.sub = dbUser.id;
+            } catch (e) {
+              console.error("Google jwt ensure failed", e);
+              try {
+                const raced = await findUserByGoogle(googleId);
+                if (raced) token.sub = raced.id;
+              } catch (again) {
+                console.error("Google jwt lookup failed", again);
+              }
+            }
+          }
+        } else if (account?.provider === "discord" && profile && "id" in profile) {
+          const discordId = String((profile as { id: string }).id);
+          token.discordId = discordId;
+          // NextAuth ignores `user.id` set in signIn (no adapter). Create/find here
+          // so the first Discord callback stores the Prisma cuid, not the snowflake.
+          let dbUser;
           try {
-            const dbUser = await ensureGoogleUser({
-              googleId,
+            dbUser = await ensureDiscordUser({
+              discordId,
               email: user?.email,
               name: user?.name,
               image: user?.image,
-              access_token: account.access_token,
-              refresh_token: account.refresh_token,
-              expires_at: account.expires_at,
-              id_token: account.id_token,
-              token_type: account.token_type,
-              scope: account.scope,
             });
-            if (dbUser) token.sub = dbUser.id;
           } catch (e) {
-            console.error("Google jwt ensure failed", e);
-            const raced = await findUserByGoogle(googleId);
-            if (raced) token.sub = raced.id;
+            console.error("Discord jwt ensure failed", e);
+            try {
+              dbUser = await findUserByDiscord(discordId);
+            } catch (again) {
+              console.error("Discord jwt lookup failed", again);
+            }
           }
+          if (dbUser) token.sub = dbUser.id;
+          else if (user?.id && !isSnowflake(user.id)) token.sub = user.id;
+        } else if (user?.id && !isSnowflake(user.id)) {
+          token.sub = user.id;
+        } else if (isSnowflake(token.sub) || token.discordId) {
+          const dbUser = await resolveSessionUserMemo(token);
+          if (dbUser) token.sub = dbUser.id;
         }
-      } else if (account?.provider === "discord" && profile && "id" in profile) {
-        const discordId = String((profile as { id: string }).id);
-        token.discordId = discordId;
-        // NextAuth ignores `user.id` set in signIn (no adapter). Create/find here
-        // so the first Discord callback stores the Prisma cuid, not the snowflake.
-        let dbUser;
-        try {
-          dbUser = await ensureDiscordUser({
-            discordId,
-            email: user?.email,
-            name: user?.name,
-            image: user?.image,
-          });
-        } catch (e) {
-          console.error("Discord jwt ensure failed", e);
-          dbUser = await findUserByDiscord(discordId);
-        }
-        if (dbUser) token.sub = dbUser.id;
-        else if (user?.id && !isSnowflake(user.id)) token.sub = user.id;
-      } else if (user?.id && !isSnowflake(user.id)) {
-        token.sub = user.id;
-      } else if (isSnowflake(token.sub) || token.discordId) {
-        const dbUser = await resolveSessionUserMemo(token);
-        if (dbUser) token.sub = dbUser.id;
-      }
 
-      const jwtStale =
-        !token.u ||
-        !token.u.onboardingDone ||
-        Date.now() - (token.hydratedAt || 0) > JWT_HYDRATE_MS;
-      if (user || account || jwtStale) {
-        const dbUser = await resolveSessionUserMemo(token);
-        if (dbUser) stampToken(token, dbUser);
+        const jwtStale =
+          !token.u ||
+          !token.u.onboardingDone ||
+          Date.now() - (token.hydratedAt || 0) > JWT_HYDRATE_MS;
+        if (user || account || jwtStale) {
+          const dbUser = await resolveSessionUserMemo(token);
+          if (dbUser) stampToken(token, dbUser);
+        }
+      } catch (e) {
+        // A throw here becomes error=Callback and dumps the browser on
+        // /login?callbackUrl=… after Google or Discord already said yes.
+        console.error("jwt callback failed", e);
       }
       return token;
     },
